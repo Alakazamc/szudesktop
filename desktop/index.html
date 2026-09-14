@@ -320,7 +320,8 @@
   /* ---------- 收成展示架（一排水果） ---------- */
   .harvest{display:flex; justify-content:center; align-items:flex-end; gap:14px; padding:8px 0 4px;
     flex-wrap:wrap;}
-  .harvest .cell{display:flex; flex-direction:column; align-items:center; gap:2px; width:46px;}
+  .harvest .cell{display:flex; flex-direction:column; align-items:center; gap:2px;
+    width:58px; white-space:nowrap;}
   .harvest .cell .n{color:var(--cream-line);}
   .harvest .cell svg{animation:bob 2.8s steps(2) infinite var(--d,0s);}
   @keyframes bob{0%,88%,100%{transform:translateY(0)} 94%{transform:translateY(-3px)}}
@@ -331,6 +332,41 @@
     box-shadow:inset 0 2px 0 var(--wood-lite), 3px 3px 0 rgba(0,0,0,.28);
     padding:5px 16px; color:var(--cream); flex-wrap:wrap;}
   .plank .nail{width:3px; height:3px; background:var(--wood-dark);}
+
+  /* ---------- 宠物：荔园猫 ---------- */
+  .pet-wrap{display:flex; gap:10px; align-items:flex-start;}
+  .pet-pen{position:relative; width:74px; height:62px; flex:0 0 auto; overflow:hidden;
+    border:3px solid var(--frame); display:flex; align-items:flex-end; justify-content:center;
+    background:linear-gradient(180deg,#7FB8E8 0 26px, #8FC86A 26px 100%);}
+  .pet-pen::before{content:""; position:absolute; left:0; right:0; bottom:0; height:8px;
+    background:repeating-linear-gradient(90deg,#5EA85A 0 4px,#4C9838 4px 8px);}
+  .pet-pen::after{content:""; position:absolute; right:6px; top:5px; width:8px; height:8px;
+    background:var(--gold); box-shadow:-2px 2px 0 #E8862E, 2px 2px 0 #E8862E;}
+  .pet-pen svg{position:relative; z-index:1; animation:petIdle 2.4s steps(2) infinite;}
+  @keyframes petIdle{0%,100%{transform:translateY(0)} 50%{transform:translateY(-1px)}}
+  .pet-wrap.joy svg{animation:petJump .45s steps(2) 3;}
+  @keyframes petJump{0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)}}
+  .pet-pen .tail{transform-box:fill-box; transform-origin:50% 100%;
+    animation:tailWag 1.1s steps(2) infinite;}
+  @keyframes tailWag{0%,100%{transform:translateX(0)} 50%{transform:translateX(-2px)}}
+  .pet-pen .zz{animation:zzz 2.2s steps(3) infinite;}
+  @keyframes zzz{0%{opacity:0; transform:translate(0,0)} 30%{opacity:1} 100%{opacity:0; transform:translate(5px,-10px)}}
+  /* 飘出来的像素爱心 */
+  .pet-hearts{position:absolute; left:50%; top:16px; width:0; height:0; z-index:2;}
+  .pet-hearts i{position:absolute; width:2px; height:2px; background:#E8607A;
+    box-shadow:-2px 0 0 #E8607A, -4px -2px 0 #E8607A, 2px -2px 0 #E8607A, 0 -2px 0 #E8607A;
+    animation:heartUp 1s steps(5) forwards;}
+  @keyframes heartUp{0%{transform:translate(0,0); opacity:1} 100%{transform:translate(7px,-24px); opacity:0}}
+  .petbar{height:12px; background:#B79A69; border:2px solid var(--frame); position:relative; overflow:hidden;}
+  .petbar i{display:block; height:100%; background:#E8607A;
+    background-image:repeating-linear-gradient(90deg, transparent 0 4px, rgba(255,255,255,.3) 4px 6px);}
+  /* 农场里溜达的猫 */
+  .walkcat{position:absolute; bottom:0; left:-30px; z-index:2;
+    animation:catWalk 30s steps(48) infinite;}
+  @keyframes catWalk{0%{left:-30px} 48%{left:calc(100% - 24px)}
+    50%{left:calc(100% - 24px)} 98%{left:-30px} 100%{left:-30px}}
+  .walkcat svg{animation:catStep .5s steps(2) infinite;}
+  @keyframes catStep{0%,100%{transform:translateY(0)} 50%{transform:translateY(-1px)}}
 
   /* ---------- 弹窗 ---------- */
   .overlay{position:fixed; inset:0; background:rgba(20,12,4,.6); display:none; align-items:center; justify-content:center; z-index:120;}
@@ -467,6 +503,64 @@
     <rect x="2" y="12" width="6" height="2" fill="#A02030"/><rect x="2" y="8" width="2" height="2" fill="#F08090"/>
     <rect x="9" y="7" width="6" height="2" fill="#E04848"/><rect x="8" y="9" width="8" height="4" fill="#E04848"/>
     <rect x="9" y="13" width="6" height="2" fill="#B03030"/><rect x="9" y="9" width="2" height="2" fill="#F89898"/>
+  </symbol>
+
+  <!-- 宠物·荔园猫：平常 / 开心 / 睡着 / 不高兴 四种状态 -->
+  <symbol id="cat-normal" viewBox="0 0 20 22">
+    <rect class="tail" x="17" y="9" width="2" height="6" fill="#E8862E"/>
+    <rect x="3" y="2" width="3" height="3" fill="#E8862E"/><rect x="12" y="2" width="3" height="3" fill="#E8862E"/>
+    <rect x="4" y="3" width="1" height="2" fill="#F8C8A0"/><rect x="13" y="3" width="1" height="2" fill="#F8C8A0"/>
+    <rect x="2" y="4" width="14" height="9" fill="#F0A03A"/>
+    <rect x="6" y="4" width="2" height="2" fill="#E8862E"/><rect x="10" y="4" width="2" height="2" fill="#E8862E"/>
+    <rect x="4" y="7" width="2" height="3" fill="#2A2222"/><rect x="12" y="7" width="2" height="3" fill="#2A2222"/>
+    <rect x="4" y="7" width="1" height="1" fill="#FFFFFF"/><rect x="12" y="7" width="1" height="1" fill="#FFFFFF"/>
+    <rect x="8" y="10" width="2" height="1" fill="#E07070"/>
+    <rect x="6" y="11" width="1" height="1" fill="#B05030"/><rect x="11" y="11" width="1" height="1" fill="#B05030"/>
+    <rect x="1" y="13" width="16" height="7" fill="#F0A03A"/><rect x="5" y="15" width="8" height="5" fill="#FFF6E0"/>
+    <rect x="2" y="13" width="1" height="3" fill="#E8862E"/><rect x="15" y="14" width="1" height="3" fill="#E8862E"/>
+    <rect x="3" y="20" width="3" height="2" fill="#E8862E"/><rect x="12" y="20" width="3" height="2" fill="#E8862E"/>
+  </symbol>
+  <symbol id="cat-happy" viewBox="0 0 20 22">
+    <rect class="tail" x="17" y="9" width="2" height="6" fill="#E8862E"/>
+    <rect x="3" y="2" width="3" height="3" fill="#E8862E"/><rect x="12" y="2" width="3" height="3" fill="#E8862E"/>
+    <rect x="4" y="3" width="1" height="2" fill="#F8C8A0"/><rect x="13" y="3" width="1" height="2" fill="#F8C8A0"/>
+    <rect x="2" y="4" width="14" height="9" fill="#F0A03A"/>
+    <rect x="6" y="4" width="2" height="2" fill="#E8862E"/><rect x="10" y="4" width="2" height="2" fill="#E8862E"/>
+    <rect x="4" y="7" width="2" height="1" fill="#2A2222"/><rect x="12" y="7" width="2" height="1" fill="#2A2222"/>
+    <rect x="8" y="10" width="2" height="1" fill="#E07070"/>
+    <rect x="7" y="11" width="4" height="2" fill="#B05030"/><rect x="8" y="12" width="2" height="1" fill="#E07070"/>
+    <rect x="1" y="13" width="16" height="7" fill="#F0A03A"/><rect x="5" y="15" width="8" height="5" fill="#FFF6E0"/>
+    <rect x="2" y="13" width="1" height="3" fill="#E8862E"/><rect x="15" y="14" width="1" height="3" fill="#E8862E"/>
+    <rect x="3" y="20" width="3" height="2" fill="#E8862E"/><rect x="12" y="20" width="3" height="2" fill="#E8862E"/>
+    <rect x="15" y="2" width="1" height="1" fill="#E8607A"/><rect x="17" y="2" width="1" height="1" fill="#E8607A"/>
+    <rect x="15" y="3" width="3" height="1" fill="#E8607A"/><rect x="16" y="4" width="1" height="1" fill="#E8607A"/>
+  </symbol>
+  <symbol id="cat-sleep" viewBox="0 0 20 22">
+    <rect x="3" y="4" width="3" height="3" fill="#E8862E"/><rect x="12" y="4" width="3" height="3" fill="#E8862E"/>
+    <rect x="2" y="6" width="14" height="9" fill="#F0A03A"/>
+    <rect x="6" y="6" width="2" height="2" fill="#E8862E"/><rect x="10" y="6" width="2" height="2" fill="#E8862E"/>
+    <rect x="4" y="10" width="2" height="1" fill="#2A2222"/><rect x="12" y="10" width="2" height="1" fill="#2A2222"/>
+    <rect x="8" y="12" width="2" height="1" fill="#E07070"/>
+    <rect x="1" y="15" width="16" height="6" fill="#F0A03A"/><rect x="5" y="17" width="8" height="4" fill="#FFF6E0"/>
+    <rect x="2" y="21" width="4" height="1" fill="#E8862E"/><rect x="12" y="21" width="4" height="1" fill="#E8862E"/>
+    <rect class="tail" x="17" y="17" width="2" height="4" fill="#E8862E"/>
+    <g class="zz" fill="#FFF6E0">
+      <rect x="15" y="1" width="3" height="1"/><rect x="16" y="2" width="1" height="1"/>
+      <rect x="15" y="3" width="3" height="1"/>
+    </g>
+  </symbol>
+  <symbol id="cat-sad" viewBox="0 0 20 22">
+    <rect class="tail" x="17" y="16" width="2" height="5" fill="#C96A18"/>
+    <rect x="2" y="5" width="3" height="2" fill="#E8862E"/><rect x="13" y="5" width="3" height="2" fill="#E8862E"/>
+    <rect x="2" y="4" width="14" height="9" fill="#E8963A"/>
+    <rect x="6" y="4" width="2" height="2" fill="#E8862E"/><rect x="10" y="4" width="2" height="2" fill="#E8862E"/>
+    <rect x="4" y="7" width="2" height="2" fill="#2A2222"/><rect x="12" y="7" width="2" height="2" fill="#2A2222"/>
+    <rect x="4" y="7" width="1" height="1" fill="#FFFFFF"/><rect x="12" y="7" width="1" height="1" fill="#FFFFFF"/>
+    <rect x="12" y="10" width="1" height="2" fill="#6FA8E0"/>
+    <rect x="8" y="10" width="2" height="1" fill="#E07070"/>
+    <rect x="8" y="12" width="3" height="1" fill="#B05030"/>
+    <rect x="1" y="13" width="16" height="7" fill="#E8963A"/><rect x="5" y="15" width="8" height="5" fill="#F5E4C0"/>
+    <rect x="3" y="20" width="3" height="2" fill="#C96A18"/><rect x="12" y="20" width="3" height="2" fill="#C96A18"/>
   </symbol>
 </svg>
 
@@ -655,6 +749,30 @@
         <svg class="fruit" width="24" height="24" viewBox="0 0 16 16"><use href="#f-cherry"/></svg>
         <svg class="fruit" width="24" height="24" viewBox="0 0 16 16"><use href="#f-blue"/></svg>
       </div>
+
+      <hr class="rule">
+      <h2><svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-star"/></svg>
+        <span id="pet-name">荔园猫</span>
+        <span class="chipmini">Lv <b id="pet-lv" class="cy">1</b> · <span id="pet-mood">好奇</span></span></h2>
+      <div class="pet-wrap" id="pet-wrap" style="margin-top:8px">
+        <span class="pet-pen">
+          <svg width="56" height="62" viewBox="0 0 20 22" role="img" aria-label="荔园猫">
+            <use id="pet-use" href="#cat-normal"/>
+          </svg>
+          <span class="pet-hearts" id="pet-hearts" aria-hidden="true"></span>
+        </span>
+        <div style="flex:1; min-width:0">
+          <div class="kv"><span class="cm">亲密度</span><span><b id="pet-love" class="cr">0</b><span class="cm"> / 100</span></span></div>
+          <div class="petbar"><i id="pet-bar" style="width:0%"></i></div>
+          <div class="kv" style="margin-top:4px"><span class="cm">已陪伴</span><span><b id="pet-time" class="cb">0 分钟</b></span></div>
+          <div class="kv"><span class="cm">小鱼干</span><span><b id="pet-fish" class="cy">3</b><span class="cm"> 条（今日）</span></span></div>
+          <div style="display:flex; gap:6px; margin-top:6px">
+            <button class="btn" id="pet-pat">摸摸</button>
+            <button class="btn ghost" id="pet-feed">喂小鱼干</button>
+          </div>
+        </div>
+      </div>
+      <p class="cm" id="pet-say" style="margin-top:6px">它在围栏里打量你。</p>
     </aside>
 
     <section class="panel">
@@ -879,6 +997,10 @@
       <rect x="10" y="16" width="8" height="6" fill="#7FAAC8"/>
       <rect x="6" y="26" width="16" height="2" fill="#3E6F8C"/>
     </svg>
+    <!-- 在农场里溜达的猫 -->
+    <span class="walkcat" aria-hidden="true">
+      <svg width="30" height="33" viewBox="0 0 20 22"><use href="#cat-normal"/></svg>
+    </span>
   </div>
 
   <!-- 收成展示架：一排水果，纯装饰 -->
@@ -1125,12 +1247,158 @@ function say(text){ type(talkText, text); }
 say("柯西，欢迎回到农场！[[b|SZU_WLAN]] 长势喜人，[[y|教学区]]信号满格，是个适合写代码的夜晚。想好把哪些工具种进[[g|农田]]，随时叫我。");
 
 /* ---------- 各处按钮 ---------- */
-document.getElementById("btn-login").onclick = () => modal("一键登录", SAY.login);
-document.getElementById("btn-diag").onclick  = () => modal("断线诊断", SAY.diag);
+/* 网络状态一动，猫跟着换表情 */
+document.getElementById("btn-login").onclick = () => {
+  modal("一键登录", SAY.login);
+  netOK = true; petReact("happy", 4000);
+  petSay("你一上线它就精神了，蹲在围栏边等你。");
+};
+document.getElementById("btn-diag").onclick  = () => {
+  modal("断线诊断", SAY.diag);
+  netOK = false; petReact("sleep", 6000);
+  petSay("断着网，它趴回窝里打盹去了。");
+  setTimeout(() => { netOK = true; petOverride = null; petRender(); }, 6000);
+};
 document.getElementById("sw-auto").addEventListener("change", e =>
   modal("自动重连", e.target.checked ? "已打开。接上内核后会每 [[y|15 秒]]检查一次，掉了自动补登。" : "已关闭。手动点[[g|一键登录]]就行。"));
 document.querySelectorAll("[data-say]").forEach(el =>
   el.addEventListener("click", () => modal("荔宝", SAY[el.dataset.say] || "……")));
+
+/* ================= 宠物系统：荔园猫 =================
+   存档在 localStorage，刷新不掉档，关掉浏览器明天回来还在。
+   规则：
+     · 摸摸  +1 亲密度，3 秒一次
+     · 喂小鱼干 +8，每天 3 条，跨天自动补满
+     · 满 100 升一级，等级越高越容易是开心脸
+     · 超过 24 小时没理它，按天扣亲密度（星露谷的老规矩）
+   猫的表情跟着网络走：netOK 为假就趴窝睡觉，登录成功乐一下，断线诊断蔫一会儿。
+   TODO(szunet): netOK 现在写死为 true，接真内核后换成 portal.Detect() 的结果。 */
+const PET_KEY = "szuDesktop.pet.v1";
+const PET_TODAY = new Date().toDateString();
+const pet = Object.assign(
+  { name:"荔园猫", lv:1, love:20, mins:0, day:PET_TODAY, fish:3, last:Date.now(), opens:0 },
+  JSON.parse(localStorage.getItem(PET_KEY) || "{}")
+);
+if (pet.day !== PET_TODAY){ pet.day = PET_TODAY; pet.fish = 3; }  // 新的一天补满小鱼干
+pet.opens = (pet.opens || 0) + 1;
+pet.mins = Number(pet.mins) || 0;
+pet.love = Math.max(0, Math.min(99, Number(pet.love) || 0));
+
+const PET_MOOD = {
+  normal:{ icon:"#cat-normal", text:"好奇" },
+  happy: { icon:"#cat-happy",  text:"很开心" },
+  sleep: { icon:"#cat-sleep",  text:"睡着了" },
+  sad:   { icon:"#cat-sad",    text:"有点蔫" },
+};
+const PET_PAT_LINES = [
+  "它眯起眼，喉咙里发出呼噜声。",
+  "蹭了蹭你的手，亲密度 +1。",
+  "翻了个身把肚皮露给你——这是最高规格的信任。",
+  "用头顶你的手心，示意别停。",
+  "尾巴竖成一根天线，绕着你走了一圈。",
+];
+
+let netOK = true;
+let petOverride = null, petOverrideUntil = 0;
+
+function petSave(){ try{ localStorage.setItem(PET_KEY, JSON.stringify(pet)); }catch(e){} }
+
+function petMood(){
+  if (petOverride && Date.now() < petOverrideUntil) return petOverride;
+  petOverride = null;
+  if (!netOK) return "sleep";
+  if (pet.love >= 70) return "happy";
+  if (pet.love <= 8) return "sad";
+  return "normal";
+}
+
+function petRender(){
+  const cfg = PET_MOOD[petMood()];
+  document.getElementById("pet-use").setAttribute("href", cfg.icon);
+  document.getElementById("pet-mood").textContent = cfg.text;
+  document.getElementById("pet-lv").textContent = String(pet.lv);
+  document.getElementById("pet-love").textContent = pet.love;
+  document.getElementById("pet-bar").style.width = pet.love + "%";
+  document.getElementById("pet-fish").textContent = pet.fish;
+  const m = Math.floor(pet.mins);
+  document.getElementById("pet-time").textContent =
+    m < 60 ? m + " 分钟" : Math.floor(m / 60) + " 小时 " + (m % 60) + " 分";
+  petSave();
+}
+function petSay(t){ document.getElementById("pet-say").textContent = t; }
+
+/* 飘一串像素爱心 */
+function petHearts(){
+  const box = document.getElementById("pet-hearts");
+  for (let i = 0; i < 3; i++){
+    const h = document.createElement("i");
+    h.style.left = (i * 5 - 5) + "px";
+    h.style.animationDelay = (i * 0.12) + "s";
+    box.appendChild(h);
+    setTimeout(() => h.remove(), 1300 + i * 120);
+  }
+}
+
+/* 临时换个表情 + 蹦一下，比如刚登录成功 */
+function petReact(mood, ms){
+  petOverride = mood;
+  petOverrideUntil = Date.now() + (ms || 3000);
+  const w = document.getElementById("pet-wrap");
+  w.classList.remove("joy");
+  void w.offsetWidth;              // 重置动画，连点也能每次都蹦
+  w.classList.add("joy");
+  petRender();
+}
+
+function petAdd(n){
+  pet.love += n;
+  if (pet.love >= 100){
+    pet.love = 0; pet.lv += 1;
+    petReact("happy", 4500);
+    petSay("升到 Lv " + pet.lv + " 了！它绕着你转了三圈。");
+  }
+  pet.last = Date.now();
+  petRender();
+}
+
+/* 隔了太久没理它，亲密度往前掉 */
+(function petDecay(){
+  const days = Math.floor((Date.now() - (pet.last || Date.now())) / 864e5);
+  if (days > 0){
+    pet.love = Math.max(0, pet.love - Math.min(30, days * 3));
+    petSay("你 " + days + " 天没来了，它在围栏边趴了一整天。");
+  } else {
+    petSay(pet.opens === 1
+      ? "它从围栏那头跑过来，冲你叫了一声。"
+      : "这是第 " + pet.opens + " 次打开，它已经认得你了。");
+  }
+})();
+
+let patCool = 0;
+document.getElementById("pet-pat").onclick = () => {
+  const now = Date.now();
+  if (now - patCool < 3000){ petSay("刚摸过，让它缓缓。（3 秒一次）"); return; }
+  patCool = now;
+  petAdd(1); petHearts(); petReact("happy", 2600);
+  petSay(PET_PAT_LINES[Math.floor(Math.random() * PET_PAT_LINES.length)]);
+};
+document.getElementById("pet-feed").onclick = () => {
+  if (pet.fish <= 0){ petSay("今天的小鱼干喂完了，明天再来。"); return; }
+  pet.fish -= 1;
+  petAdd(8); petHearts(); petReact("happy", 3200);
+  petSay("咔嚓咔嚓……尾巴摇成了一把扇子。");
+};
+
+/* 陪伴时长按真实停留时间累积，每 10 秒记一次 */
+setInterval(() => {
+  pet.mins += 10 / 60;
+  const m = Math.floor(pet.mins);
+  document.getElementById("pet-time").textContent =
+    m < 60 ? m + " 分钟" : Math.floor(m / 60) + " 小时 " + (m % 60) + " 分";
+  if (Math.floor(pet.mins) % 5 === 0) petSave();
+}, 10000);
+
+petRender();
 
 /* ---------- 动感：错开相位 + 逐字跳 ---------- */
 /* --d 只写 CSS 变量，不写 animation-delay，否则 hover 时的临时动画会继承这个延迟而不动 */
