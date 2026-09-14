@@ -322,9 +322,7 @@
     flex-wrap:wrap;}
   .harvest .cell{display:flex; flex-direction:column; align-items:center; gap:2px; width:46px;}
   .harvest .cell .n{color:var(--cream-line);}
-  .harvest .cell svg{animation:bob 2.8s steps(2) infinite;}
-  .harvest .cell:nth-child(2n) svg{animation-delay:.5s;}
-  .harvest .cell:nth-child(3n) svg{animation-delay:1.1s;}
+  .harvest .cell svg{animation:bob 2.8s steps(2) infinite var(--d,0s);}
   @keyframes bob{0%,88%,100%{transform:translateY(0)} 94%{transform:translateY(-3px)}}
 
   /* ---------- 页脚木板 ---------- */
@@ -344,6 +342,80 @@
   .modal .text{min-height:52px;}
   .modal .row{display:flex; justify-content:flex-end; gap:8px; margin-top:10px;}
   .cursor::after{content:"▌"; color:var(--coin); animation:blink .8s steps(2) infinite;}
+
+  /* ================= 动感 =================
+     铁律：所有动画都用 steps()，一格一格硬切。
+     用平滑缓动的话像素字会被抗锯齿糊掉，像素味立刻没了。
+     --d 是 JS 写的错开相位，让同类元素不同步跳。 */
+
+  /* 文字逐字跳跃：JS 把每个字包成 .jp，delay 递增连成波浪 */
+  .jp{display:inline-block; animation:jpb 1.4s steps(1) infinite var(--d,0s);}
+  @keyframes jpb{0%,84%,100%{transform:translateY(0)} 92%{transform:translateY(-2px)}}
+
+  /* 耕地缓慢向前推，8 帧正好走一格垄沟（24px） */
+  body{animation:soilPan 7s steps(8) infinite;}
+  @keyframes soilPan{
+    from{background-position:0 0, 0 0, 0 0, 0 0;}
+    to  {background-position:0 0, 0 0, 0 0, 0 24px;}
+  }
+
+  /* 云飘 · 月亮浮 */
+  .sky .cloud{animation:drift 30s steps(3) infinite var(--d,0s);}
+  @keyframes drift{0%,100%{transform:translateX(0)} 50%{transform:translateX(16px)}}
+  .sky .moon{animation:moonFloat 5.5s steps(2) infinite;}
+  @keyframes moonFloat{0%,100%{transform:translateY(0)} 50%{transform:translateY(-2px)}}
+
+  /* 草和花摇摆 */
+  .grassband .flower,.grassband .tuft{transform-origin:50% 100%;
+    animation:sway 2.6s steps(2) infinite var(--d,0s);}
+  @keyframes sway{0%,100%{transform:translateX(0)} 50%{transform:translateX(2px)}}
+
+  /* 木牌轻轻起伏 */
+  .sign{animation:signBob 3.4s steps(2) infinite;}
+  @keyframes signBob{0%,100%{transform:translateY(0)} 50%{transform:translateY(-1px)}}
+
+  /* 金币翻转 */
+  .chip .coin{animation:coinSpin 1.4s steps(2) infinite;}
+  @keyframes coinSpin{0%,100%{transform:scaleX(1)} 50%{transform:scaleX(.35)}}
+
+  /* 进度条条纹向右流 */
+  .bar::after{background-size:8px 100%; animation:stripe 1s steps(2) infinite;}
+  @keyframes stripe{from{background-position:0 0} to{background-position:8px 0}}
+
+  /* 列表小圆点上下跳 */
+  .feed .dot{animation:dotPulse 1.8s steps(2) infinite var(--d,0s);}
+  @keyframes dotPulse{0%,100%{transform:translateY(0)} 50%{transform:translateY(-2px)}}
+
+  /* 农田格子：像作物在长 */
+  .plot{animation:plotBob 3.2s steps(1) infinite var(--d,0s);}
+  @keyframes plotBob{0%,90%,100%{transform:translateY(0)} 95%{transform:translateY(-1px)}}
+
+  /* 工具栏：装了东西的槽呼吸 */
+  .slot.has{animation:slotBreath 2.8s steps(2) infinite var(--d,0s);}
+  @keyframes slotBreath{0%,100%{box-shadow:inset 0 0 0 2px var(--soil)}
+    50%{box-shadow:inset 0 0 0 2px var(--wood-lite)}}
+
+  /* 水果弹跳 + hover 蹦一下 */
+  .harvest .cell svg{animation:bob 2.8s steps(2) infinite var(--d,0s);}
+  @keyframes bob{0%,88%,100%{transform:translateY(0)} 94%{transform:translateY(-3px)}}
+  .panel h2:hover .fic,.plot:hover .pfruit,.harvest .cell:hover svg{animation:ficJump .4s steps(2) 2;}
+  @keyframes ficJump{0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)}}
+
+  /* 图表柱子：先长出来，hover 再蹦 */
+  .chart .col i{transform-origin:50% 100%; animation:barGrow .7s steps(7) both;}
+  @keyframes barGrow{from{transform:scaleY(0)} to{transform:scaleY(1)}}
+  .chart .col:hover i{animation:ficJump .4s steps(2) 2;}
+
+  /* 荔宝头像呼吸 */
+  .talk .who-face,.modal .face{animation:faceBob 2.2s steps(2) infinite;}
+  @keyframes faceBob{0%,100%{transform:translateY(0)} 50%{transform:translateY(-2px)}}
+
+  /* CRT 扫描线缓慢下移 */
+  body::after{background-size:100% 3px; animation:scan 3s steps(3) infinite;}
+  @keyframes scan{from{background-position:0 0} to{background-position:0 3px}}
+
+  /* 系统开了「减少动态效果」就全停 */
+  @media (prefers-reduced-motion: reduce){ *,*::before,*::after{animation:none !important;} }
 
   footer{color:var(--cream-line); text-align:center; padding:8px 0 16px;}
   ::selection{background:var(--accent); color:#fff;}
@@ -1003,6 +1075,7 @@ for (let i = 0; i < 12; i++){
   if (dockIcons[i]){
     s.innerHTML = dockIcons[i].html + `<span class="key">${i + 1}</span>`;
     s.dataset.say = i;
+    s.classList.add("has");
     s.onclick = () => modal("工具槽 " + (i + 1), dockIcons[i].say);
   } else {
     s.onclick = () => modal("空工具槽", SAY.slotEmpty);
@@ -1058,6 +1131,51 @@ document.getElementById("sw-auto").addEventListener("change", e =>
   modal("自动重连", e.target.checked ? "已打开。接上内核后会每 [[y|15 秒]]检查一次，掉了自动补登。" : "已关闭。手动点[[g|一键登录]]就行。"));
 document.querySelectorAll("[data-say]").forEach(el =>
   el.addEventListener("click", () => modal("荔宝", SAY[el.dataset.say] || "……")));
+
+/* ---------- 动感：错开相位 + 逐字跳 ---------- */
+/* --d 只写 CSS 变量，不写 animation-delay，否则 hover 时的临时动画会继承这个延迟而不动 */
+function stagger(sel, step){
+  document.querySelectorAll(sel).forEach((el, i) =>
+    el.style.setProperty("--d", (-i * step).toFixed(2) + "s"));
+}
+let wave = 0;   // 全页共用一条波浪，字会从左到右依次起伏
+function bounceText(root){
+  const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (tw.nextNode()) nodes.push(tw.currentNode);
+  nodes.forEach(n => {
+    if (!n.textContent.trim()) return;
+    const frag = document.createDocumentFragment();
+    for (const ch of n.textContent){
+      if (!ch.trim()){ frag.appendChild(document.createTextNode(ch)); continue; }
+      const s = document.createElement("span");
+      s.className = "jp";
+      s.textContent = ch;
+      s.style.animationDelay = (wave++ * 0.06 % 1.4).toFixed(2) + "s";
+      frag.appendChild(s);
+    }
+    /* 父元素是 flex 时，直接塞 span 会一字一格吃进 gap，包一层防开 */
+    if (getComputedStyle(n.parentNode).display.indexOf("flex") >= 0){
+      const wrap = document.createElement("span");
+      wrap.style.display = "inline-block";
+      wrap.appendChild(frag);
+      n.parentNode.replaceChild(wrap, n);
+    } else {
+      n.parentNode.replaceChild(frag, n);
+    }
+  });
+}
+function juice(){
+  stagger(".sky .cloud", 7);
+  stagger(".grassband .flower, .grassband .tuft", 0.37);
+  stagger(".plot", 0.3);
+  stagger(".feed .dot", 0.23);
+  stagger(".harvest .cell svg", 0.45);
+  stagger(".slot.has", 0.7);
+  document.querySelectorAll(".sign h1, .panel h2, .tab, .btn, .harvest .n, .plot .name")
+    .forEach(bounceText);
+}
+juice();
 
 /* ---------- HUD 时钟 ---------- */
 function tick(){
