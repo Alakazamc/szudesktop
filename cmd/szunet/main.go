@@ -57,6 +57,8 @@ func main() {
 		cmdDetect(args)
 	case "diag":
 		cmdDiag(args)
+	case "vpn":
+		cmdVPN(args)
 	case "config":
 		cmdConfig(args)
 	case "version", "-v", "--version":
@@ -79,6 +81,7 @@ func usage() {
   szunet status     看当前在哪个区、账号在不在线
   szunet detect     只探测网络区域
   szunet diag       连不上时跑这个，给出排查结论
+  szunet vpn        校外访问校园网的三条通道（WebVPN / EasyConnect / 零信任）
   szunet config     管理保存的账号密码
   szunet version    看版本
 
