@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>szuDesktop — 深大校园服务台（原型）</title>
+<!--
+  szuDesktop 像素风原型（星露谷 × 深大荔枝）
+  ----------------------------------------
+  · 单文件原型，无构建、无依赖；双击就能开。
+  · 字体：缝合像素字体 Fusion Pixel（OFL-1.1），CDN 挂了会自动退化到系统字体。
+  · 想加服务：改 SERVICE 数组即可，左栏列表 / 服务农田 / 工具栏会一起变。
+  · 接真后端：搜 TODO(szunet)，一键登录 / 断线诊断之后走 szuNet CLI 的本地服务。
+  · 文字上色的小语法：[[b|文字]] → b 蓝 / g 绿 / y 金 / r 红 / t 青 / p 紫 / m 淡
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@vp-tw/cjk-web-fonts-fusion-pixel-font@0.0.1/dist/12px/proportional/zh_hans/Fusion-Pixel-12px-Proportional-Simplified-Chinese.css">
+<style>
+  :root{
+    --night:#2C3E6B; --night-2:#22304F; --soil:#8A5A33; --furrow:#74481F;
+    --wood:#6B4423; --wood-dark:#3E2410; --wood-mid:#7C4E27; --wood-lite:#A9713B;
+    --frame:#4A2C12; --accent:#E8862E; --cream:#FFE9C5; --cream-hi:#FFF6E0;
+    --cream-dim:#F2D3A0; --cream-line:#D9B98A;
+    --orange:#DC7B05; --orange-hi:#F0A03A; --orange-down:#AD6104;
+    --ink:#4A2C12; --muted:#9A7B54;
+    --ok:#5E9C3A; --bad:#C84B3A; --blue:#4A7FB5; --coin:#C97C0A; --gold:#F2B33D;
+    --teal:#2E8B7A; --purple:#6A5ACD; --pink:#D86A9A; --leaf:#4C9838;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{font-size:12px;}
+  body{
+    font-family:"Fusion Pixel 12px Proportional Simplified Chinese","Fusion Pixel 12px Proportional SC","Zpix","Microsoft YaHei",monospace;
+    font-size:12px; line-height:1.7; color:var(--ink); position:relative;
+    background:repeating-linear-gradient(180deg, var(--soil) 0 21px, var(--furrow) 21px 24px);
+    min-height:100vh; overflow-x:hidden;
+  }
+  /* CRT 扫描线，很淡，只为增加像素质感 */
+  body::after{content:""; position:fixed; inset:0; pointer-events:none; z-index:99;
+    background:repeating-linear-gradient(180deg, rgba(0,0,0,.05) 0 1px, transparent 1px 3px);}
+  img,svg{image-rendering:pixelated;}
+
+  /* ---------- 文字色 ---------- */
+  .cb{color:var(--blue);} .cg{color:var(--ok);} .cy{color:var(--coin);} .cr{color:var(--bad);}
+  .ct{color:var(--teal);} .cp{color:var(--purple);} .cw{color:#B57B14;} .cm{color:var(--muted);}
+  .hl{background:#FFE9A8; padding:0 3px; box-shadow:0 0 0 1px var(--accent);}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:0 16px; position:relative;}
+
+  /* ---------- 窗口标题栏 ---------- */
+  .titlebar{background:var(--wood-dark); color:var(--cream); display:flex; align-items:center;
+    gap:8px; padding:4px 10px; user-select:none; border-bottom:2px solid #241206;}
+  .titlebar .dot{width:10px; height:10px; border:2px solid #7A2A2A;}
+  .titlebar .dot.r{background:#E04848;} .titlebar .dot.y{background:var(--gold); border-color:#8A6A10;}
+  .titlebar .dot.g{background:#63C164; border-color:#2E7A2E;}
+  .titlebar .sp{flex:1;}
+  .titlebar .wbtn{width:16px; height:16px; background:var(--wood); border:2px solid #2A1810;
+    display:inline-flex; align-items:center; justify-content:center; cursor:pointer; color:var(--cream);}
+  .titlebar .wbtn:hover{background:var(--orange);}
+
+  /* ---------- 夜空 ---------- */
+  .sky{background:linear-gradient(180deg, var(--night-2) 0 44%, var(--night) 44% 100%);
+    border-bottom:3px solid var(--wood-dark); position:relative; overflow:hidden;}
+  .sky .star{position:absolute; width:2px; height:2px; background:#FFF8E0; animation:tw 2.6s steps(2) infinite;}
+  .sky .star.b{background:#BFD8FF;} .sky .star.y{background:#FFE9A8;} .sky .star.p{background:#F0C8E0;}
+  @keyframes tw{0%,100%{opacity:1} 50%{opacity:.25}}
+  .sky .moon{position:absolute; right:236px; top:54px; width:22px; height:22px; border-radius:50%;
+    background:var(--cream-hi); box-shadow:-5px -3px 0 0 var(--night) inset; z-index:0;}
+  .sky .shoot{position:absolute; top:8px; left:-40px; width:26px; height:2px; background:#FFF8E0;
+    box-shadow:-6px 0 0 1px rgba(255,248,224,.5); animation:shoot 9s linear infinite; z-index:0;}
+  @keyframes shoot{0%,86%{transform:translate(0,0); opacity:0} 88%{opacity:1}
+    100%{transform:translate(1360px,220px); opacity:0}}
+  .sky .cloud{position:absolute; z-index:0; opacity:.9;}
+  .sky .mount{position:absolute; bottom:0; left:0; right:0; height:26px; z-index:0;}
+  .sign,.tabs,.hud{position:relative; z-index:1;}
+
+  /* ---------- HUD ---------- */
+  .hud{display:flex; gap:8px; align-items:center; padding:10px 0 8px; flex-wrap:wrap;}
+  .chip{background:var(--wood); border:2px solid var(--wood-dark); color:var(--cream);
+    padding:2px 10px; display:inline-flex; align-items:center; gap:6px;
+    box-shadow:inset 0 2px 0 var(--wood-lite);}
+  .chip .ic{width:10px; height:10px; flex:0 0 auto; border:1px solid var(--wood-dark);}
+  .chip .coin{width:11px; height:11px; border-radius:50%; background:var(--gold); border:2px solid #B57B14;}
+  .chip.right{margin-left:auto;}
+  .chip k{font-style:normal; color:var(--gold);}
+
+  /* ---------- 木牌 ---------- */
+  .sign{background:var(--soil); border:4px solid var(--frame); box-shadow:inset 0 0 0 2px var(--accent), 4px 4px 0 rgba(0,0,0,.3);
+    padding:6px 26px; display:flex; align-items:center; gap:10px; margin:4px auto 12px; width:max-content;}
+  .sign .nail{position:absolute; width:3px; height:3px; background:var(--frame);}
+  .sign .vine{position:absolute; width:10px; height:4px; background:var(--leaf); top:-3px; left:8px;
+    box-shadow:0 4px 0 var(--leaf), 10px 2px 0 #63C164;}
+  .sign h1{font-size:24px; font-weight:400; color:var(--cream-hi); letter-spacing:1px;
+    text-shadow:2px 2px 0 var(--frame);}
+
+  /* ---------- 栅栏 ---------- */
+  .fence{height:14px; background:
+    repeating-linear-gradient(90deg, var(--wood-lite) 0 6px, transparent 6px 14px),
+    linear-gradient(var(--wood), var(--wood));
+    border-top:2px solid var(--frame); border-bottom:2px solid var(--frame);}
+
+  /* ---------- 标签栏 ---------- */
+  .tabs{background:var(--wood); border:3px solid var(--wood-dark); display:flex; gap:4px; padding:3px;
+    box-shadow:inset 0 2px 0 var(--wood-lite);}
+  .tab{flex:0 0 auto; padding:3px 14px; background:var(--wood-mid); border:2px solid var(--frame);
+    color:var(--cream); cursor:pointer; display:flex; gap:6px; align-items:center;}
+  .tab .ic{width:10px; height:10px; border:1px solid var(--wood-dark);}
+  .tab:hover{background:#8A5C34;}
+  .tab.active{background:var(--cream); color:var(--ink); box-shadow:inset 0 -3px 0 var(--accent);}
+  .tab .badge{background:var(--bad); color:#fff; padding:0 4px; line-height:1.4;}
+
+  /* ---------- 面板 ---------- */
+  .panel{background:var(--cream); border:4px solid var(--frame);
+    box-shadow:inset 0 0 0 2px var(--accent), 5px 5px 0 rgba(0,0,0,.28); padding:12px; position:relative;}
+  .panel h2{font-size:12px; font-weight:400; display:flex; align-items:center; gap:8px;}
+  .panel h2 .tab-ic{width:10px; height:10px; border:2px solid var(--frame); flex:0 0 auto;}
+  .panel h2 .chipmini{margin-left:auto; background:var(--cream-dim); border:2px solid var(--accent);
+    padding:0 8px; color:var(--ink);}
+  .rule{border:none; height:2px; margin:8px 0;
+    background:repeating-linear-gradient(90deg, var(--cream-line) 0 4px, transparent 4px 8px);}
+
+  .stage{display:grid; grid-template-columns:296px minmax(0,1fr) 316px; gap:14px; padding:2px 0 14px;}
+  @media (max-width:1080px){ .stage{grid-template-columns:1fr;} }
+
+  /* ---------- 左栏 ---------- */
+  .search{width:100%; background:var(--cream-hi); border:2px solid #C9A166; padding:3px 8px;
+    font:inherit; font-size:12px; color:var(--ink); outline:none;}
+  .search:focus{border-color:var(--accent); box-shadow:0 0 0 2px #FFE9A8;}
+  .group{margin-top:8px; font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px;}
+  .group::before{content:""; width:6px; height:6px; background:var(--accent);}
+  .svc-list{list-style:none;}
+  .svc-list li{display:flex; align-items:center; gap:8px; padding:4px 6px; cursor:pointer; border:2px solid transparent;}
+  .svc-list li:hover{background:var(--cream-dim);}
+  .svc-list li.active{background:#FFE9A8; border-color:var(--accent);}
+  .svc-list .ic{width:14px; height:14px; flex:0 0 auto; border:2px solid var(--wood-dark);}
+  .svc-list .tag{margin-left:auto; padding:0 5px; border:1px solid; }
+  .svc-list .tag.on{color:var(--ok); border-color:var(--ok);}
+  .svc-list .tag.off{color:var(--muted); border-color:var(--cream-line);}
+
+  /* ---------- 按钮 / 开关 ---------- */
+  .btn{display:inline-block; background:var(--orange); color:var(--cream-hi); border:3px solid var(--frame);
+    box-shadow:inset 0 2px 0 var(--orange-hi), 3px 3px 0 rgba(0,0,0,.25);
+    padding:4px 14px; font:inherit; font-size:12px; cursor:pointer; user-select:none;}
+  .btn:hover{background:var(--orange-hi);}
+  .btn:active{transform:translate(2px,2px); box-shadow:inset 0 1px 0 var(--orange-down);}
+  .btn.ghost{background:var(--cream-dim); color:var(--ink); box-shadow:3px 3px 0 rgba(0,0,0,.25);}
+  .btn.ghost:hover{background:#E8C48E;}
+  .btn.block{display:block; width:100%; text-align:center;}
+  .switch{display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none;}
+  .switch input{display:none;}
+  .switch .track{width:34px; height:16px; background:#B79A69; border:2px solid var(--frame); position:relative;}
+  .switch .track::after{content:""; position:absolute; top:0; left:0; width:12px; height:12px; background:var(--cream-hi);
+    border:2px solid var(--frame); transition:none;}
+  .switch input:checked + .track{background:var(--ok);}
+  .switch input:checked + .track::after{left:18px;}
+
+  /* ---------- 任务 / 统计 / 进度条 ---------- */
+  .quest{list-style:none;}
+  .quest li{display:flex; gap:8px; align-items:flex-start; padding:3px 0;}
+  .box{width:12px; height:12px; flex:0 0 auto; margin-top:5px; background:var(--cream-hi); border:2px solid var(--muted);}
+  .box.done{background:var(--ok); border-color:var(--wood-dark); position:relative;}
+  .box.done::after{content:""; position:absolute; left:1px; top:-1px; width:3px; height:7px;
+    border-right:2px solid #FFF6E0; border-bottom:2px solid #FFF6E0; transform:rotate(40deg);}
+  .bar{height:14px; background:#B79A69; border:2px solid var(--frame); position:relative; overflow:hidden;}
+  .bar i{display:block; height:100%; background:var(--ok);}
+  .bar::after{content:""; position:absolute; inset:0;
+    background:repeating-linear-gradient(90deg, transparent 0 6px, rgba(0,0,0,.14) 6px 8px);}
+  .barrow{display:flex; justify-content:space-between; margin:6px 0 2px;}
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px;}
+  .stat{background:var(--cream-hi); border:2px solid var(--cream-line); padding:5px 8px;}
+  .stat .k{color:var(--muted); font-size:12px;}
+  .stat .v{font-size:12px;}
+  .sig{display:inline-flex; gap:2px; vertical-align:middle;}
+  .sig i{width:3px; height:9px; background:var(--cream-line);}
+  .sig i.on{background:var(--ok);}
+
+  /* ---------- 农田 ---------- */
+  .farm{display:grid; grid-template-columns:repeat(auto-fill,minmax(152px,1fr)); gap:10px; margin-top:8px;}
+  .plot{position:relative; background:#9A6438; border:3px solid #5D3A1A; padding:10px 8px 8px;
+    min-height:70px; cursor:pointer; text-align:center; box-shadow:inset 0 3px 0 rgba(255,255,255,.07);}
+  .plot .furrow{height:2px; background:#7C4E27; margin:5px 4px; box-shadow:0 2px 0 rgba(255,255,255,.06);}
+  .plot .name{color:var(--cream-hi);}
+  .plot .state{font-size:12px;}
+  .plot .state.on{color:#C8F0A8;} .plot .state.off{color:var(--cream-line);}
+  .plot:hover{border-color:var(--accent); animation:wob .24s steps(2) 2;}
+  @keyframes wob{50%{transform:translate(-1px,-1px)}}
+  .plot.sprout::before{content:""; position:absolute; top:8px; left:50%; width:4px; height:13px;
+    margin-left:-2px; background:var(--ok);}
+  .plot.sprout::after{content:""; position:absolute; top:4px; left:50%; width:16px; height:6px; margin-left:-8px;
+    background:var(--ok); box-shadow:-10px 3px 0 0 var(--ok), 10px 3px 0 0 var(--ok);}
+  .plot .qm{font-size:24px; color:#3E2410; line-height:1;}
+
+  /* ---------- 右栏 ---------- */
+  .who{display:flex; gap:10px; align-items:center;}
+  .avatar{width:40px; height:40px; flex:0 0 auto; background:#F8C890; border:3px solid var(--frame); position:relative;
+    box-shadow:inset 0 -3px 0 rgba(0,0,0,.08);}
+  .avatar::before{content:""; position:absolute; inset:0 0 auto 0; height:12px; background:#4A3828;}
+  .avatar::after{content:""; position:absolute; top:18px; left:8px; width:3px; height:3px; background:#2A2222;
+    box-shadow:10px 0 0 0 #2A2222, 0 8px 0 0 #C96A5A;}
+  .kv{display:flex; justify-content:space-between; padding:2px 0;}
+  .feed{list-style:none;}
+  .feed li{display:flex; gap:8px; padding:2px 0; align-items:flex-start;}
+  .feed .dot{width:6px; height:6px; margin-top:7px; flex:0 0 auto; border:1px solid rgba(0,0,0,.15);}
+  .tchip{background:var(--cream-dim); border:1px solid var(--cream-line); padding:0 5px; margin-right:4px;}
+
+  /* ---------- 对话框 ---------- */
+  .talk{position:relative; margin:6px 0 10px;}
+  .talk .dlg{background:var(--cream); border:4px solid var(--frame);
+    box-shadow:inset 0 0 0 2px var(--accent), 5px 5px 0 rgba(0,0,0,.28);
+    padding:12px 26px 12px 78px; min-height:80px;}
+  .talk .name{position:absolute; top:-13px; left:66px; background:#FFE9A8; border:2px solid var(--frame);
+    padding:0 10px; z-index:2; color:var(--coin);}
+  .talk .who-face{position:absolute; left:12px; bottom:-8px; z-index:2;}
+  .talk .text{min-height:40px;}
+  .talk .more{position:absolute; right:14px; bottom:10px; width:0; height:0;
+    border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid var(--frame);
+    animation:blink 1s steps(2) infinite;}
+  @keyframes blink{50%{opacity:0;}}
+
+  /* ---------- 工具栏 ---------- */
+  .dock{display:flex; gap:6px; justify-content:center; padding:4px 0 6px; flex-wrap:wrap;}
+  .slot{width:44px; height:44px; background:var(--wood); border:3px solid var(--wood-dark);
+    box-shadow:inset 0 0 0 2px var(--soil); cursor:pointer; display:flex; align-items:center; justify-content:center;
+    position:relative;}
+  .slot:hover{box-shadow:inset 0 0 0 2px var(--accent);}
+  .slot .fill{width:20px; height:20px; border:2px solid var(--wood-dark);}
+  .slot .round{width:18px; height:18px; border-radius:50%; background:var(--gold); border:2px solid #B57B14;}
+  .slot .key{position:absolute; right:1px; bottom:0; color:var(--cream-line); font-size:12px;}
+
+  /* ---------- 农场装饰条 ---------- */
+  .farmstrip{display:flex; align-items:flex-end; justify-content:center; gap:26px; padding:6px 0 2px; position:relative;}
+  .chicken{animation:hop 3.4s steps(2) infinite;}
+  @keyframes hop{0%,84%,100%{transform:translateY(0)} 90%{transform:translateY(-5px)}}
+  .firefly{position:absolute; width:3px; height:3px; background:#F7E39B; box-shadow:0 0 0 1px rgba(247,227,155,.35);
+    animation:fly 5s ease-in-out infinite; z-index:1;}
+  @keyframes fly{0%,100%{transform:translate(0,0); opacity:.2}
+    30%{transform:translate(14px,-16px); opacity:1} 60%{transform:translate(-10px,-26px); opacity:.5}}
+
+  /* ---------- 弹窗 ---------- */
+  .overlay{position:fixed; inset:0; background:rgba(20,12,4,.6); display:none; align-items:center; justify-content:center; z-index:120;}
+  .overlay.show{display:flex;}
+  .modal{width:min(580px, 92vw); background:var(--cream); border:4px solid var(--frame);
+    box-shadow:inset 0 0 0 2px var(--accent), 7px 7px 0 rgba(0,0,0,.4); padding:16px 16px 14px 92px; position:relative;}
+  .modal .face{position:absolute; left:14px; top:16px;}
+  .modal h3{font-size:12px; font-weight:400; color:var(--coin); margin-bottom:6px;}
+  .modal .text{min-height:52px;}
+  .modal .row{display:flex; justify-content:flex-end; gap:8px; margin-top:10px;}
+  .cursor::after{content:"▌"; color:var(--coin); animation:blink .8s steps(2) infinite;}
+
+  footer{color:var(--cream-line); text-align:center; padding:8px 0 16px;}
+  ::selection{background:var(--accent); color:#fff;}
+</style>
+</head>
+<body>
+
+<div class="titlebar">
+  <span class="dot r" aria-hidden="true"></span>
+  <span class="dot y" aria-hidden="true"></span>
+  <span class="dot g" aria-hidden="true"></span>
+  <span style="margin-left:6px">szuDesktop <span class="cy">v0.1.2</span> — 内测 · 与深圳大学官方无关</span>
+  <span class="sp"></span>
+  <span class="wbtn" data-say="min" title="最小化">—</span>
+  <span class="wbtn" data-say="max" title="最大化">□</span>
+  <span class="wbtn" data-say="close" title="关闭">×</span>
+</div>
+
+<header class="sky">
+  <span class="star" style="left:4%;top:18%;animation-delay:.2s"></span>
+  <span class="star y" style="left:9%;top:46%;animation-delay:1.1s"></span>
+  <span class="star b" style="left:14%;top:26%;animation-delay:.6s"></span>
+  <span class="star" style="left:19%;top:62%;animation-delay:1.8s"></span>
+  <span class="star p" style="left:25%;top:20%;animation-delay:.9s"></span>
+  <span class="star b" style="left:33%;top:52%;animation-delay:1.4s"></span>
+  <span class="star" style="left:41%;top:16%;animation-delay:2.2s"></span>
+  <span class="star y" style="left:48%;top:38%;animation-delay:.4s"></span>
+  <span class="star" style="left:57%;top:22%;animation-delay:1.6s"></span>
+  <span class="star b" style="left:64%;top:58%;animation-delay:.7s"></span>
+  <span class="star p" style="left:73%;top:32%;animation-delay:2s"></span>
+  <span class="star" style="left:81%;top:14%;animation-delay:1.2s"></span>
+  <span class="star y" style="left:88%;top:44%;animation-delay:.3s"></span>
+  <span class="star" style="left:95%;top:24%;animation-delay:1.9s"></span>
+  <span class="shoot" aria-hidden="true"></span>
+  <span class="moon" aria-hidden="true"></span>
+  <span class="cloud" style="left:6%;top:64%" aria-hidden="true">
+    <svg width="60" height="18" viewBox="0 0 60 18"><rect x="8" y="8" width="44" height="10" fill="#3A4E80"/>
+      <rect x="16" y="2" width="28" height="8" fill="#3A4E80"/><rect x="4" y="12" width="52" height="6" fill="#3A4E80"/></svg>
+  </span>
+  <span class="cloud" style="right:8%;top:70%" aria-hidden="true">
+    <svg width="44" height="14" viewBox="0 0 44 14"><rect x="6" y="6" width="32" height="8" fill="#3A4E80"/>
+      <rect x="12" y="1" width="20" height="7" fill="#3A4E80"/></svg>
+  </span>
+  <svg class="mount" viewBox="0 0 1200 26" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0 26 L0 14 L40 14 L40 8 L80 8 L80 14 L140 14 L140 4 L200 4 L200 12 L260 12 L260 18
+             L340 18 L340 10 L400 10 L400 16 L470 16 L470 6 L540 6 L540 14 L610 14 L610 18 L680 18
+             L680 8 L740 8 L740 14 L820 14 L820 4 L890 4 L890 12 L960 12 L960 16 L1030 16 L1030 8
+             L1100 8 L1100 14 L1200 14 L1200 26 Z" fill="#1E2A46"/>
+  </svg>
+
+  <div class="wrap">
+    <div class="hud">
+      <span class="chip"><span class="ic" style="background:var(--gold)"></span><span id="hud-clock">— · — · —</span></span>
+      <span class="chip"><span class="coin" aria-hidden="true"></span><k>¥</k> 23.50</span>
+      <span class="chip"><span class="ic" style="background:var(--blue)"></span>26°C · 雷阵雨（演示）</span>
+      <span class="chip right"><span class="ic" style="background:var(--ok)"></span>在线 <k>·</k> 教学区</span>
+      <span class="chip">v0.1.2 内测</span>
+    </div>
+
+    <div class="sign">
+      <span class="vine" aria-hidden="true"></span>
+      <span class="nail" style="top:5px;left:6px"></span>
+      <span class="nail" style="top:5px;right:6px"></span>
+      <span class="nail" style="bottom:5px;left:6px"></span>
+      <span class="nail" style="bottom:5px;right:6px"></span>
+      <svg width="30" height="30" viewBox="0 0 28 28" role="img" aria-label="荔枝图标">
+        <rect x="6" y="6" width="16" height="16" fill="#E04848"/>
+        <rect x="9" y="13" width="3" height="3" fill="#B03030"/><rect x="15" y="17" width="3" height="3" fill="#B03030"/>
+        <rect x="8" y="8" width="3" height="3" fill="#F89898"/>
+        <rect x="11" y="2" width="8" height="4" fill="#48A848"/><rect x="19" y="4" width="4" height="4" fill="#639922"/>
+      </svg>
+      <h1>szuDesktop</h1>
+    </div>
+
+    <nav class="tabs" id="tabs" aria-label="页面标签">
+      <span class="tab active" data-view="overview"><span class="ic" style="background:var(--blue)"></span>概览</span>
+      <span class="tab" data-view="network"><span class="ic" style="background:var(--ok)"></span>校园网</span>
+      <span class="tab" data-view="jw"><span class="ic" style="background:var(--gold)"></span>教务</span>
+      <span class="tab" data-view="lib"><span class="ic" style="background:var(--bad)"></span>图书馆</span>
+      <span class="tab" data-view="card"><span class="ic" style="background:var(--teal)"></span>一卡通</span>
+      <span class="tab" data-view="sq"><span class="ic" style="background:var(--purple)"></span>服务<span class="badge" id="svc-count">0</span></span>
+      <span class="tab" data-view="set"><span class="ic" style="background:var(--muted)"></span>设置</span>
+    </nav>
+  </div>
+</header>
+
+<div class="fence" aria-hidden="true"></div>
+
+<main class="wrap">
+  <span class="firefly" style="left:2%;top:120px;animation-delay:0s"></span>
+  <span class="firefly" style="left:88%;top:260px;animation-delay:1.2s"></span>
+  <span class="firefly" style="left:6%;top:520px;animation-delay:2.4s"></span>
+  <span class="firefly" style="left:92%;top:640px;animation-delay:.8s"></span>
+  <span class="firefly" style="left:48%;top:760px;animation-delay:1.7s"></span>
+
+  <!-- 概览 -->
+  <section id="view-overview" class="stage">
+    <aside class="panel">
+      <h2><span class="tab-ic" style="background:var(--blue)"></span>服务清单
+        <span class="chipmini">共 <b id="svc-total" class="cb">0</b> 项</span></h2>
+      <hr class="rule">
+      <input class="search" id="svc-search" type="text" placeholder="搜索服务…" aria-label="搜索服务">
+      <div id="svc-groups"></div>
+      <hr class="rule">
+      <button class="btn block" data-say="add">＋ 添加服务</button>
+      <button class="btn ghost block" style="margin-top:8px" data-say="sort">⇅ 调整顺序</button>
+    </aside>
+
+    <section class="panel">
+      <h2><span class="tab-ic" style="background:var(--ok)"></span>任务 · <span class="cg">保持在线</span>
+        <span class="chipmini">进行中</span></h2>
+      <hr class="rule">
+      <ul class="quest">
+        <li><span class="box done" aria-hidden="true"></span>已连接 <span class="cb">SZU_WLAN</span></li>
+        <li><span class="box done" aria-hidden="true"></span>认证区域：<span class="cy">教学区（SRun）</span></li>
+        <li><span class="box" aria-hidden="true"></span><span class="cm">流量数据待同步（本周）</span></li>
+      </ul>
+
+      <div class="barrow"><span class="cm">今日在线</span><span><b class="cg">3 小时 12 分</b> <span class="cm">/ 8 小时</span></span></div>
+      <div class="bar"><i style="width:40%;background:var(--ok)"></i></div>
+      <div class="barrow"><span class="cm">本月流量</span><span><b class="cb">12.4 GB</b> <span class="cm">/ 40 GB</span></span></div>
+      <div class="bar"><i style="width:31%;background:var(--blue)"></i></div>
+
+      <hr class="rule">
+      <div class="stats">
+        <div class="stat"><div class="k">IP 地址</div><div class="v cb">10.20.30.42</div></div>
+        <div class="stat"><div class="k">网关</div><div class="v cm">172.30.255.1</div></div>
+        <div class="stat"><div class="k">信号</div><div class="v cg">良好 <span class="sig"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span></div></div>
+        <div class="stat"><div class="k">延迟</div><div class="v cy">18 ms</div></div>
+      </div>
+
+      <hr class="rule">
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <button class="btn" id="btn-login">一键登录</button>
+        <button class="btn ghost" id="btn-diag">断线诊断</button>
+        <label class="switch"><input type="checkbox" id="sw-auto" checked><span class="track"></span>
+          <span class="cm">自动重连</span></label>
+      </div>
+
+      <hr class="rule">
+      <h2><span class="tab-ic" style="background:var(--leaf)"></span>服务农田
+        <span class="chipmini"><b class="cg">1</b> 已开垦 / <b id="plot-todo" class="cm">0</b> 待开垦</span></h2>
+      <div class="farm" id="farm"></div>
+    </section>
+
+    <aside>
+      <div class="panel">
+        <div class="who">
+          <span class="avatar" aria-hidden="true"></span>
+          <div>
+            <div><b class="cy">柯西</b> <span class="cm">· 大三</span></div>
+            <div class="cm">卡号 <span class="cb">2023***21</span></div>
+          </div>
+        </div>
+        <hr class="rule">
+        <div class="barrow"><span class="cm">套餐剩余</span><span><b class="cg">18 天</b></span></div>
+        <div class="bar"><i style="width:60%;background:var(--ok)"></i></div>
+        <div class="barrow"><span class="cm">账户余额</span><span><b class="cy">¥ 23.50</b></span></div>
+        <div class="bar"><i style="width:14%;background:var(--gold)"></i></div>
+      </div>
+
+      <div class="panel" style="margin-top:14px;">
+        <h2><span class="tab-ic" style="background:var(--gold)"></span>今日课表</h2>
+        <hr class="rule">
+        <ul class="feed">
+          <li><span class="dot" style="background:var(--blue)"></span><span class="tchip cb">08:00</span>高等数学 · <span class="cm">A302</span></li>
+          <li><span class="dot" style="background:var(--teal)"></span><span class="tchip ct">10:00</span>数据结构 · <span class="cm">B105</span></li>
+          <li><span class="dot" style="background:var(--purple)"></span><span class="tchip cp">14:30</span>体育课 · <span class="cm">田径场</span></li>
+        </ul>
+      </div>
+
+      <div class="panel" style="margin-top:14px;">
+        <h2><span class="tab-ic" style="background:var(--accent)"></span>告示板</h2>
+        <hr class="rule">
+        <ul class="feed">
+          <li><span class="dot" style="background:var(--gold)"></span>9 月套餐续费已开放</li>
+          <li><span class="dot" style="background:var(--bad)"></span>图书馆 <span class="cr">9.20</span> 闭馆检修</li>
+          <li><span class="dot" style="background:var(--ok)"></span>校车时刻表已更新</li>
+        </ul>
+      </div>
+
+      <div class="panel" style="margin-top:14px;">
+        <h2><span class="tab-ic" style="background:var(--purple)"></span>日志</h2>
+        <hr class="rule">
+        <ul class="feed">
+          <li><span class="dot" style="background:var(--ok)"></span>登录了 <span class="cb">SZU_WLAN</span> · 昨天</li>
+          <li><span class="dot" style="background:var(--blue)"></span>更新到 <span class="cy">v0.1.2</span> · 周一</li>
+          <li><span class="dot" style="background:var(--muted)"></span>自动重连生效 <span class="cg">2</span> 次</li>
+        </ul>
+      </div>
+    </aside>
+  </section>
+
+  <!-- 占位页 -->
+  <section id="view-placeholder" class="panel" style="display:none; margin:2px 0 14px;">
+    <h2><span class="tab-ic" style="background:var(--accent)"></span><span id="ph-title">装修中</span></h2>
+    <hr class="rule">
+    <p id="ph-text" class="cm"></p>
+  </section>
+
+  <!-- 对话框 -->
+  <div class="talk">
+    <span class="name">荔宝</span>
+    <span class="who-face" aria-hidden="true">
+      <svg width="54" height="62" viewBox="0 0 52 60" role="img" aria-label="荔宝：像素荔枝精灵">
+        <rect x="12" y="8" width="10" height="6" fill="#48A848"/><rect x="22" y="12" width="5" height="4" fill="#639922"/>
+        <rect x="10" y="18" width="32" height="6" fill="#E04848"/>
+        <rect x="6" y="24" width="40" height="12" fill="#E04848"/>
+        <rect x="4" y="36" width="44" height="14" fill="#E04848"/>
+        <rect x="6" y="50" width="40" height="8" fill="#E04848"/>
+        <rect x="12" y="14" width="6" height="5" fill="#48A848"/>
+        <rect x="10" y="30" width="4" height="4" fill="#B03030"/><rect x="38" y="34" width="4" height="4" fill="#B03030"/>
+        <rect x="16" y="44" width="4" height="4" fill="#B03030"/><rect x="42" y="26" width="4" height="4" fill="#B03030"/>
+        <rect x="8" y="28" width="4" height="4" fill="#F89898"/>
+        <rect x="14" y="34" width="7" height="7" fill="#FFFFFF"/><rect x="32" y="34" width="7" height="7" fill="#FFFFFF"/>
+        <rect x="17" y="37" width="3" height="3" fill="#2A2222"/><rect x="35" y="37" width="3" height="3" fill="#2A2222"/>
+        <rect x="22" y="46" width="8" height="2" fill="#7A2A2A"/>
+      </svg>
+    </span>
+    <div class="dlg">
+      <div class="text cursor" id="talk-text"></div>
+      <span class="more" aria-hidden="true"></span>
+    </div>
+  </div>
+
+  <!-- 工具栏 -->
+  <div class="dock" id="dock" aria-label="快捷工具栏"></div>
+
+  <!-- 农场装饰条 -->
+  <div class="farmstrip" aria-hidden="true">
+    <svg width="120" height="46" viewBox="0 0 120 46">
+      <rect x="10" y="30" width="46" height="8" fill="#6B4423"/>
+      <rect x="14" y="38" width="4" height="8" fill="#4A2C12"/><rect x="48" y="38" width="4" height="8" fill="#4A2C12"/>
+      <rect x="14" y="10" width="34" height="6" fill="#C9A166"/><rect x="20" y="16" width="34" height="4" fill="#E8C48E"/>
+      <rect x="18" y="20" width="30" height="4" fill="#C9A166"/>
+      <rect x="24" y="4" width="16" height="8" fill="#4C9838"/><rect x="30" y="10" width="4" height="4" fill="#4C9838"/>
+    </svg>
+    <svg class="chicken" width="42" height="40" viewBox="0 0 42 40" role="img" aria-label="小鸡">
+      <rect x="10" y="12" width="22" height="18" fill="#FFF6E0"/>
+      <rect x="26" y="16" width="12" height="12" fill="#FFF6E0"/>
+      <rect x="12" y="6" width="4" height="6" fill="#E04848"/><rect x="18" y="4" width="4" height="8" fill="#E04848"/>
+      <rect x="34" y="18" width="6" height="4" fill="#F2B33D"/>
+      <rect x="28" y="18" width="3" height="3" fill="#2A2222"/>
+      <rect x="14" y="30" width="4" height="6" fill="#F2B33D"/><rect x="24" y="30" width="4" height="6" fill="#F2B33D"/>
+    </svg>
+    <svg width="56" height="36" viewBox="0 0 56 36">
+      <rect x="8" y="18" width="40" height="18" fill="#4C9838"/>
+      <rect x="2" y="24" width="52" height="12" fill="#3E7C2C"/>
+      <rect x="14" y="14" width="28" height="6" fill="#63C164"/>
+      <rect x="18" y="22" width="4" height="4" fill="#E04848"/><rect x="32" y="26" width="4" height="4" fill="#F2B33D"/>
+      <rect x="26" y="18" width="4" height="4" fill="#D86A9A"/>
+    </svg>
+    <svg width="40" height="26" viewBox="0 0 40 26">
+      <rect x="4" y="12" width="32" height="14" fill="#8A8A82"/>
+      <rect x="0" y="18" width="40" height="8" fill="#6E6E66"/>
+      <rect x="10" y="6" width="20" height="8" fill="#A8A8A0"/>
+    </svg>
+  </div>
+
+  <footer>szuDesktop 原型 · 与深圳大学官方无关 · 按 <span class="cy">1–4</span> 用快捷键 · <span class="cy">Esc</span> 关弹窗 · 荔宝负责陪聊</footer>
+</main>
+
+<!-- 弹窗 -->
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <span class="face" aria-hidden="true">
+      <svg width="46" height="52" viewBox="0 0 52 60" role="img" aria-label="荔宝">
+        <rect x="12" y="8" width="10" height="6" fill="#48A848"/><rect x="22" y="12" width="5" height="4" fill="#639922"/>
+        <rect x="10" y="18" width="32" height="6" fill="#E04848"/>
+        <rect x="6" y="24" width="40" height="12" fill="#E04848"/>
+        <rect x="4" y="36" width="44" height="14" fill="#E04848"/>
+        <rect x="6" y="50" width="40" height="8" fill="#E04848"/>
+        <rect x="12" y="14" width="6" height="5" fill="#48A848"/>
+        <rect x="10" y="30" width="4" height="4" fill="#B03030"/><rect x="38" y="34" width="4" height="4" fill="#B03030"/>
+        <rect x="16" y="44" width="4" height="4" fill="#B03030"/><rect x="42" y="26" width="4" height="4" fill="#B03030"/>
+        <rect x="14" y="34" width="7" height="7" fill="#FFFFFF"/><rect x="32" y="34" width="7" height="7" fill="#FFFFFF"/>
+        <rect x="17" y="37" width="3" height="3" fill="#2A2222"/><rect x="35" y="37" width="3" height="3" fill="#2A2222"/>
+        <rect x="22" y="46" width="8" height="2" fill="#7A2A2A"/>
+      </svg>
+    </span>
+    <h3 id="modal-title">荔宝</h3>
+    <div class="text" id="modal-text"></div>
+    <div class="row"><button class="btn" id="modal-ok">知道了</button></div>
+  </div>
+</div>
+
+<script>
+/* ============ 服务清单：想加什么改这里 ============
+   status: "planted"（已接好）| "todo"（占位）
+   group : 左栏分组名      say: 点击后荔宝说的话（支持 [[b|上色]] 语法） */
+const SERVICE = [
+  { id:"net",   name:"校园网认证", color:"#4A7FB5", status:"planted", group:"常用",
+    say:"点[[g|一键登录]]试试。现在是[[y|演示模式]]，还没接 szunet 内核。" },
+  { id:"card",  name:"一卡通余额", color:"#C97C0A", status:"todo", group:"常用",
+    say:"余额在右上角显示了。[[y|交易流水]]后面补上。" },
+  { id:"score", name:"成绩查询",   color:"#F2B33D", status:"todo", group:"教务",
+    say:"成绩单还在地里长着，急也没用。" },
+  { id:"course",name:"课表",       color:"#6A5ACD", status:"todo", group:"教务",
+    say:"课表已经画了个[[p|今日课表]]的小卡在右栏，完整版等教务接口。" },
+  { id:"lib",   name:"图书馆",     color:"#C84B3A", status:"todo", group:"校园",
+    say:"座位系统还没接进来。先去三楼占个[[b|靠窗]]的位置？" },
+  { id:"room",  name:"空教室",     color:"#2E8B7A", status:"todo", group:"校园",
+    say:"空教室数据要[[t|教务处]]配合，正在挖通道。" },
+  { id:"bus",   name:"校车时刻",   color:"#9A7B54", status:"todo", group:"校园",
+    say:"校车时刻表在赶来的路上了……大概吧。" },
+  { id:"mail",  name:"校园邮箱",   color:"#6A5ACD", status:"todo", group:"校园",
+    say:"邮箱接入考虑中。深大邮箱的 [[p|IMAP]] 有点脾气。" },
+  { id:"ele",   name:"elearning",  color:"#4A7FB5", status:"todo", group:"校园",
+    say:"elearning 的接口……先让它再长一长。" },
+  { id:"pe",    name:"体测预约",   color:"#D86A9A", status:"todo", group:"待定",
+    say:"[[r|体测]]这种事，工具帮不了你，跑就完了。" },
+];
+
+const SAY = {
+  add:   "想好要种什么了？改 index.html 里的 [[g|SERVICE]] 数组，或者直接告诉我，马上开垦。",
+  sort:  "拖动排序还没做。你先想好[[y|哪几个工具最常用]]，我来排。",
+  login: "演示模式：还没接 szunet 内核。接上之后，这里就是真的[[g|一键登录]]。",
+  diag:  "诊断逻辑在 szuNet CLI 里已经能跑了（[[b|szunet diag]]），就差接进来。",
+  close: "别关！这只是个[[y|网页原型]]，右上角的叉是装饰。",
+  min:   "最小化也先别按，假的。",
+  max:   "已经很大了。",
+  slotEmpty:"[[m|空的工具槽]]。等工具想好了就放这儿。",
+  slotNet:  "校园网快捷入口。工具栏想放什么，以后再定。",
+  ph: {
+    network:"校园网的操作台放这页：[[g|状态]]、[[b|时长]]、流量曲线。现在先在「概览」里用。",
+    jw:"教务页：[[p|课表]]、[[y|成绩]]、考试安排。想好布局告诉荔宝。",
+    lib:"图书馆页：[[r|座位预约]]、借书记录、到期提醒。",
+    card:"一卡通页：[[y|流水]]、充值、消费统计。",
+    sq:"服务广场：所有能装的服务都摆在这里挑。",
+    set:"设置页：开机自启、代理直连规则、[[m|深色模式]]（农场夜景已经是了）。"
+  }
+};
+
+/* ---------- 上色文字 + 打字机 ---------- */
+const COLORS = {b:"#2E6FA8", g:"#4A8C2A", y:"#C97C0A", r:"#B8402F", t:"#2E8B7A", p:"#6A5ACD", m:"#9A7B54"};
+function parseRich(text){
+  const out = [], re = /\[\[(\w)\|(.*?)\]\]/g;
+  let last = 0, m;
+  while ((m = re.exec(text))){
+    if (m.index > last) out.push({t:text.slice(last, m.index), c:null});
+    out.push({t:m[2], c:COLORS[m[1]] || null});
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push({t:text.slice(last), c:null});
+  return out;
+}
+function renderPrefix(tokens, n, cursor){
+  let left = n, html = "";
+  for (const tk of tokens){
+    if (left <= 0) break;
+    const s = tk.t.slice(0, left);
+    html += tk.c ? `<span style="color:${tk.c}">${s}</span>` : s;
+    left -= s.length;
+  }
+  return html + (cursor ? '<span class="cursor"></span>' : "");
+}
+let typeTimer = null;
+function type(el, text){
+  clearInterval(typeTimer);
+  const tokens = parseRich(text);
+  const total = tokens.reduce((n, x) => n + x.t.length, 0);
+  let i = 0;
+  typeTimer = setInterval(() => {
+    i += 1;
+    el.innerHTML = renderPrefix(tokens, i, i < total);
+    if (i >= total) clearInterval(typeTimer);
+  }, 26);
+}
+
+/* ---------- 左栏列表 ---------- */
+const groupsEl = document.getElementById("svc-groups");
+function renderList(filter){
+  groupsEl.innerHTML = "";
+  const hit = SERVICE.filter(s => !filter || s.name.toLowerCase().includes(filter.toLowerCase()));
+  const seen = [];
+  hit.forEach(s => { if (!seen.includes(s.group)) seen.push(s.group); });
+  if (!hit.length){
+    groupsEl.innerHTML = '<p class="cm" style="padding:6px 2px">没找到。换个词试试？</p>';
+    return;
+  }
+  seen.forEach(g => {
+    const h = document.createElement("div");
+    h.className = "group";
+    h.textContent = g;
+    const ul = document.createElement("ul");
+    ul.className = "svc-list";
+    hit.filter(s => s.group === g).forEach(s => {
+      const li = document.createElement("li");
+      if (s.status === "planted") li.classList.add("active");
+      li.innerHTML = `<span class="ic" style="background:${s.color}"></span>${s.name}
+        <span class="tag ${s.status === "planted" ? "on" : "off"}">${s.status === "planted" ? "已接好" : "占位"}</span>`;
+      li.onclick = () => modal(s.name, s.say);
+      ul.appendChild(li);
+    });
+    groupsEl.appendChild(h);
+    groupsEl.appendChild(ul);
+  });
+}
+renderList("");
+document.getElementById("svc-search").addEventListener("input", e => renderList(e.target.value));
+document.getElementById("svc-total").textContent = SERVICE.length;
+document.getElementById("svc-count").textContent = SERVICE.length;
+document.getElementById("plot-todo").textContent = SERVICE.filter(s => s.status === "todo").length;
+
+/* ---------- 服务农田 ---------- */
+const farm = document.getElementById("farm");
+SERVICE.forEach(s => {
+  const d = document.createElement("div");
+  d.className = "plot" + (s.status === "planted" ? " sprout" : "");
+  d.innerHTML = s.status === "planted"
+    ? `<div class="furrow"></div><div class="furrow"></div><div class="name">${s.name}</div><div class="state on">已开垦</div>`
+    : `<div class="qm">?</div><div class="name">${s.name}</div><div class="state off">待开垦</div>`;
+  d.onclick = () => modal(s.name, s.say);
+  farm.appendChild(d);
+});
+
+/* ---------- 工具栏 + 数字键 ---------- */
+const dock = document.getElementById("dock");
+const dockIcons = [
+  { html:'<span class="fill" style="background:var(--blue)"></span>', say:SAY.slotNet },
+  { html:'<span class="fill" style="background:var(--bad)"></span>',  say:SAY.lib },
+  { html:'<span class="round"></span>',                               say:SAY.card },
+  { html:'<span class="fill" style="background:var(--teal)"></span>', say:SAY.ph.card },
+];
+for (let i = 0; i < 12; i++){
+  const s = document.createElement("span");
+  s.className = "slot";
+  if (dockIcons[i]){
+    s.innerHTML = dockIcons[i].html + `<span class="key">${i + 1}</span>`;
+    s.dataset.say = i;
+    s.onclick = () => modal("工具槽 " + (i + 1), dockIcons[i].say);
+  } else {
+    s.onclick = () => modal("空工具槽", SAY.slotEmpty);
+  }
+  dock.appendChild(s);
+}
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape"){ closeModal(); return; }
+  const n = parseInt(e.key, 10);
+  if (n >= 1 && n <= dockIcons.length) modal("工具槽 " + n, dockIcons[n - 1].say);
+});
+
+/* ---------- 标签切换 ---------- */
+const tabs = document.querySelectorAll("#tabs .tab");
+const vOverview = document.getElementById("view-overview");
+const vPh = document.getElementById("view-placeholder");
+tabs.forEach(t => t.addEventListener("click", () => {
+  tabs.forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  if (t.dataset.view === "overview"){
+    vOverview.style.display = "grid";
+    vPh.style.display = "none";
+  } else {
+    vOverview.style.display = "none";
+    vPh.style.display = "block";
+    document.getElementById("ph-title").textContent = t.textContent.trim().replace(/\d+$/, "") + " · 装修中";
+    document.getElementById("ph-text").textContent = (SAY.ph[t.dataset.view] || "这一页还在装修。").replace(/\[\[\w\|(.*?)\]\]/g, "$1");
+    say(SAY.ph[t.dataset.view] || "这一页还在装修。");
+  }
+}));
+
+/* ---------- 弹窗 ---------- */
+const overlay = document.getElementById("overlay");
+const modalText = document.getElementById("modal-text");
+function modal(title, text){
+  document.getElementById("modal-title").textContent = title;
+  type(modalText, text);
+  overlay.classList.add("show");
+}
+function closeModal(){ overlay.classList.remove("show"); clearInterval(typeTimer); modalText.textContent = ""; }
+document.getElementById("modal-ok").onclick = closeModal;
+overlay.addEventListener("click", e => { if (e.target === overlay) closeModal(); });
+
+/* ---------- 底部对话 ---------- */
+const talkText = document.getElementById("talk-text");
+function say(text){ type(talkText, text); }
+say("柯西，欢迎回到农场！[[b|SZU_WLAN]] 长势喜人，[[y|教学区]]信号满格，是个适合写代码的夜晚。想好把哪些工具种进[[g|农田]]，随时叫我。");
+
+/* ---------- 各处按钮 ---------- */
+document.getElementById("btn-login").onclick = () => modal("一键登录", SAY.login);
+document.getElementById("btn-diag").onclick  = () => modal("断线诊断", SAY.diag);
+document.getElementById("sw-auto").addEventListener("change", e =>
+  modal("自动重连", e.target.checked ? "已打开。接上内核后会每 [[y|15 秒]]检查一次，掉了自动补登。" : "已关闭。手动点[[g|一键登录]]就行。"));
+document.querySelectorAll("[data-say]").forEach(el =>
+  el.addEventListener("click", () => modal("荔宝", SAY[el.dataset.say] || "……")));
+
+/* ---------- HUD 时钟 ---------- */
+function tick(){
+  const d = new Date();
+  const seasons = ["冬","冬","春","春","春","夏","夏","夏","秋","秋","秋","冬"];
+  const weeks = ["日","一","二","三","四","五","六"];
+  const p = n => String(n).padStart(2, "0");
+  document.getElementById("hud-clock").textContent =
+    `${seasons[d.getMonth()]} · ${d.getMonth() + 1}月${d.getDate()}日 · 周${weeks[d.getDay()]} · ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+tick(); setInterval(tick, 30000);
+</script>
+</body>
+</html>
