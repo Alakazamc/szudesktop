@@ -1,0 +1,20 @@
+# 编译产物
+/dist/
+/szunet
+/szunet.exe
+*.exe
+*.test
+*.out
+
+# 本地配置：里面可能有账号信息，绝对不要提交
+.szunet/
+config.json
+credentials.json
+.env
+
+# 编辑器 / 系统
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

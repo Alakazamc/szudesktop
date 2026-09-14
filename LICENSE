@@ -1,0 +1,40 @@
+MIT License
+
+Copyright (c) 2026 szuNet contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+第三方代码声明 / Third-party notices
+
+本项目 internal/crypto/xencode.go 中的 XXTEA（xEncode）实现改写自
+Sleepstars/SZU-login（https://github.com/Sleepstars/SZU-login），
+该项目采用 MIT License，原始版权声明如下：
+
+  Copyright 2021 E99p1ant. All rights reserved.
+  Use of this source code is governed by a MIT-style
+  license that can be found in the LICENSE file.
+
+Sleepstars/SZU-login 是 vidar-team/srun-login
+（https://github.com/vidar-team/srun-login）的分支，同样采用 MIT License。
+
+深澜协议的完整加密流程（challenge、HMAC-MD5、xEncode、自定义 Base64、
+SHA1 chksum）来自深澜门户页面自带的 JavaScript，本项目只是用 Go 重新实现，
+未直接引用任何 GPL / AGPL 授权的代码。
