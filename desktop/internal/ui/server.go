@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"os/exec"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -141,12 +142,39 @@ func (s *Server) Run() error {
 	return srv.Serve(ln)
 }
 
+// routes 注册路由。
+//
+// ⚠️ 静态资源这条规则别动，改了会踩一个很隐蔽的坑。
+//
+// 同一个页面有两种打开方式，对相对路径的解析基准不一样：
+//
+//  1. 双击页面（file://）：基准是 desktop/ 目录，旁边就躺着 assets/，
+//     所以页面里写 assets/art/m1.png 是对的。
+//  2. 起服务访问 http://127.0.0.1:PORT/：二进制里嵌的根已经是 assets/ 那一层了
+//     （上面 fs.Sub 把前缀剥了），再收到 /assets/art/m1.png 会去找
+//     assets/assets/art/m1.png —— 404。
+//
+// 症状特别难看：本地开页面一切正常，一跑起来满屏破图，但浏览器控制台
+// 一句错都不报，看着像"图坏了"。这次就是这么找了两小时的。
+//
+// 解法：/assets/ 前缀在服务端统一剥掉再交给静态服务，两条路都通，
+// 页面里那套相对路径一个字符都不用改。
 func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 	fileServer := http.FileServer(http.FS(static))
 
-	// 根路径直接给 index.html
+	// /assets/xxx -> 剥掉前缀 -> 当 xxx 处理
+	// 剥完 r.URL.Path 就是 assets 里那一层的路径，正好对上 embed 的根
+	assetsPrefix := http.StripPrefix("/assets", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "" {
+			r.URL.Path = "/"
+		}
+		fileServer.ServeHTTP(w, r)
+	}))
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
+		p := r.URL.Path
+		switch {
+		case p == "/" || p == "/index.html":
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			data, err := fs.ReadFile(static, "index.html")
 			if err != nil {
@@ -154,6 +182,9 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 				return
 			}
 			_, _ = w.Write(data)
+			return
+		case p == "/assets" || strings.HasPrefix(p, "/assets/"):
+			assetsPrefix.ServeHTTP(w, r)
 			return
 		}
 		fileServer.ServeHTTP(w, r)

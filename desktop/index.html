@@ -37,6 +37,13 @@
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   html{font-size:12px;}
+  /* 游戏原版木质指针。hotspot 0 0 = 箭头尖在左上角；
+     后面一定要跟一个 auto，不然图片加载不出来时整个页面没有光标。 */
+  body{cursor:url("assets/art/coursor.png") 0 0, auto;}
+  /* 可点的东西换成"手"的感觉：指针放大一点，视觉上就是"按下去" */
+  a,button,.btn,.tab,label,.svc-list li,.wbtn,.switch,.plot{cursor:url("assets/art/coursor.png") 0 0, pointer;}
+  /* 文本输入处保留系统的 I 形光标，木指针插不进文字里 */
+  input,textarea{cursor:text;}
   body{
     font-family:var(--pix);
     font-size:12px; line-height:1.7; color:var(--ink); position:relative;
@@ -81,9 +88,12 @@
   .titlebar .dot.r{background:#E04848;} .titlebar .dot.y{background:var(--gold); border-color:#8A6A10;}
   .titlebar .dot.g{background:#63C164; border-color:#2E7A2E;}
   .titlebar .sp{flex:1;}
-  .titlebar .wbtn{width:16px; height:16px; background:var(--wood); border:2px solid #2A1810;
-    display:inline-flex; align-items:center; justify-content:center; cursor:pointer; color:var(--cream);}
-  .titlebar .wbtn:hover{background:var(--orange);}
+  /* 窗口按钮换成游戏原版贴图（关闭/最大化），加载不出来时下面的字还在 */
+  .titlebar .wbtn{width:18px; height:18px; background:var(--wood); border:2px solid #2A1810;
+    display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
+    color:var(--cream); font-size:10px; line-height:1; overflow:hidden;}
+  .titlebar .wbtn img{width:18px; height:18px; display:block; image-rendering:pixelated;}
+  .titlebar .wbtn:hover{background:var(--orange); filter:brightness(1.15);}
 
   /* ---------- 夜空 ---------- */
   .sky{background:linear-gradient(180deg, var(--night-2) 0 44%, var(--night) 44% 100%);
@@ -97,8 +107,21 @@
     box-shadow:-6px 0 0 1px rgba(255,248,224,.5); animation:shoot 9s linear infinite; z-index:0;}
   @keyframes shoot{0%,86%{transform:translate(0,0); opacity:0} 88%{opacity:1}
     100%{transform:translate(1360px,220px); opacity:0}}
-  .sky .cloud{position:absolute; z-index:0; opacity:.9;}
+  .sky .cloud{position:absolute; z-index:0; opacity:.9; pointer-events:none;}
+  .sky .cloud img{width:100%; height:auto; display:block; image-rendering:pixelated;
+    /* 云是白底的，压成夜色再降亮度，才不会在夜空里发白 */
+    filter:brightness(.42) saturate(.55) sepia(.35) hue-rotate(180deg);}
   .sky .mount{position:absolute; bottom:0; left:0; right:0; height:26px; z-index:0;}
+  /* 远处飞过的鸟（原版 GIF，本身就是逐帧动画，不用再加 CSS 动） */
+  .sky .bird{position:absolute; width:22px; z-index:0; opacity:.5; pointer-events:none;
+    image-rendering:pixelated; animation:flyBy 46s linear infinite;}
+  .sky .bird.b2{width:16px; top:64%; opacity:.35; animation-duration:61s; animation-delay:-19s;}
+  @keyframes flyBy{
+    0%{transform:translateX(-40px); opacity:0}
+    6%{opacity:.5}
+    94%{opacity:.5}
+    100%{transform:translateX(760px); opacity:0}
+  }
   .sign,.tabs,.hud{position:relative; z-index:1;}
 
   /* ---------- HUD ---------- */
@@ -179,13 +202,36 @@
 
   /* ---------- 标签栏 ---------- */
   .tabs{background:var(--wood); border:3px solid var(--wood-dark); display:flex; gap:4px; padding:3px;
-    box-shadow:inset 0 2px 0 var(--wood-lite);}
+    box-shadow:inset 0 2px 0 var(--wood-lite); flex-wrap:wrap;}
   .tab{flex:0 0 auto; padding:3px 14px; background:var(--wood-mid); border:2px solid var(--frame);
     color:var(--cream); cursor:pointer; display:flex; gap:6px; align-items:center;}
   .tab .ic{width:10px; height:10px; border:1px solid var(--wood-dark);}
   .tab:hover{background:#8A5C34;}
   .tab.active{background:var(--cream); color:var(--ink); box-shadow:inset 0 -3px 0 var(--accent);}
   .tab .badge{background:var(--bad); color:#fff; padding:0 4px; line-height:1.4;}
+  /* 换成游戏原版木头告示牌（放大 2 倍，配合 image-rendering:pixelated 保持硬边） */
+  .tabs.art{gap:6px; padding:5px 6px;}
+  .tab.art{padding:0; background:none; border:0; position:relative; width:122px; height:96px;
+    justify-content:center; align-items:center; display:flex;}
+  .tab.art img{width:100%; height:100%; display:block; image-rendering:pixelated;
+    transition:transform .12s steps(2);}
+  /* 中文用像素字体写，贴在牌心的空处（牌心大概在垂直 30%~78% 那一段） */
+  .tab.art .lb{position:absolute; top:53%; left:50%; transform:translate(-50%,-50%);
+    font-size:15px; line-height:1; color:#8A4A2C; letter-spacing:0;
+    text-shadow:1px 1px 0 #FFF0C8, -1px -1px 0 #FFF0C8, 1px -1px 0 #FFF0C8, -1px 1px 0 #FFF0C8;
+    white-space:nowrap; pointer-events:none;}
+  .tab.art .badge{position:absolute; top:14px; right:14px; font-size:11px;
+    background:var(--bad); color:#fff; padding:0 4px; line-height:1.5; border:2px solid var(--frame);}
+  .tab.art:hover img{transform:translateY(-3px);}
+  .tab.art.active img{filter:saturate(1.15) brightness(1.04);}
+  .tab.art.active .lb{color:#5A2A12;}
+  /* 选中的牌子底下垫一条金条，比改图片颜色更显眼 */
+  .tab.art::after{content:""; position:absolute; left:20px; right:20px; bottom:2px; height:4px;
+    background:transparent;}
+  .tab.art.active::after{background:var(--gold); box-shadow:0 0 0 2px var(--frame);}
+  @media (max-width:1080px){ .tab.art{width:96px; height:76px;} .tab.art .lb{font-size:13px;} }
+  @media (max-width:760px){ .tab.art{width:76px; height:60px;} .tab.art .lb{font-size:12px;}
+    .tab.art .badge{top:8px; right:8px; font-size:10px;} }
 
   /* ---------- 面板 ---------- */
   .panel{background:var(--cream); border:4px solid var(--frame);
@@ -210,8 +256,10 @@
   .svc-list li{display:flex; align-items:center; gap:8px; padding:4px 6px; cursor:pointer; border:2px solid transparent;}
   .svc-list li:hover{background:var(--cream-dim);}
   .svc-list li.active{background:#FFE9A8; border-color:var(--accent);}
-  .svc-list .ic{width:14px; height:14px; flex:0 0 auto; border:2px solid var(--wood-dark);
-    image-rendering:pixelated; display:block;}
+  .svc-list .ic{width:22px; height:22px; flex:0 0 auto; image-rendering:pixelated; display:block;
+    filter:drop-shadow(1px 1px 0 rgba(0,0,0,.18));}
+  /* 占位的服务图标压暗，一眼能分出"已接好 / 还没做" */
+  .svc-list li.off .ic{filter:grayscale(.75) opacity(.55);}
   .svc-list .tag{margin-left:auto; padding:0 5px; border:1px solid; }
   .svc-list .tag.on{color:var(--ok); border-color:var(--ok);}
   .svc-list .tag.off{color:var(--muted); border-color:var(--cream-line);}
@@ -272,12 +320,17 @@
 
   /* ---------- 右栏 ---------- */
   .who{display:flex; gap:10px; align-items:center;}
-  .avatar{width:40px; height:40px; flex:0 0 auto; background:#F8C890; border:3px solid var(--frame); position:relative;
-    box-shadow:inset 0 -3px 0 rgba(0,0,0,.08);}
-  .avatar::before{content:""; position:absolute; inset:0 0 auto 0; height:12px; background:#4A3828;}
-  .avatar::after{content:""; position:absolute; top:18px; left:8px; width:3px; height:3px; background:#2A2222;
-    box-shadow:10px 0 0 0 #2A2222, 0 8px 0 0 #C96A5A;}
+  /* 头像用游戏原版立绘。原图 182x173 里还带一块写着名字的木牌，
+     已经裁掉，只剩木框头像 130x132（见 design/crop_face.py）。 */
+  .avatar{width:52px; height:53px; flex:0 0 auto; border:0; background:none;
+    image-rendering:pixelated; display:block;}
   .kv{display:flex; justify-content:space-between; padding:2px 0;}
+  /* 「正在连接内核」的原版木牌。连上内核后由 JS 加上 .hide 收起来 */
+  .sys-loading{text-align:center; padding:2px 0 4px;}
+  .sys-loading img{width:132px; height:auto; image-rendering:pixelated;
+    animation:loadBreath 1.1s steps(2) infinite;}
+  .sys-loading.hide{display:none;}
+  @keyframes loadBreath{0%,100%{opacity:1} 50%{opacity:.55}}
   .feed{list-style:none;}
   .feed li{display:flex; gap:8px; padding:2px 0; align-items:flex-start;}
   .feed .dot{width:6px; height:6px; margin-top:7px; flex:0 0 auto; border:1px solid rgba(0,0,0,.15);}
@@ -305,10 +358,20 @@
   .slot:hover{box-shadow:inset 0 0 0 2px var(--accent);}
   .slot .fill{width:20px; height:20px; border:2px solid var(--wood-dark);}
   .slot .round{width:18px; height:18px; border-radius:50%; background:var(--gold); border:2px solid #B57B14;}
-  .slot .key{position:absolute; right:1px; bottom:0; color:var(--cream-line); font-size:12px;}
+  /* 游戏原版物品图标（100x100 的图缩到 28px，像素感还在） */
+  .slot img{width:28px; height:28px; image-rendering:pixelated; display:block;
+    filter:drop-shadow(1px 1px 0 rgba(0,0,0,.35));}
+  .slot:hover img{transform:translateY(-2px);}
+  .slot .key{position:absolute; right:1px; bottom:0; color:var(--cream-line); font-size:12px;
+    text-shadow:1px 1px 0 rgba(0,0,0,.6);}
 
   /* ---------- 农场装饰条 ---------- */
   .farmstrip{display:flex; align-items:flex-end; justify-content:center; gap:26px; padding:6px 0 2px; position:relative;}
+  /* 游戏原版祝尼魔（从加载图里切出来的单只），轻轻上下浮动 */
+  .junimo{width:34px; height:auto; image-rendering:pixelated;
+    animation:junBounce 2.6s steps(3) infinite;}
+  .junimo.j2{width:28px; animation-duration:3.4s; animation-delay:-1.1s;}
+  @keyframes junBounce{0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)}}
   .chicken{animation:hop 3.4s steps(2) infinite;}
   @keyframes hop{0%,84%,100%{transform:translateY(0)} 90%{transform:translateY(-5px)}}
   .firefly{position:absolute; width:3px; height:3px; background:#F7E39B; box-shadow:0 0 0 1px rgba(247,227,155,.35);
@@ -574,8 +637,8 @@
   <span style="margin-left:6px">szuDesktop <span class="cy">v0.1.2</span> — 内测 · 与深圳大学官方无关</span>
   <span class="sp"></span>
   <span class="wbtn" data-say="min" title="最小化">—</span>
-  <span class="wbtn" data-say="max" title="最大化">□</span>
-  <span class="wbtn" data-say="close" title="关闭">×</span>
+  <span class="wbtn" data-say="max" title="最大化"><img src="assets/art/maximize.png" alt=""></span>
+  <span class="wbtn" data-say="close" title="关闭"><img src="assets/art/close.png" alt=""></span>
 </div>
 
 <header class="sky">
@@ -596,6 +659,8 @@
   <span class="aurora" aria-hidden="true"></span>
   <span class="shoot" aria-hidden="true"></span>
   <span class="moon" aria-hidden="true"></span>
+  <img class="bird" src="assets/art/bird.gif" alt="" aria-hidden="true" style="top:56%">
+  <img class="bird b2" src="assets/art/bird.gif" alt="" aria-hidden="true">
 
   <!-- 星座：几颗星连成线，纯装饰 -->
   <svg class="conste" style="left:58%;top:8%" width="86" height="52" viewBox="0 0 43 26" aria-hidden="true">
@@ -626,22 +691,15 @@
     <rect x="13" y="22" width="12" height="0" fill="#24502A"/>
   </svg>
 
-  <span class="cloud" style="left:6%;top:64%" aria-hidden="true">
-    <svg width="60" height="18" viewBox="0 0 60 18"><rect x="8" y="8" width="44" height="10" fill="#3A4E80"/>
-      <rect x="16" y="2" width="28" height="8" fill="#3A4E80"/><rect x="4" y="12" width="52" height="6" fill="#3A4E80"/></svg>
-  </span>
-  <span class="cloud" style="right:8%;top:70%" aria-hidden="true">
-    <svg width="44" height="14" viewBox="0 0 44 14"><rect x="6" y="6" width="32" height="8" fill="#3A4E80"/>
-      <rect x="12" y="1" width="20" height="7" fill="#3A4E80"/></svg>
-  </span>
-  <span class="cloud" style="left:31%;top:74%" aria-hidden="true">
-    <svg width="34" height="11" viewBox="0 0 34 11"><rect x="4" y="5" width="26" height="6" fill="#33456F"/>
-      <rect x="9" y="1" width="16" height="5" fill="#33456F"/></svg>
-  </span>
-  <span class="cloud" style="right:33%;top:12%" aria-hidden="true">
-    <svg width="28" height="9" viewBox="0 0 28 9"><rect x="3" y="4" width="22" height="5" fill="#33456F"/>
-      <rect x="8" y="0" width="12" height="5" fill="#33456F"/></svg>
-  </span>
+  <!-- 云：游戏原版云朵贴图，压暗混入夜色 -->
+  <span class="cloud" style="left:4%;top:58%;width:120px" aria-hidden="true">
+    <img src="assets/art/cloud3.png" alt=""></span>
+  <span class="cloud" style="right:6%;top:64%;width:104px" aria-hidden="true">
+    <img src="assets/art/cloud4.png" alt=""></span>
+  <span class="cloud" style="left:27%;top:70%;width:96px;opacity:.7" aria-hidden="true">
+    <img src="assets/art/cloud4.png" alt=""></span>
+  <span class="cloud" style="right:30%;top:6%;width:150px;opacity:.55" aria-hidden="true">
+    <img src="assets/art/cloud3.png" alt=""></span>
   <span class="star" style="left:2%;top:8%;animation-delay:.5s"></span>
   <span class="star b" style="left:11%;top:70%;animation-delay:2.4s"></span>
   <span class="star p" style="left:37%;top:8%;animation-delay:1.3s"></span>
@@ -681,14 +739,21 @@
       <h1>szuDesktop</h1>
     </div>
 
-    <nav class="tabs" id="tabs" aria-label="页面标签">
-      <span class="tab active" data-view="overview"><span class="ic" style="background:var(--blue)"></span>概览</span>
-      <span class="tab" data-view="network"><span class="ic" style="background:var(--ok)"></span>校园网</span>
-      <span class="tab" data-view="jw"><span class="ic" style="background:var(--gold)"></span>教务</span>
-      <span class="tab" data-view="lib"><span class="ic" style="background:var(--bad)"></span>图书馆</span>
-      <span class="tab" data-view="card"><span class="ic" style="background:var(--teal)"></span>一卡通</span>
-      <span class="tab" data-view="sq"><span class="ic" style="background:var(--purple)"></span>服务<span class="badge" id="svc-count">0</span></span>
-      <span class="tab" data-view="set"><span class="ic" style="background:var(--muted)"></span>设置</span>
+    <nav class="tabs art" id="tabs" aria-label="页面标签">
+      <span class="tab art active" data-view="overview" title="概览">
+        <img src="assets/art/m1.png" alt=""><span class="lb">概览</span></span>
+      <span class="tab art" data-view="network" title="校园网">
+        <img src="assets/art/m2.png" alt=""><span class="lb">校园网</span></span>
+      <span class="tab art" data-view="jw" title="教务">
+        <img src="assets/art/m3.png" alt=""><span class="lb">教务</span></span>
+      <span class="tab art" data-view="lib" title="图书馆">
+        <img src="assets/art/m4.png" alt=""><span class="lb">图书馆</span></span>
+      <span class="tab art" data-view="card" title="一卡通">
+        <img src="assets/art/m1.png" alt=""><span class="lb">一卡通</span></span>
+      <span class="tab art" data-view="sq" title="服务">
+        <img src="assets/art/m2.png" alt=""><span class="lb">服务</span><span class="badge" id="svc-count">0</span></span>
+      <span class="tab art" data-view="set" title="设置">
+        <img src="assets/art/m3.png" alt=""><span class="lb">设置</span></span>
     </nav>
   </div>
 </header>
@@ -779,6 +844,10 @@
       <h2><svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-straw"/></svg>任务 · <span class="cg">保持在线</span>
         <span class="chipmini">进行中</span></h2>
       <hr class="rule">
+      <!-- 原版 "Loading…" 木牌：只在"正在连内核"时露一下，连上就收起来 -->
+      <div id="sys-loading" class="sys-loading">
+        <img src="assets/art/loading.png" alt="正在连接内核算">
+      </div>
       <ul class="quest">
         <li><span class="box done" aria-hidden="true"></span>已连接 <span class="cb">SZU_WLAN</span></li>
         <li><span class="box done" aria-hidden="true"></span>认证区域：<span class="cy" id="q-zone">探测中…</span></li>
@@ -818,7 +887,7 @@
     <aside>
       <div class="panel">
         <div class="who">
-          <span class="avatar" aria-hidden="true"></span>
+          <img class="avatar" src="assets/art/face-abigail.png" alt="头像">
           <div>
             <div><b class="cy">柯西</b> <span class="cm">· 大三</span></div>
             <div class="cm">卡号 <span class="cb">2023***21</span></div>
@@ -943,6 +1012,9 @@
 
   <!-- 农场装饰条 -->
   <div class="farmstrip" aria-hidden="true">
+    <!-- 原版祝尼魔：从 loading-junimo.gif（一张 5 只的长图）里切出来的单只 -->
+    <img class="junimo" src="assets/art/junimo-green.png" alt="">
+    <img class="junimo j2" src="assets/art/junimo-pink.png" alt="">
     <svg width="120" height="46" viewBox="0 0 120 46">
       <rect x="10" y="30" width="46" height="8" fill="#6B4423"/>
       <rect x="14" y="38" width="4" height="8" fill="#4A2C12"/><rect x="48" y="38" width="4" height="8" fill="#4A2C12"/>
@@ -1056,24 +1128,34 @@
    group : 左栏分组名      say: 点击后荔宝说的话（支持 [[b|上色]] 语法） */
 const SERVICE = [
   { id:"net",   name:"校园网认证", color:"#4A7FB5", status:"planted", group:"常用",
+    icon:"dwarf.png",
     say:"点[[g|一键登录]]试试。现在是[[y|演示模式]]，还没接 szunet 内核。" },
   { id:"card",  name:"一卡通余额", color:"#C97C0A", status:"todo", group:"常用",
+    icon:"diamond.png",
     say:"余额在右上角显示了。[[y|交易流水]]后面补上。" },
   { id:"score", name:"成绩查询",   color:"#F2B33D", status:"todo", group:"教务",
+    icon:"star.png",
     say:"成绩单还在地里长着，急也没用。" },
   { id:"course",name:"课表",       color:"#6A5ACD", status:"todo", group:"教务",
+    icon:"calendar.png",
     say:"课表已经画了个[[p|今日课表]]的小卡在右栏，完整版等教务接口。" },
   { id:"lib",   name:"图书馆",     color:"#C84B3A", status:"todo", group:"校园",
+    icon:"folder.png",
     say:"座位系统还没接进来。先去三楼占个[[b|靠窗]]的位置？" },
   { id:"room",  name:"空教室",     color:"#2E8B7A", status:"todo", group:"校园",
+    icon:"settings.png",
     say:"空教室数据要[[t|教务处]]配合，正在挖通道。" },
   { id:"bus",   name:"校车时刻",   color:"#9A7B54", status:"todo", group:"校园",
+    icon:"icon1.png",
     say:"校车时刻表在赶来的路上了……大概吧。" },
   { id:"mail",  name:"校园邮箱",   color:"#6A5ACD", status:"todo", group:"校园",
+    icon:"files.png",
     say:"邮箱接入考虑中。深大邮箱的 [[p|IMAP]] 有点脾气。" },
   { id:"ele",   name:"elearning",  color:"#4A7FB5", status:"todo", group:"校园",
+    icon:"icon1.png",
     say:"elearning 的接口……先让它再长一长。" },
   { id:"pe",    name:"体测预约",   color:"#D86A9A", status:"todo", group:"待定",
+    icon:"star1.png",
     say:"[[r|体测]]这种事，工具帮不了你，跑就完了。" },
 ];
 
@@ -1155,8 +1237,8 @@ function renderList(filter){
     ul.className = "svc-list";
     hit.filter(s => s.group === g).forEach(s => {
       const li = document.createElement("li");
-      if (s.status === "planted") li.classList.add("active");
-      li.innerHTML = `<svg class="ic" viewBox="0 0 16 16" aria-hidden="true" style="border-color:${s.color}"><use href="#${fruitOf(SERVICE.indexOf(s))}"/></svg>${s.name}
+      if (s.status === "planted") li.classList.add("active"); else li.classList.add("off");
+      li.innerHTML = `<img class="ic" src="assets/art/${s.icon}" alt="" loading="lazy">${s.name}
         <span class="tag ${s.status === "planted" ? "on" : "off"}">${s.status === "planted" ? "已接好" : "占位"}</span>`;
       li.onclick = () => modal(s.name, s.say);
       ul.appendChild(li);
@@ -1187,20 +1269,23 @@ SERVICE.forEach((s, i) => {
 
 /* ---------- 工具栏 + 数字键 ---------- */
 const dock = document.getElementById("dock");
+/* 工具槽换成游戏原版的物品图标，和星露谷的物品栏一个味道 */
 const dockIcons = [
-  { html:'<span class="fill" style="background:var(--blue)"></span>', say:SAY.slotNet },
-  { html:'<span class="fill" style="background:var(--bad)"></span>',  say:SAY.lib },
-  { html:'<span class="round"></span>',                               say:SAY.card },
-  { html:'<span class="fill" style="background:var(--teal)"></span>', say:SAY.ph.card },
+  { art:"dwarf.png",    say:SAY.slotNet,  tip:"校园网认证" },
+  { art:"folder.png",   say:SAY.lib,      tip:"图书馆" },
+  { art:"diamond.png",  say:SAY.card,     tip:"一卡通" },
+  { art:"settings.png", say:SAY.ph.card,  tip:"设置" },
 ];
 for (let i = 0; i < 12; i++){
   const s = document.createElement("span");
   s.className = "slot";
   if (dockIcons[i]){
-    s.innerHTML = dockIcons[i].html + `<span class="key">${i + 1}</span>`;
+    s.innerHTML = `<img src="assets/art/${dockIcons[i].art}" alt="" loading="lazy">`
+      + `<span class="key">${i + 1}</span>`;
     s.dataset.say = i;
+    s.title = dockIcons[i].tip;
     s.classList.add("has");
-    s.onclick = () => modal("工具槽 " + (i + 1), dockIcons[i].say);
+    s.onclick = () => modal(dockIcons[i].tip, dockIcons[i].say);
   } else {
     s.onclick = () => modal("空工具槽", SAY.slotEmpty);
   }
@@ -1504,6 +1589,9 @@ function setLiveBadge(on, note){
   if (!el) return;
   el.textContent = on ? "内核已连接" : "演示模式";
   el.style.color = on ? "#C8F0A8" : "";
+  // 连上（或确定连不上）之后就把 "Loading…" 木牌收起来
+  const ld = document.getElementById("sys-loading");
+  if (ld) ld.classList.add("hide");
   if (note) document.getElementById("sys-note").textContent = note;
 }
 

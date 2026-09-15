@@ -10,6 +10,7 @@
 """
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -154,7 +155,55 @@ try:
         except Exception as e:
             line(path, False, str(e))
 
-    print("\n[6] 页面是当前版本")
+    print("\n[5b] 美术素材能不能取到")
+    # 这些是从 stardewOS 拿来的图。少一张页面就会有块空白，
+    # 但浏览器不会报错，所以必须在这里挑几张关键的打一遍。
+    for path in ["/art/m1.png", "/art/face-abigail.png", "/art/coursor.png",
+                 "/art/junimo-green.png", "/art/loading.png", "/art/bird.gif",
+                 "/art/dwarf.png", "/art/maximize.png"]:
+        try:
+            st, ct, body = http(path)
+            line(path, st == 200 and len(body) > 100,
+                 "%d, %.1f KB, %s" % (st, len(body) / 1024, ct.split(";")[0]))
+        except Exception as e:
+            line(path, False, str(e))
+
+    print("\n[6] 页面引用的资源路径一条都不能 404")
+    # 这条是补的坑：页面用 file:// 直接打开时，相对路径是基于 desktop/ 目录的，
+    # 所以写的是 assets/art/xxx.png；但服务端嵌的根是 assets/ 这一层，
+    # 收到 /assets/art/xxx.png 会去 assets/assets/art/ 找，直接 404。
+    # 表现为：本地浏览器打开一切正常，跑起来满屏破图，而且浏览器不报错。
+    # 所以这里把页面里所有 src/href 抽出来，逐个真打一遍。
+    try:
+        _, _, body = http("/")
+        page = body.decode("utf-8", "ignore")
+        refs = set()
+        for m in re.finditer(r'(?:src|href)\s*=\s*"([^"]+)"', page):
+            u = m.group(1)
+            if u.startswith(("http://", "https://", "data:", "#", "mailto:")):
+                continue
+            # JS 模板串（形如 ${...}）是运行时才拼出真路径的，这里没法验，跳过
+            if "${" in u or "+" in u:
+                continue
+            if u.startswith("/"):
+                refs.add(u)
+            else:
+                refs.add("/" + u)
+        refs = sorted(refs)
+        bad = []
+        for u in refs:
+            try:
+                st, _, _ = http(u)
+                if st != 200:
+                    bad.append("%s -> %d" % (u, st))
+            except Exception as e:
+                bad.append("%s -> %s" % (u, e))
+        line("页面共引用 %d 个资源" % len(refs), len(refs) > 0)
+        line("全部能取到", not bad, ("; ".join(bad[:6]) if bad else "没有 404"))
+    except Exception as e:
+        line("资源路径检查", False, str(e))
+
+    print("\n[7] 页面是当前版本")
     try:
         _, _, body = http("/")
         page = body.decode("utf-8", "ignore")
@@ -162,7 +211,7 @@ try:
             line("含标记 " + m, m in page)
         local = open(r"D:\szuNet\desktop\assets\index.html", encoding="utf-8").read()
         line("与本地 index.html 一致", len(page) == len(local),
-             "内嵌 %d 字节 / 本地 %d 字节" % (len(page), len(local)))
+             "内嵌 %d 字符 / 本地 %d 字符" % (len(page), len(local)))
     except Exception as e:
         line("页面版本", False, str(e))
 

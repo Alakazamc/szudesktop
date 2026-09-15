@@ -27,3 +27,8 @@ desktop/internal/ui/assets/
 desktop/design/_measure.html
 desktop/design/_slice*.html
 desktop/*.measure.html
+# 临时调试页面（探针脚本会现场生成、跑完删掉）
+desktop/_*.html
+desktop/assets/_*.html
+desktop/design/_*.html
+desktop/design/_*.png
