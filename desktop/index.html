@@ -435,8 +435,6 @@
   .slot img{width:28px; height:28px; image-rendering:pixelated; display:block;
     filter:drop-shadow(1px 1px 0 rgba(0,0,0,.35));}
   .slot:hover img{transform:translateY(-2px);}
-  .slot .key{position:absolute; right:1px; bottom:0; color:var(--cream-line); font-size:12px;
-    text-shadow:1px 1px 0 rgba(0,0,0,.6);}
 
   /* ---------- 农场装饰条 ---------- */
   .farmstrip{display:flex; align-items:flex-end; justify-content:center; gap:26px; padding:6px 0 2px; position:relative;}
@@ -656,6 +654,28 @@
     .pscroll{overflow:visible;}
     .farm{overflow:visible;}
     .farmstrip{position:static;}
+  }
+
+  /* ---------- 翻页化：滚动条一根不留，改用右下角小木牌翻页 ---------- */
+  /* 全站藏滚动条：内容还能滚（滚轮/拖拽都正常），只是不显示那根灰条 */
+  *{scrollbar-width:none; -ms-overflow-style:none;}
+  *::-webkit-scrollbar{display:none; width:0; height:0;}
+  /* 翻页器：钉在各滚动区底部（sticky），只有内容超过一页才出现 */
+  .pager{position:sticky; bottom:0; z-index:6; display:flex; justify-content:flex-end;
+    align-items:center; gap:5px; padding:3px 2px 1px; pointer-events:none;
+    background:linear-gradient(180deg, transparent, rgba(74,44,18,.14));}
+  .pager button{pointer-events:auto; width:22px; height:20px; padding:0;
+    border:2px solid var(--frame); background:var(--wood-mid); color:var(--cream);
+    font-family:var(--pix); font-size:10px; line-height:1;
+    box-shadow:inset 1px 1px 0 rgba(255,255,255,.25), 1px 2px 0 rgba(0,0,0,.25);}
+  .pager button:hover:not(:disabled){background:var(--wood-lite);}
+  .pager button:active:not(:disabled){transform:translateY(1px); box-shadow:inset 1px 1px 0 rgba(255,255,255,.15);}
+  .pager button:disabled{opacity:.35; box-shadow:none;}
+  .pager .pg-label{pointer-events:auto; background:var(--wood-dark); color:var(--cream);
+    border:2px solid var(--frame); padding:1px 6px; font-size:10px; line-height:1.5;}
+  /* 小窗回退模式下也保持同一套翻页器，只是不钉底了 */
+  @media (max-height:760px), (max-width:1080px){
+    .pager{position:static; justify-content:center;}
   }
 </style>
 </head>
@@ -1028,6 +1048,7 @@
         </div>
       </div>
       <p class="cm" id="pet-say" style="margin-top:6px">它在围栏里打量你。</p>
+      <div class="pager" id="pg-left"></div>
       </div><!-- /pscroll 左栏滚动区 -->
     </aside>
 
@@ -1067,6 +1088,7 @@
       <div class="bar"><i style="width:40%;background:var(--ok)"></i></div>
       <div class="barrow"><span class="cm">本月流量</span><span><b class="cb">12.4 GB</b> <span class="cm">/ 40 GB（演示）</span></span></div>
       <div class="bar"><i style="width:31%;background:var(--blue)"></i></div>
+      <div class="pager" id="pg-mid"></div>
       </div><!-- /pscroll 中栏滚动区 -->
 
       <hr class="rule">
@@ -1164,6 +1186,7 @@
           <li><span class="dot" style="background:var(--muted)"></span>自动重连生效 <span class="cg">2</span> 次</li>
         </ul>
       </div>
+      <div class="pager" id="pg-right"></div>
     </aside>
   </section>
 
@@ -1315,11 +1338,10 @@
   <div class="plank">
     <span class="nail" aria-hidden="true"></span>
     <svg class="fruit" width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-lychee"/></svg>
-    <span>szuDesktop 原型 · 与深圳大学官方无关 · 按 <span class="cy">1–4</span> 用快捷键 · <span class="cy">Esc</span> 关弹窗</span>
+    <span>szuDesktop · 与深圳大学官方无关 · <span class="cy">Esc</span> 关弹窗 · 字体与素材仅供本地演示</span>
     <svg class="fruit" width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-star"/></svg>
     <span class="nail" aria-hidden="true"></span>
   </div>
-  <footer>荔宝负责陪聊 · 想加工具就改 SERVICE 数组 · 星露谷字体与素材仅供本地原型演示</footer>
 </main>
 
 <!-- 弹窗 -->
@@ -1492,8 +1514,7 @@ for (let i = 0; i < 12; i++){
   const s = document.createElement("span");
   s.className = "slot";
   if (dockIcons[i]){
-    s.innerHTML = `<img src="assets/art/${dockIcons[i].art}" alt="" loading="lazy">`
-      + `<span class="key">${i + 1}</span>`;
+    s.innerHTML = `<img src="assets/art/${dockIcons[i].art}" alt="" loading="lazy">`;
     s.dataset.say = i;
     s.title = dockIcons[i].tip;
     s.classList.add("has");
@@ -1504,9 +1525,7 @@ for (let i = 0; i < 12; i++){
   dock.appendChild(s);
 }
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape"){ closeModal(); return; }
-  const n = parseInt(e.key, 10);
-  if (n >= 1 && n <= dockIcons.length) modal("工具槽 " + n, dockIcons[n - 1].say);
+  if (e.key === "Escape") closeModal();
 });
 
 /* ---------- 标签切换 ---------- */
@@ -1550,13 +1569,10 @@ say("柯西，欢迎回到农场！[[b|SZU_WLAN]] 长势喜人，[[y|教学区]]
 
 /* ---------- 各处按钮 ---------- */
 /* 网络状态一动，猫跟着换表情；有内核时走真接口 */
+/* 一键登录不再直接发请求：把人带到登录页去填，页面自己管登录 */
 document.getElementById("btn-login").onclick = () => {
-  if (LIVE) doLogin();
-  else {
-    modal("一键登录", SAY.login);
-    netOK = true; petReact("happy", 4000);
-    petSay("你一上线它就精神了，蹲在围栏边等你。");
-  }
+  const t = document.querySelector('#tabs .tab[data-view="network"]');
+  if (t) t.click();
 };
 document.getElementById("btn-diag").onclick = () => {
   if (LIVE) doDiag();
@@ -1830,14 +1846,8 @@ async function refreshStatus(){
   syncSwitches(st);
 }
 
-/* doLogin/doLogout 是概览页那两个按钮用的：走已保存的凭据。
-   登录页自己单填的单次账号不经过这里（见 doLoginPage）。 */
-async function doLogin(){
-  const res = await api("/api/login", { method:"POST" });
-  if (!res){ type(modalText, "没连上本地内核，这是[[y|演示]]效果。用 szudesktop 启动就有真结果。"); return; }
-  modal("一键登录", (res.ok ? "[[g|登录成功：]]" : "[[r|登录失败：]]") + res.message);
-  await refreshStatus();
-}
+/* doLogout 给概览页的「注销下线」用：走已保存的凭据。
+   登录页自己单填的账号不经过这里（见 doLoginPage）。 */
 async function doLogout(){
   const res = await api("/api/logout", { method:"POST" });
   if (!res){ type(modalText, "没连上本地内核，[[y|演示]]效果。"); return; }
@@ -1864,6 +1874,41 @@ function tick(){
     `${seasons[d.getMonth()]} · ${d.getMonth() + 1}月${d.getDate()}日 · 周${weeks[d.getDay()]} · ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 tick(); setInterval(tick, 30000);
+
+/* ---------- 翻页器：滚动区不显示滚动条，超一页就在右下角给小木牌 ---------- */
+/* 原理：盒子本身还能滚（滚轮照用），翻页按钮一次翻一屏高；
+   页码跟着滚动位置走，内容或窗口一变就重算，只有一页时整块隐藏。 */
+function makePager(bar, box){
+  const prev = document.createElement("button");
+  prev.textContent = "◀"; prev.title = "上一页";
+  const lab = document.createElement("span"); lab.className = "pg-label";
+  const next = document.createElement("button");
+  next.textContent = "▶"; next.title = "下一页";
+  bar.append(prev, lab, next);
+  let raf = 0;
+  function tick(){
+    raf = 0;
+    const pageH = Math.max(1, box.clientHeight);
+    const pages = Math.max(1, Math.ceil((box.scrollHeight - 2) / pageH));
+    const cur = pages <= 1 ? 1 : Math.min(pages, Math.round(box.scrollTop / pageH) + 1);
+    bar.style.display = pages > 1 ? "flex" : "none";
+    lab.textContent = cur + "/" + pages;
+    prev.disabled = cur <= 1; next.disabled = cur >= pages;
+  }
+  prev.onclick = () => box.scrollBy({ top: -box.clientHeight, behavior: "smooth" });
+  next.onclick = () => box.scrollBy({ top:  box.clientHeight, behavior: "smooth" });
+  box.addEventListener("scroll", () => { if (!raf) raf = requestAnimationFrame(tick); });
+  addEventListener("resize", tick);
+  tick();
+  return tick;
+}
+const pagerTicks = [
+  makePager(document.getElementById("pg-left"),  document.querySelector("aside.panel > .pscroll")),
+  makePager(document.getElementById("pg-mid"),   document.getElementById("pg-mid").closest(".pscroll")),
+  makePager(document.getElementById("pg-right"), document.getElementById("pg-right").closest("aside")),
+];
+/* 列表是异步生成的，状态一刷新页码就可能变：低频兜底重算 */
+setInterval(() => pagerTicks.forEach(f => f()), 1200);
 
 /* 启动：问一次内核，能连上就切真实模式，之后每 20 秒刷新 */
 setLiveBadge(false, "正在找本地内核……");
