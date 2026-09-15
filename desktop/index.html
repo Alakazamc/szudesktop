@@ -623,6 +623,29 @@
   .harvest{padding:4px 0 2px;}
   .plank{margin-top:4px;}
   footer{flex:0 0 auto; padding:2px 0 4px; font-size:11px;}
+  /* ---------- 登录页 ----------
+     登录表单放在 stage 里，跨满三列但不撑宽：卡片最多 620px 居中。 */
+  .loginwrap{grid-column:1 / -1; max-width:620px; margin:0 auto; width:100%;}
+  .loginbody{display:flex; gap:22px; align-items:flex-start;}
+  .loginart{flex:0 0 auto; text-align:center; padding-top:6px;}
+  .loginart svg{display:block; animation:signBob 3.4s steps(2) infinite;}
+  .loginart p{margin:8px 0 0; max-width:120px; line-height:1.5;}
+  .loginform{flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:8px;}
+  .loginform .lf{font-size:12px; color:var(--cream);}
+  .inp{width:100%; box-sizing:border-box; background:#FFF6E0; color:#3A2A1A;
+       border:4px solid var(--frame); box-shadow:inset 0 0 0 2px #D9C39A;
+       padding:9px 10px; font-family:inherit; font-size:14px; outline:none;}
+  .inp:focus{border-color:var(--gold); box-shadow:inset 0 0 0 2px var(--accent);}
+  .loginrow{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:4px;}
+  .lgnote{min-height:20px; font-size:12px; line-height:1.6; color:var(--cream);}
+  .lgnote.ok{color:var(--ok);} .lgnote.bad{color:var(--bad);}
+  .loginstate{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:8px;}
+  .loginstate .k{font-size:11px; color:var(--muted);}
+  .loginstate .v{font-size:13px;}
+  @media (max-width:1080px){
+    .loginbody{flex-direction:column;}
+    .loginart p{max-width:none;}
+  }
   /* 窗口太矮（<760px）或太窄（<1080px）时退回普通页面滚动，别硬塞 */
   @media (max-height:760px), (max-width:1080px){
     html, body{height:auto; overflow:visible;}
@@ -741,6 +764,10 @@
     <rect x="1" y="13" width="16" height="7" fill="#E8963A"/><rect x="5" y="15" width="8" height="5" fill="#F5E4C0"/>
     <rect x="3" y="20" width="3" height="2" fill="#C96A18"/><rect x="12" y="20" width="3" height="2" fill="#C96A18"/>
   </symbol>
+
+  <!-- 荔宝立绘（gen_libao.py 生成的那套 rect），做成 symbol 好在多处复用。
+       登录页左边迎客的就是它，改形象时跑 desktop/design/gen_libao.py --write 会同时更新下面这一串。 -->
+  <symbol id="libao" viewBox="0 0 52 56"><rect x="20" y="0" width="4" height="2" fill="#6E1F35"/><rect x="18" y="2" width="2" height="2" fill="#6E1F35"/><rect x="20" y="2" width="4" height="2" fill="#ED4C67"/><rect x="24" y="2" width="2" height="2" fill="#6E1F35"/><rect x="16" y="4" width="12" height="2" fill="#6E1F35"/><rect x="2" y="6" width="6" height="2" fill="#6E1F35"/><rect x="16" y="6" width="20" height="2" fill="#6E1F35"/><rect x="0" y="8" width="2" height="2" fill="#6E1F35"/><rect x="2" y="8" width="4" height="2" fill="#ED4C67"/><rect x="6" y="8" width="2" height="2" fill="#6E1F35"/><rect x="12" y="8" width="2" height="2" fill="#6E1F35"/><rect x="14" y="8" width="4" height="2" fill="#F585A0"/><rect x="18" y="8" width="22" height="2" fill="#ED4C67"/><rect x="40" y="8" width="2" height="2" fill="#6E1F35"/><rect x="0" y="10" width="2" height="2" fill="#6E1F35"/><rect x="2" y="10" width="4" height="2" fill="#ED4C67"/><rect x="6" y="10" width="2" height="2" fill="#6E1F35"/><rect x="10" y="10" width="2" height="2" fill="#6E1F35"/><rect x="12" y="10" width="4" height="2" fill="#F585A0"/><rect x="16" y="10" width="24" height="2" fill="#ED4C67"/><rect x="40" y="10" width="2" height="2" fill="#6E1F35"/><rect x="2" y="12" width="10" height="2" fill="#6E1F35"/><rect x="12" y="12" width="28" height="2" fill="#ED4C67"/><rect x="40" y="12" width="2" height="2" fill="#6E1F35"/><rect x="2" y="14" width="2" height="2" fill="#6E1F35"/><rect x="4" y="14" width="4" height="2" fill="#ED4C67"/><rect x="8" y="14" width="4" height="2" fill="#6E1F35"/><rect x="12" y="14" width="6" height="2" fill="#ED4C67"/><rect x="18" y="14" width="2" height="2" fill="#4A1A28"/><rect x="20" y="14" width="12" height="2" fill="#ED4C67"/><rect x="32" y="14" width="2" height="2" fill="#4A1A28"/><rect x="34" y="14" width="6" height="2" fill="#ED4C67"/><rect x="40" y="14" width="2" height="2" fill="#6E1F35"/><rect x="2" y="16" width="8" height="2" fill="#6E1F35"/><rect x="10" y="16" width="6" height="2" fill="#ED4C67"/><rect x="16" y="16" width="2" height="2" fill="#4A1A28"/><rect x="18" y="16" width="2" height="2" fill="#ED4C67"/><rect x="20" y="16" width="2" height="2" fill="#4A1A28"/><rect x="22" y="16" width="8" height="2" fill="#ED4C67"/><rect x="30" y="16" width="2" height="2" fill="#4A1A28"/><rect x="32" y="16" width="2" height="2" fill="#ED4C67"/><rect x="34" y="16" width="2" height="2" fill="#4A1A28"/><rect x="36" y="16" width="6" height="2" fill="#ED4C67"/><rect x="42" y="16" width="2" height="2" fill="#6E1F35"/><rect x="8" y="18" width="2" height="2" fill="#6E1F35"/><rect x="10" y="18" width="32" height="2" fill="#ED4C67"/><rect x="42" y="18" width="2" height="2" fill="#6E1F35"/><rect x="8" y="20" width="2" height="2" fill="#6E1F35"/><rect x="10" y="20" width="10" height="2" fill="#ED4C67"/><rect x="20" y="20" width="10" height="2" fill="#4A1A28"/><rect x="30" y="20" width="12" height="2" fill="#ED4C67"/><rect x="42" y="20" width="2" height="2" fill="#6E1F35"/><rect x="8" y="22" width="2" height="2" fill="#6E1F35"/><rect x="10" y="22" width="4" height="2" fill="#F78DA7"/><rect x="14" y="22" width="6" height="2" fill="#ED4C67"/><rect x="20" y="22" width="2" height="2" fill="#4A1A28"/><rect x="22" y="22" width="6" height="2" fill="#FFFFFF"/><rect x="28" y="22" width="2" height="2" fill="#4A1A28"/><rect x="30" y="22" width="8" height="2" fill="#ED4C67"/><rect x="38" y="22" width="4" height="2" fill="#F78DA7"/><rect x="42" y="22" width="2" height="2" fill="#6E1F35"/><rect x="8" y="24" width="2" height="2" fill="#6E1F35"/><rect x="10" y="24" width="4" height="2" fill="#F78DA7"/><rect x="14" y="24" width="6" height="2" fill="#ED4C67"/><rect x="20" y="24" width="2" height="2" fill="#4A1A28"/><rect x="22" y="24" width="2" height="2" fill="#FFFFFF"/><rect x="24" y="24" width="4" height="2" fill="#F08080"/><rect x="28" y="24" width="2" height="2" fill="#4A1A28"/><rect x="30" y="24" width="8" height="2" fill="#ED4C67"/><rect x="38" y="24" width="4" height="2" fill="#F78DA7"/><rect x="42" y="24" width="2" height="2" fill="#6E1F35"/><rect x="8" y="26" width="2" height="2" fill="#6E1F35"/><rect x="10" y="26" width="10" height="2" fill="#ED4C67"/><rect x="20" y="26" width="10" height="2" fill="#4A1A28"/><rect x="30" y="26" width="12" height="2" fill="#ED4C67"/><rect x="42" y="26" width="2" height="2" fill="#6E1F35"/><rect x="8" y="28" width="2" height="2" fill="#6E1F35"/><rect x="10" y="28" width="32" height="2" fill="#ED4C67"/><rect x="42" y="28" width="2" height="2" fill="#6E1F35"/><rect x="8" y="30" width="2" height="2" fill="#6E1F35"/><rect x="10" y="30" width="32" height="2" fill="#ED4C67"/><rect x="42" y="30" width="2" height="2" fill="#6E1F35"/><rect x="8" y="32" width="2" height="2" fill="#6E1F35"/><rect x="10" y="32" width="30" height="2" fill="#ED4C67"/><rect x="40" y="32" width="2" height="2" fill="#C93A55"/><rect x="42" y="32" width="2" height="2" fill="#6E1F35"/><rect x="8" y="34" width="2" height="2" fill="#6E1F35"/><rect x="10" y="34" width="26" height="2" fill="#ED4C67"/><rect x="36" y="34" width="4" height="2" fill="#C93A55"/><rect x="40" y="34" width="2" height="2" fill="#6E1F35"/><rect x="10" y="36" width="2" height="2" fill="#6E1F35"/><rect x="12" y="36" width="24" height="2" fill="#ED4C67"/><rect x="36" y="36" width="4" height="2" fill="#C93A55"/><rect x="40" y="36" width="2" height="2" fill="#6E1F35"/><rect x="12" y="38" width="2" height="2" fill="#6E1F35"/><rect x="14" y="38" width="20" height="2" fill="#ED4C67"/><rect x="34" y="38" width="4" height="2" fill="#C93A55"/><rect x="38" y="38" width="2" height="2" fill="#6E1F35"/><rect x="14" y="40" width="2" height="2" fill="#6E1F35"/><rect x="16" y="40" width="20" height="2" fill="#C93A55"/><rect x="36" y="40" width="2" height="2" fill="#6E1F35"/><rect x="16" y="42" width="20" height="2" fill="#6E1F35"/><rect x="16" y="44" width="2" height="2" fill="#6E1F35"/><rect x="18" y="44" width="8" height="2" fill="#31407A"/><rect x="26" y="44" width="2" height="2" fill="#6E1F35"/><rect x="28" y="44" width="8" height="2" fill="#31407A"/><rect x="36" y="44" width="2" height="2" fill="#6E1F35"/><rect x="16" y="46" width="2" height="2" fill="#6E1F35"/><rect x="18" y="46" width="8" height="2" fill="#31407A"/><rect x="26" y="46" width="2" height="2" fill="#6E1F35"/><rect x="28" y="46" width="8" height="2" fill="#31407A"/><rect x="36" y="46" width="2" height="2" fill="#6E1F35"/><rect x="16" y="48" width="2" height="2" fill="#6E1F35"/><rect x="18" y="48" width="8" height="2" fill="#31407A"/><rect x="26" y="48" width="2" height="2" fill="#6E1F35"/><rect x="28" y="48" width="8" height="2" fill="#31407A"/><rect x="36" y="48" width="2" height="2" fill="#6E1F35"/><rect x="16" y="50" width="2" height="2" fill="#6E1F35"/><rect x="18" y="50" width="8" height="2" fill="#232E5C"/><rect x="26" y="50" width="2" height="2" fill="#6E1F35"/><rect x="28" y="50" width="8" height="2" fill="#232E5C"/><rect x="36" y="50" width="2" height="2" fill="#6E1F35"/><rect x="16" y="52" width="2" height="2" fill="#6E1F35"/><rect x="18" y="52" width="8" height="2" fill="#232E5C"/><rect x="26" y="52" width="2" height="2" fill="#6E1F35"/><rect x="28" y="52" width="8" height="2" fill="#232E5C"/><rect x="36" y="52" width="2" height="2" fill="#6E1F35"/><rect x="16" y="54" width="22" height="2" fill="#6E1F35"/></symbol>
 </svg>
 
 <i class="frame-side l" aria-hidden="true"></i>
@@ -1032,11 +1059,8 @@
       <hr class="rule">
       <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <button class="btn" id="btn-login">一键登录</button>
-        <button class="btn ghost" id="btn-logout">注销下线</button>
         <button class="btn ghost" id="btn-diag">断线诊断</button>
-        <button class="btn ghost" id="btn-save-cred">保存账号</button>
-        <label class="switch"><input type="checkbox" id="sw-auto" checked><span class="track"></span>
-          <span class="cm">自动重连</span></label>
+        <button class="btn ghost" id="btn-save-cred">去登录页</button>
       </div>
 
       <div class="barrow"><span class="cm">今日在线</span><span><b class="cg">3 小时 12 分</b> <span class="cm">/ 8 小时（演示）</span></span></div>
@@ -1148,6 +1172,51 @@
     <h2><span class="tab-ic" style="background:var(--accent)"></span><span id="ph-title">装修中</span></h2>
     <hr class="rule">
     <p id="ph-text" class="cm"></p>
+  </section>
+
+  <!-- 校园网登录页：点顶上「校园网」标签进来。
+       账号密码在这里填，勾「记住」才写进系统保险箱（Windows DPAPI / macOS 钥匙串），
+       不勾就只用这一次，用完即丢、不落盘。 -->
+  <section id="view-login" class="stage" style="display:none">
+    <div class="panel loginwrap">
+      <h2><svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-lychee"/></svg>校园网登录
+        <span class="chipmini" id="lg-zone">探测中…</span></h2>
+      <hr class="rule">
+
+      <div class="loginbody">
+        <!-- 左边：荔宝举着手欢迎 -->
+        <div class="loginart" aria-hidden="true">
+          <svg width="92" height="99" viewBox="0 0 52 56"><use href="#libao"/></svg>
+          <p class="cm" id="lg-hint">卡号是校园卡上的 6 位数字，密码是统一身份认证密码。</p>
+        </div>
+
+        <!-- 右边：表单 -->
+        <div class="loginform">
+          <label class="lf" for="lg-user">校园卡号</label>
+          <input class="inp" id="lg-user" type="text" inputmode="numeric" autocomplete="username"
+                 placeholder="6 位卡号" maxlength="12">
+
+          <label class="lf" for="lg-pass">密码</label>
+          <input class="inp" id="lg-pass" type="password" autocomplete="current-password"
+                 placeholder="统一身份认证密码">
+
+          <label class="switch"><input type="checkbox" id="lg-save" checked><span class="track"></span>
+            <span class="cm">记住账号密码</span></label>
+
+          <div class="loginrow">
+            <button class="btn" id="lg-login">登录</button>
+            <button class="btn ghost" id="lg-logout">注销下线</button>
+            <button class="btn ghost" id="lg-forget">忘掉已存的账号</button>
+          </div>
+
+          <div id="lg-note" class="lgnote">填好就能登录。</div>
+        </div>
+      </div>
+
+      <hr class="rule">
+      <!-- 当前连网状态，登录后自动刷新 -->
+      <div class="loginstate" id="lg-state"></div>
+    </div>
   </section>
 
   <!-- 对话框 -->
@@ -1444,18 +1513,21 @@ document.addEventListener("keydown", e => {
 const tabs = document.querySelectorAll("#tabs .tab");
 const vOverview = document.getElementById("view-overview");
 const vPh = document.getElementById("view-placeholder");
+const vLogin = document.getElementById("view-login");
+/* 校园网标签进来的是登录页，其余还没做好的走占位页 */
 tabs.forEach(t => t.addEventListener("click", () => {
   tabs.forEach(x => x.classList.remove("active"));
   t.classList.add("active");
-  if (t.dataset.view === "overview"){
-    vOverview.style.display = "grid";
-    vPh.style.display = "none";
-  } else {
-    vOverview.style.display = "none";
-    vPh.style.display = "block";
+  const v = t.dataset.view;
+  const login = (v === "network" || v === "login");
+  vOverview.style.display = v === "overview" ? "grid" : "none";
+  vLogin.style.display = login ? "grid" : "none";
+  vPh.style.display = (v === "overview" || login) ? "none" : "block";
+  if (login){ refreshLogin(); say("在这页登就行。勾上[[g|记住]]以后开机就能自动登。"); return; }
+  if (v !== "overview"){
     document.getElementById("ph-title").textContent = t.textContent.trim().replace(/\d+$/, "") + " · 装修中";
-    document.getElementById("ph-text").textContent = (SAY.ph[t.dataset.view] || "这一页还在装修。").replace(/\[\[\w\|(.*?)\]\]/g, "$1");
-    say(SAY.ph[t.dataset.view] || "这一页还在装修。");
+    document.getElementById("ph-text").textContent = (SAY.ph[v] || "这一页还在装修。").replace(/\[\[\w\|(.*?)\]\]/g, "$1");
+    say(SAY.ph[v] || "这一页还在装修。");
   }
 }));
 
@@ -1497,27 +1569,20 @@ document.getElementById("btn-diag").onclick = () => {
 };
 const btnOut = document.getElementById("btn-logout");
 if (btnOut) btnOut.onclick = () => doLogout();
+/* 概览里那个「去登录页」按钮：直接切到校园网标签 */
 const btnSave = document.getElementById("btn-save-cred");
-if (btnSave) btnSave.onclick = () => saveCred();
-/* 自动重连开关：有内核就切真的保持在线，没内核就弹提示 */
-const swAuto = document.getElementById("sw-auto");
-swAuto.addEventListener("change", e => {
-  if (LIVE) toggleKeep(e.target.checked);
-  else modal("自动重连", e.target.checked
-    ? "已打开（[[y|演示]]）。接上内核后每 [[y|15 秒]]检查一次，掉了自动补登。"
-    : "已关闭（[[y|演示]]）。手动点[[g|一键登录]]就行。");
-});
-/* 状态刷新时同步这个开关，别让它和内核真实状态不一致 */
+if (btnSave) btnSave.onclick = () => {
+  const t = document.querySelector('#tabs .tab[data-view="network"]');
+  if (t) t.click();
+};
+/* 自动重连（常驻保活）已经去掉了：要不要登录由人在登录页决定，不做后台自动补登。
+   这里只把「账号存没存、存在哪」同步到底部那句提示上。 */
 function syncSwitches(st){
   if (!st) return;
-  const sw = document.getElementById("sw-auto");
-  /* 用户正在拨这个开关时不回写，免得动画被抢 */
-  if (sw && document.activeElement !== sw) sw.checked = !!st.keep_alive;
   const note = document.getElementById("sys-note");
-  if (st.relogins > 0){
-    note.textContent = "已自动补登 " + st.relogins + " 次。"
-      + (st.saved ? "账号 " + st.username + " 存在 " + st.store_desc : "");
-  }
+  note.textContent = st.saved
+    ? "账号 " + st.username + " 存在 " + st.store_desc + "，要改去「校园网」标签页。"
+    : "还没存账号，去「校园网」标签页登录（勾上记住就不用每次输）。";
 }
 
 document.querySelectorAll("[data-say]").forEach(el =>
@@ -1765,17 +1830,18 @@ async function refreshStatus(){
   syncSwitches(st);
 }
 
+/* doLogin/doLogout 是概览页那两个按钮用的：走已保存的凭据。
+   登录页自己单填的单次账号不经过这里（见 doLoginPage）。 */
 async function doLogin(){
-  const box = modal("一键登录", "正在认证……");
   const res = await api("/api/login", { method:"POST" });
   if (!res){ type(modalText, "没连上本地内核，这是[[y|演示]]效果。用 szudesktop 启动就有真结果。"); return; }
-  type(modalText, (res.ok ? "[[g|" : "[[r|") + (res.ok ? "登录成功：" : "登录失败：") + res.message);
+  modal("一键登录", (res.ok ? "[[g|登录成功：]]" : "[[r|登录失败：]]") + res.message);
   await refreshStatus();
 }
 async function doLogout(){
   const res = await api("/api/logout", { method:"POST" });
   if (!res){ type(modalText, "没连上本地内核，[[y|演示]]效果。"); return; }
-  type(modalText, (res.ok ? "[[g|" : "[[r|") + res.message);
+  modal("注销下线", (res.ok ? "[[g|" : "[[r|") + res.message);
   await refreshStatus();
 }
 async function doDiag(){
@@ -1788,39 +1854,6 @@ async function doDiag(){
   (d.advices || []).forEach((a, i) => { t += (i === 0 ? "\n\n建议：" : "\n") + "· " + a; });
   type(modalText, t);
 }
-async function saveCred(){
-  const u = prompt("校园卡号（6 位）：");
-  if (!u) return;
-  const p = prompt("统一身份认证密码：");
-  if (!p) return;
-  const res = await api("/api/credential", { method:"POST", body: JSON.stringify({ username:u, password:p }) });
-  if (!res){ modal("保存账号", "没连上本地内核，[[y|存不了]]。命令行跑 szunet config set 也一样。"); return; }
-  modal("保存账号", "已存进[[g|" + res.store_desc + "]]。密码不会明文落盘，换机器也解不开。");
-  refreshStatus();
-}
-
-/* 自动重连 = 内核的常驻保持在线，接真接口 */
-async function toggleKeep(on){
-  const res = await api("/api/keepalive", { method:"POST", body: JSON.stringify({ on: on }) });
-  if (!res){
-    modal("自动重连", on ? "已打开（[[y|演示]]）。接上内核后会每 15 秒检查一次，掉了自动补登。"
-                         : "已关闭（[[y|演示]]）。");
-    return;
-  }
-  /* 以内核回报的真实状态为准，别拿点击的意图当结果 */
-  const real = res.on === true;
-  const sw = document.getElementById("sw-auto");
-  if (sw) sw.checked = real;
-  if (real !== on){
-    modal("自动重连", "内核那边没切过去（当前是" + (real ? "开着" : "关着") + "），再点一次试试。");
-    return;
-  }
-  modal("自动重连", real
-    ? "已打开。内核每 [[b|" + res.interval + " 秒]]探一次，发现掉线自动补登，不用管它。"
-    : "已关闭。需要的时候手动点[[g|一键登录]]。");
-  refreshStatus();
-}
-
 /* ---------- HUD 时钟 ---------- */
 function tick(){
   const d = new Date();
@@ -1835,6 +1868,11 @@ tick(); setInterval(tick, 30000);
 /* 启动：问一次内核，能连上就切真实模式，之后每 20 秒刷新 */
 setLiveBadge(false, "正在找本地内核……");
 refreshStatus();
+/* 用 #login 打开就直接停在登录页（命令行里也想直接给链接时用得上） */
+if (location.hash === "#login"){
+  const t = document.querySelector('#tabs .tab[data-view="network"]');
+  if (t) t.click();
+}
 setInterval(refreshStatus, 20000);
 </script>
 </body>

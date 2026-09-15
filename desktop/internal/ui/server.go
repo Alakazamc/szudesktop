@@ -6,7 +6,6 @@
 package ui
 
 import (
-	"context"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -40,8 +39,6 @@ type Options struct {
 	User      string // 覆盖保存的账号
 	Password  string // 覆盖保存的密码
 	AutoLogin bool   // 启动后自动登录一次
-	KeepAlive bool   // 常驻盯着网络，掉线自动补登
-	Interval  int    // KeepAlive 的检查间隔（秒），默认 30
 	SrunHost  string
 	DrcomHost string
 	NoOpen    bool // 不自动开浏览器
@@ -55,11 +52,6 @@ type Server struct {
 	mu       sync.Mutex
 	lastErr  string
 	lastZone portal.Zone
-
-	alive      bool // 常驻监控是否在跑
-	lastOK     time.Time
-	relogin    int // 累计自动补登次数
-	cancelKeep context.CancelFunc
 }
 
 // New 创建一个还没开始监听的 Server。
@@ -114,21 +106,13 @@ func (s *Server) Run() error {
 	if s.opts.AutoLogin {
 		go func() {
 			time.Sleep(300 * time.Millisecond) // 先让服务起来，再打日志
-			res := s.doLogin()
+			res := s.doLogin("", "")
 			if res.OK {
 				fmt.Printf("[自动登录] %s\n", res.Message)
 			} else {
 				fmt.Printf("[自动登录失败] %s\n", res.Message)
 			}
 		}()
-	}
-
-	if s.opts.KeepAlive {
-		if s.opts.Interval <= 0 {
-			s.opts.Interval = 30
-		}
-		s.startKeepAlive()
-		fmt.Printf("[保持在线] 每 %d 秒检查一次，掉线自动补登\n", s.opts.Interval)
 	}
 
 	if !s.opts.NoOpen {
@@ -197,75 +181,6 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 	mux.HandleFunc("/api/logout", s.handleLogout)
 	mux.HandleFunc("/api/diag", s.handleDiag)
 	mux.HandleFunc("/api/credential", s.handleCredential)
-	mux.HandleFunc("/api/keepalive", s.handleKeepAlive)
-}
-
-// handleKeepAlive 开关常驻保持在线。前端那个「自动重连」开关接的就是这里。
-//
-// GET  看当前状态
-// POST {"on":true|false} 切换
-func (s *Server) handleKeepAlive(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		s.mu.Lock()
-		on, n := s.alive, s.relogin
-		s.mu.Unlock()
-		writeJSON(w, map[string]any{"on": on, "relogins": n, "interval": s.checkInterval()})
-		return
-	}
-	if r.Method != http.MethodPost {
-		http.Error(w, "不支持的方法", 405)
-		return
-	}
-
-	var req struct {
-		On bool `json:"on"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "请求格式不对", 400)
-		return
-	}
-
-	// started 表示「这次调用有没有真的改状态」，state 改完才发响应，
-	// 所以前端拿到 started=false 就知道本来就是这个状态，不是没生效。
-	started := false
-	if req.On {
-		started = s.startKeepAlive()
-	} else {
-		s.mu.Lock()
-		running := s.alive
-		s.mu.Unlock()
-		if running {
-			s.stopKeepAlive()
-			started = true
-		}
-	}
-
-	s.mu.Lock()
-	on, n := s.alive, s.relogin
-	s.mu.Unlock()
-	writeJSON(w, map[string]any{
-		"on":       on,
-		"relogins": n,
-		"interval": s.checkInterval(),
-		"started":  started,
-	})
-}
-
-func (s *Server) checkInterval() int {
-	if s.opts.Interval <= 0 {
-		return 30
-	}
-	return s.opts.Interval
-}
-
-func (s *Server) stopKeepAlive() {
-	s.mu.Lock()
-	if s.cancelKeep != nil {
-		s.cancelKeep()
-		s.cancelKeep = nil
-	}
-	s.alive = false
-	s.mu.Unlock()
 }
 
 /* ---------- 接口 ---------- */
@@ -281,8 +196,6 @@ type statusResp struct {
 	StoreDesc  string   `json:"store_desc"`  // 凭据存在哪
 	LastError  string   `json:"last_error"`
 	Advices    []string `json:"advices"`
-	KeepAlive  bool     `json:"keep_alive"`  // 有没有开着常驻保持
-	Relogins   int      `json:"relogins"`    // 累计自动补登次数
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
@@ -321,8 +234,6 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		out.LastError = s.lastErr
 	}
 	out.Advices = detectAdvices(det)
-	out.KeepAlive = s.alive
-	out.Relogins = s.relogin
 	s.mu.Unlock()
 
 	writeJSON(w, out)
@@ -334,15 +245,39 @@ type loginResp struct {
 	Message string `json:"message"`
 }
 
+// credRequest 是登录/注销请求里可选的临时账号。
+//
+// 页面上勾了「记住」就先存凭据，服务端从保险箱里取；没勾的话，把账号密码
+// 随请求一起带过来，用这一次就丢，不落盘。
+type credRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+// readCredRequest 从请求体里读临时账号。请求体为空也允许（表示用已保存的）。
+func readCredRequest(r *http.Request) credRequest {
+	var req credRequest
+	if r.Body == nil {
+		return req
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	return req
+}
+
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
-	res := s.doLogin()
+	req := readCredRequest(r)
+	res := s.doLogin(req.Username, req.Password)
 	writeJSON(w, loginResp{OK: res.OK, Message: res.Message})
 }
 
-func (s *Server) doLogin() portal.Result {
-	user, pass, err := s.creds()
-	if err != nil {
-		return s.remember(err.Error())
+// doLogin 登录一次。user/pass 是本次专用的临时账号，留空就用保存的凭据。
+func (s *Server) doLogin(user, pass string) portal.Result {
+	if user == "" || pass == "" {
+		var err error
+		user, pass, err = s.creds()
+		if err != nil {
+			return s.remember(err.Error())
+		}
 	}
 
 	det := portal.Detect()
@@ -383,10 +318,15 @@ func (s *Server) doLogin() portal.Result {
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
-	user, pass, err := s.creds()
-	if err != nil {
-		writeJSON(w, loginResp{OK: false, Message: err.Error()})
-		return
+	req := readCredRequest(r)
+	user, pass := req.Username, req.Password
+	if user == "" || pass == "" {
+		var err error
+		user, pass, err = s.creds()
+		if err != nil {
+			writeJSON(w, loginResp{OK: false, Message: err.Error()})
+			return
+		}
 	}
 	det := portal.Detect()
 	var res *portal.Result
@@ -491,77 +431,8 @@ func (s *Server) handleCredential(w http.ResponseWriter, r *http.Request) {
 /* ---------- 保持在线 ---------- */
 
 // startKeepAlive 开常驻监控。
-//
-// 关键点：状态在这里「同步」改好，循环才丢到后台跑。
-// 之前是 `go s.keepAlive()`，改状态的动作排在 goroutine 里，
-// 接口可能在它被调度到之前就把旧状态返回去了，表现为「刚点开又说没开」。
-// 返回 false 说明本来就在跑，没重复起。
-func (s *Server) startKeepAlive() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.alive {
-		return false
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	s.cancelKeep = cancel
-	s.alive = true
-	s.lastErr = "" // 刚打开，别让上一轮的旧报错挂在页面上
-	go s.keepLoop(ctx)
-	return true
-}
-
-// keepLoop 是常驻监控的循环体。由 startKeepAlive 在后台拉起，别直接调。
-//
-// 只在「探测到校园网、但外网不通」时动手，两种情况跳过：
-//   - 已经能上外网：什么都不用做
-//   - 两个门户都连不上（人在校外，或者校园网整体故障）：登录也没用，别白试
-//
-// 连续失败不会死循环——每轮最多尝试一次，失败就等下一轮。
-func (s *Server) keepLoop(ctx context.Context) {
-	defer func() {
-		s.mu.Lock()
-		// 只有自己还是「当前那一个」时才清状态，避免误伤后来重启的循环
-		if s.cancelKeep == nil {
-			s.alive = false
-		}
-		s.mu.Unlock()
-	}()
-
-	ticker := time.NewTicker(time.Duration(s.checkInterval()) * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-		}
-
-		det := portal.Detect()
-		if det.InternetOK {
-			s.mu.Lock()
-			s.lastOK = time.Now()
-			s.mu.Unlock()
-			continue
-		}
-		// 不在校园网里，登录无意义
-		if det.Zone == portal.ZoneOutside || det.Zone == portal.ZoneUnknown {
-			continue
-		}
-
-		fmt.Printf("[保持在线] 外网不通（%s），尝试补登……\n", det.Zone.Label())
-		res := s.doLogin()
-		if res.OK {
-			s.mu.Lock()
-			s.relogin++
-			n := s.relogin
-			s.mu.Unlock()
-			fmt.Printf("[保持在线] 补登成功（累计第 %d 次）: %s\n", n, res.Message)
-		} else {
-			fmt.Printf("[保持在线] 补登失败: %s\n", res.Message)
-		}
-	}
-}
+// keepLoop 删掉了：以前这里有个每 30 秒轮询、掉线自动补登的常驻任务。
+// 明确不再做后台自动重连——要不要登录，由人在页面上的登录页决定。
 
 /* ---------- 小工具 ---------- */
 

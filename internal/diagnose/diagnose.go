@@ -6,6 +6,8 @@
 package diagnose
 
 import (
+	"fmt"
+
 	"github.com/Alakazamc/szunet/internal/portal"
 )
 
@@ -25,6 +27,10 @@ func Run(username, password, srunHost, drcomHost string) *Report {
 
 	if r.Detect.Zone == portal.ZoneOnline {
 		r.Advices = append(r.Advices, "当前能正常上外网。如果只是想上网，不用做任何事")
+		// 已经在线时，区域探测会被"能上外网"这条快路径短路，看不到判区结果。
+		// 但掉线重登走的正是这套判区，所以这里把协议指纹单独报出来，
+		// 让人在在线状态下也能确认"真掉线了程序会认成哪个区"。
+		r.Advices = append(r.Advices, fingerprintAdvice(r.Detect))
 		return r
 	}
 
@@ -50,6 +56,36 @@ func Run(username, password, srunHost, drcomHost string) *Report {
 
 	r.Advices = advices(r)
 	return r
+}
+
+// fingerprintAdvice 把协议指纹的结论说成人话。
+//
+// 已经在线时区域探测会短路，判区结果看不见，而掉线重登恰恰要用它，
+// 所以单独做一条说明，方便在线状态下也能验判区对不对。
+func fingerprintAdvice(d *portal.DetectResult) string {
+	if d == nil {
+		return ""
+	}
+	var zone string
+	switch {
+	case d.SrunUsable && !d.DormUsable:
+		zone = "教学区（深澜）"
+	case d.DormUsable && !d.SrunUsable:
+		zone = "宿舍区（Dr.COM）"
+	case d.SrunUsable && d.DormUsable:
+		zone = "两套都有回应，按宿舍区处理；不对就用 --zone teaching"
+	default:
+		zone = "两套接口都没回应，判不出来"
+	}
+	return fmt.Sprintf("协议指纹：深澜握手=%s、ePortal 登录接口=%s → 真掉线时按「%s」的协议登录",
+		boolCN(d.SrunUsable), boolCN(d.DormUsable), zone)
+}
+
+func boolCN(v bool) string {
+	if v {
+		return "是"
+	}
+	return "否"
 }
 
 // advices 根据探测结果生成排查建议。

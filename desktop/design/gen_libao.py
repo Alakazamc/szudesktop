@@ -98,6 +98,18 @@ def svg_block(width, height, label):
     return "".join(parts)
 
 
+def symbol_block():
+    """给页面精灵区用的可复用 symbol（登录页左边迎客那只）。"""
+    parts = ['<symbol id="libao" viewBox="0 0 52 56">']
+    for x, y, w, h, c in render():
+        parts.append('<rect x="%d" y="%d" width="%d" height="%d" fill="%s"/>' % (x, y, w, h, c))
+    parts.append("</symbol>")
+    return "".join(parts)
+
+
+SYMBOL_OLD = re.compile(r'<symbol id="libao".*?</symbol>', re.S)
+
+
 TALK_OLD = re.compile(
     r'<svg width="54" height="62" viewBox="0 0 52 60" role="img" aria-label="荔宝：像素荔枝精灵">.*?</svg>',
     re.S)
@@ -117,6 +129,13 @@ def write_index():
         raise SystemExit("旧立绘数量不对，先人工看看再动手")
     page = TALK_OLD.sub(svg_block(54, 58, "荔宝"), page)
     page = MODAL_OLD.sub(svg_block(46, 50, "荔宝"), page)
+    # 精灵区那份 symbol 一起换，登录页左边迎客的荔宝才不会落后
+    n3 = len(SYMBOL_OLD.findall(page))
+    print("找到旧 symbol: %d" % n3)
+    if n3 == 1:
+        page = SYMBOL_OLD.sub(symbol_block(), page)
+    elif n3 > 1:
+        raise SystemExit("symbol 有 %d 份，先人工看看" % n3)
     open(INDEX, "w", encoding="utf-8", newline="").write(page)
     print("已写回", INDEX)
 

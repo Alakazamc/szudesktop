@@ -109,42 +109,18 @@ try:
     except Exception as e:
         line("凭据接口", False, str(e))
 
-    print("\n[4] 保持在线开关")
+    print("\n[4] 登录接口接受临时账号（不落盘）")
     try:
-        _, _, body = http("/api/keepalive")
-        d = json.loads(body.decode("utf-8"))
-        line("默认是开着的", d.get("on") is True, "interval=%s 秒" % d.get("interval"))
-
-        req = urllib.request.Request(BASE + "/api/keepalive",
-                                     data=json.dumps({"on": False}).encode(),
+        req = urllib.request.Request(BASE + "/api/login",
+                                     data=json.dumps({"username": "", "password": ""}).encode(),
                                      headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=15) as r:
-            d2 = json.loads(r.read().decode("utf-8"))
-        line("可以关掉", d2.get("on") is False, "started=%s" % d2.get("started"))
-
-        # 复现过的问题：关掉再打开时，状态改在 goroutine 里，
-        # 响应可能早于状态变更返回，读出来还是 on=false。这里 POST 完再单独 GET 复核。
-        req = urllib.request.Request(BASE + "/api/keepalive",
-                                     data=json.dumps({"on": True}).encode(),
-                                     headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=15) as r:
-            d3 = json.loads(r.read().decode("utf-8"))
-        line("可以再打开", d3.get("on") is True, "started=%s" % d3.get("started"))
-
-        _, _, body = http("/api/keepalive")
-        d4 = json.loads(body.decode("utf-8"))
-        line("再打开后 GET 复核", d4.get("on") is True)
+        with urllib.request.urlopen(req, timeout=30) as r:
+            d = json.loads(r.read().decode("utf-8"))
+        # 保存区为空时走这个请求应得到明确报错文案，而不是 500 或崩溃
+        line("空账号返回说明而非崩溃", isinstance(d.get("message"), str) and d.get("message") != "",
+             str(d.get("message", ""))[:80])
     except Exception as e:
-        line("保持在线", False, str(e))
-
-    print("\n[4b] 状态接口与开关一致")
-    try:
-        _, _, body = http("/api/status")
-        d = json.loads(body.decode("utf-8"))
-        line("status.keep_alive 是布尔", isinstance(d.get("keep_alive"), bool), str(d.get("keep_alive")))
-        line("status.relogins 是数字", isinstance(d.get("relogins"), int), str(d.get("relogins")))
-    except Exception as e:
-        line("状态接口", False, str(e))
+        line("登录接口", False, str(e))
 
     print("\n[5] 静态资源")
     for path, size_min in [("/", 40000), ("/fonts/fusion-pixel.css", 50000), ("/fonts/svbold.ttf", 10000)]:
