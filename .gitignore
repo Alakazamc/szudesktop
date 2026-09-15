@@ -18,3 +18,12 @@ credentials.json
 *.swp
 .DS_Store
 Thumbs.db
+
+# 页面资源的副本：源在 desktop/assets，打包时由 desktop/sync-assets.py
+# 复制到 desktop/internal/ui/assets 供 go:embed 使用（embed 不能往上级目录跳）
+desktop/internal/ui/assets/
+
+# 渲染自检的中间产物
+desktop/design/_measure.html
+desktop/design/_slice*.html
+desktop/*.measure.html
