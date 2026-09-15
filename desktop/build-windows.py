@@ -1,14 +1,16 @@
-"""一步到位：同步页面 → 编译 Windows 版 → 校验内嵌页面是当前版本。
+"""一步到位：同步页面 → 编译 Windows 版 → 塞图标/版本信息 → 校验内嵌页面是当前版本。
 
 为什么要有这个脚本：页面要进二进制，中间隔了三步（主副本 → assets/ → internal/ui/assets/ → 编译），
 手敲很容易漏掉一步，结果编出来的 exe 里还是旧页面，而且看不出来。已经踩过一次。
 
 用法:
-    python build-windows.py            # 同步 + 编译
+    python build-windows.py            # 同步 + 编译 + 打资源
     python build-windows.py --no-build # 只同步
+    python build-windows.py --no-res   # 不打图标/版本信息
 """
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -19,6 +21,8 @@ MASTER = os.path.join(DESKTOP, "index.html")           # 页面主副本（唯�
 ASSETS = os.path.join(DESKTOP, "assets")               # 浏览器直接打开用的副本
 UI_ASSETS = os.path.join(DESKTOP, "internal", "ui", "assets")  # go:embed 能看见的那份
 OUT = os.path.join(ROOT, "dist", "szudesktop-windows-amd64.exe")
+ICON = os.path.join(ASSETS, "szudesktop.ico")
+MAIN_GO = os.path.join(DESKTOP, "cmd", "szudesktop", "main.go")
 
 
 def md5(path):
@@ -31,6 +35,16 @@ def size(path):
 
 def step(msg):
     print("\n>> " + msg)
+
+
+def read_version():
+    """从 main.go 里抠出版本号，省得两处各写一份、改一处忘一处。"""
+    m = re.search(r'const\s+version\s*=\s*"([^"]+)"',
+                  open(MAIN_GO, encoding="utf-8").read())
+    if not m:
+        print("!! 在 main.go 里找不到 const version")
+        sys.exit(1)
+    return m.group(1)
 
 
 # 1. 主副本 → assets/
@@ -52,7 +66,6 @@ print("   %d 个文件，%.1f KB" % (files, total / 1024))
 
 # 3. 顺手校验 CSS 里引用的 woff2 都在（字体缺了页面会悄悄变丑）
 missing = []
-import re
 for r, _, fs in os.walk(UI_ASSETS):
     for f in fs:
         if f.endswith(".css"):
@@ -69,6 +82,8 @@ if "--no-build" in sys.argv:
     print("\n只同步，不编译。")
     sys.exit(0)
 
+VER = read_version()
+
 # 4. 编译
 step("编译 Windows 版")
 env = dict(os.environ, CGO_ENABLED="0", GOOS="windows", GOARCH="amd64")
@@ -78,9 +93,25 @@ r = subprocess.run(["go", "build", "-trimpath", "-ldflags", "-s -w",
 if r.returncode != 0:
     print("!! 编译失败")
     sys.exit(r.returncode)
-print("   %s  %.1f MB" % (OUT, os.path.getsize(OUT) / 1024 / 1024))
+print("   %s  %.1f MB  版本 %s" % (OUT, os.path.getsize(OUT) / 1024 / 1024, VER))
 
-# 5. 校验：主副本和 assets/ 那份必须字节一致（能抓出「改了页面忘了同步」）
+# 5. 塞图标和版本信息。
+#    必须跟在 go build 之后 —— 重编译会把 .rsrc 段冲掉。
+if "--no-res" in sys.argv:
+    print("\n>> 跳过图标/版本信息")
+elif not os.path.exists(ICON):
+    print("\n>> !! 找不到 %s，先生成：python design/gen_icon.py" % ICON)
+    sys.exit(1)
+else:
+    step("写入图标与版本信息")
+    r = subprocess.run([sys.executable, os.path.join(DESKTOP, "add_resource.py"),
+                        OUT, "--ico", ICON, "--version", VER],
+                       cwd=ROOT)
+    if r.returncode != 0:
+        print("!! 资源写入失败")
+        sys.exit(r.returncode)
+
+# 6. 校验：主副本和 assets/ 那份必须字节一致（能抓出「改了页面忘了同步」）
 step("校验同步结果")
 master_h = md5(MASTER)
 assets_h = md5(os.path.join(ASSETS, "index.html"))

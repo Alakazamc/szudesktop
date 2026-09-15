@@ -161,6 +161,50 @@ res, err := c.Login()
 szunet config delete
 ```
 
+## 桌面客户端 szuDesktop（Windows 首版）
+
+同仓库里还有一个图形界面的客户端，给不想敲命令行的人用。
+
+它做的事：把网页界面**编译进一个 exe**，在本机回环地址起个小服务让界面上的按钮
+能真的驱动校园网认证。所以它不碰窗口系统、不装运行时，双击就能跑，三端共用一份代码。
+
+| | |
+|---|---|
+| 下载 | [Releases](../../releases) 里的 `szudesktop-<版本>-windows-amd64.zip` |
+| 内含 | `szudesktop.exe`（单文件约 8.6 MB）、`README-快速开始.txt`、`LICENSE` |
+| 界面 | 像素风（星露谷物语那一路），后端是内嵌的 szunet 内核 |
+
+首次使用：打开程序 → 填校园卡号和密码 → 「保存凭据」（同样进 Windows DPAPI）。
+之后只要程序开着，每 30 秒检查一次网络，掉线自动补登。
+
+命令行参数和 `szunet` 基本一致，另外多了 `--no-open`（不自动开浏览器）、
+`--no-keep-alive`（不做常驻保活）。
+
+### 自己构建
+
+```bash
+# 一键：同步页面 → 编译 → 塞图标和版本信息 → 校验
+python desktop/build-windows.py
+
+# 跑冒烟测试（起真服务、逐个打接口、检查页面引用的资源有没有 404）
+python desktop/smoke_windows.py
+
+# 打发布包
+python desktop/make_release.py
+```
+
+界面的源文件是 `desktop/index.html`，**只改这一个**；
+构建脚本会自动同步到 `desktop/assets/`（浏览器直接打开用）和
+`desktop/internal/ui/assets/`（`go:embed` 能看见的那份）。
+
+几个容易踩的地方，脚本里都有注释：
+
+- `go:embed` 不能引用上级目录，所以资源要复制到包内（`sync` 那一步）
+- 同一个页面在 `file://` 和 `http://` 下对相对路径的解析基准不同，
+  服务端要剥掉 `/assets` 前缀，否则本地打开正常、跑起来满屏破图
+- Go 不支持在 Windows exe 里加资源，`desktop/add_resource.py` 直接改 PE，
+  塞图标和版本信息，不引入 `windres` 之类的构建依赖
+
 ## 已知限制
 
 - `--ip` 用于绕过域名解析时，HTTPS 证书校验仍按原域名进行，不会降级成跳过校验。
