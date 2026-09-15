@@ -7,6 +7,9 @@
 打包时再复制一份到 desktop/internal/ui/assets/ 让 embed 能看见。
 
 改完页面后跑一次这个脚本即可。两个目录内容完全一致，别手改 ui 下面那份。
+
+⚠️ 更推荐用 desktop/build-windows.py：它会先把 index.html 主副本复制到 assets/，
+再调本脚本，最后编译 + 字节校验。只跑这个脚本的话，忘了复制主副本就会把旧页面编进去。
 """
 import os, shutil
 

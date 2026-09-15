@@ -1271,8 +1271,27 @@ const btnOut = document.getElementById("btn-logout");
 if (btnOut) btnOut.onclick = () => doLogout();
 const btnSave = document.getElementById("btn-save-cred");
 if (btnSave) btnSave.onclick = () => saveCred();
-document.getElementById("sw-auto").addEventListener("change", e =>
-  modal("自动重连", e.target.checked ? "已打开。接上内核后会每 [[y|15 秒]]检查一次，掉了自动补登。" : "已关闭。手动点[[g|一键登录]]就行。"));
+/* 自动重连开关：有内核就切真的保持在线，没内核就弹提示 */
+const swAuto = document.getElementById("sw-auto");
+swAuto.addEventListener("change", e => {
+  if (LIVE) toggleKeep(e.target.checked);
+  else modal("自动重连", e.target.checked
+    ? "已打开（[[y|演示]]）。接上内核后每 [[y|15 秒]]检查一次，掉了自动补登。"
+    : "已关闭（[[y|演示]]）。手动点[[g|一键登录]]就行。");
+});
+/* 状态刷新时同步这个开关，别让它和内核真实状态不一致 */
+function syncSwitches(st){
+  if (!st) return;
+  const sw = document.getElementById("sw-auto");
+  /* 用户正在拨这个开关时不回写，免得动画被抢 */
+  if (sw && document.activeElement !== sw) sw.checked = !!st.keep_alive;
+  const note = document.getElementById("sys-note");
+  if (st.relogins > 0){
+    note.textContent = "已自动补登 " + st.relogins + " 次。"
+      + (st.saved ? "账号 " + st.username + " 存在 " + st.store_desc : "");
+  }
+}
+
 document.querySelectorAll("[data-say]").forEach(el =>
   el.addEventListener("click", () => modal("荔宝", SAY[el.dataset.say] || "……")));
 
@@ -1512,6 +1531,7 @@ async function refreshStatus(){
   netOK = !!st.internet_ok;
   petOverride = null;
   petRender();
+  syncSwitches(st);
 }
 
 async function doLogin(){
@@ -1545,6 +1565,28 @@ async function saveCred(){
   const res = await api("/api/credential", { method:"POST", body: JSON.stringify({ username:u, password:p }) });
   if (!res){ modal("保存账号", "没连上本地内核，[[y|存不了]]。命令行跑 szunet config set 也一样。"); return; }
   modal("保存账号", "已存进[[g|" + res.store_desc + "]]。密码不会明文落盘，换机器也解不开。");
+  refreshStatus();
+}
+
+/* 自动重连 = 内核的常驻保持在线，接真接口 */
+async function toggleKeep(on){
+  const res = await api("/api/keepalive", { method:"POST", body: JSON.stringify({ on: on }) });
+  if (!res){
+    modal("自动重连", on ? "已打开（[[y|演示]]）。接上内核后会每 15 秒检查一次，掉了自动补登。"
+                         : "已关闭（[[y|演示]]）。");
+    return;
+  }
+  /* 以内核回报的真实状态为准，别拿点击的意图当结果 */
+  const real = res.on === true;
+  const sw = document.getElementById("sw-auto");
+  if (sw) sw.checked = real;
+  if (real !== on){
+    modal("自动重连", "内核那边没切过去（当前是" + (real ? "开着" : "关着") + "），再点一次试试。");
+    return;
+  }
+  modal("自动重连", real
+    ? "已打开。内核每 [[b|" + res.interval + " 秒]]探一次，发现掉线自动补登，不用管它。"
+    : "已关闭。需要的时候手动点[[g|一键登录]]。");
   refreshStatus();
 }
 

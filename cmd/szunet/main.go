@@ -59,6 +59,8 @@ func main() {
 		cmdDiag(args)
 	case "vpn":
 		cmdVPN(args)
+	case "autostart":
+		cmdAutostart(args)
 	case "config":
 		cmdConfig(args)
 	case "version", "-v", "--version":
@@ -82,6 +84,7 @@ func usage() {
   szunet detect     只探测网络区域
   szunet diag       连不上时跑这个，给出排查结论
   szunet vpn        校外访问校园网的三条通道（WebVPN / EasyConnect / 零信任）
+  szunet autostart  开机自动登录（Windows：写注册表启动项）
   szunet config     管理保存的账号密码
   szunet version    看版本
 

@@ -27,6 +27,8 @@ func main() {
 	user := fs.String("u", "", "校园卡号（不填就用已保存的）")
 	pass := fs.String("p", "", "统一身份认证密码")
 	noAuto := fs.Bool("no-auto-login", false, "启动时不自动登录")
+	noKeep := fs.Bool("no-keep-alive", false, "不常驻保持在线（默认每 30 秒检查，掉线自动补登）")
+	interval := fs.Int("interval", 30, "保持在线时多久检查一次（秒）")
 	noOpen := fs.Bool("no-open", false, "不自动打开浏览器")
 	srunHost := fs.String("host-teaching", portal.DefaultSrunHost, "教学区深澜门户")
 	drcomHost := fs.String("host-dorm", portal.DefaultDrcomHost, "宿舍区 Dr.COM 门户")
@@ -44,6 +46,8 @@ func main() {
 		User:      *user,
 		Password:  *pass,
 		AutoLogin: !*noAuto,
+		KeepAlive: !*noKeep,
+		Interval:  *interval,
 		NoOpen:    *noOpen,
 		SrunHost:  *srunHost,
 		DrcomHost: *drcomHost,
