@@ -14,7 +14,9 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -597,9 +599,40 @@ func detectAdvices(det *portal.DetectResult) []string {
 	}
 }
 
+// openBrowser 打开界面。
+//
+// Windows 上优先找 Edge/Chrome 用 --app 模式开：那是一个没有地址栏、
+// 没有标签页、任务栏用自己的图标、单独一个窗口的形态 —— 看起来就是个
+// 桌面客户端，而不是"开了个网页"。这是普通浏览器窗口和客户端观感
+// 差距最大的一步，比改任何 CSS 都管用。
+//
+// 找不到 Chromium 系浏览器（或启动失败）就退回 rundll32 走默认浏览器，
+// 功能不受影响，只是又变回"一个网页"。
 func openBrowser(url string) error {
 	switch runtime.GOOS {
 	case "windows":
+		// --app: 无边框客户端窗口；--start-maximized: 一屏放下全部界面
+		for _, dir := range []string{
+			os.Getenv("ProgramFiles(x86)"),
+			os.Getenv("ProgramFiles"),
+			os.Getenv("LocalAppData"), // Chrome 有时装在用户目录
+		} {
+			if dir == "" {
+				continue
+			}
+			for _, exe := range []string{
+				filepath.Join(dir, `Microsoft\Edge\Application\msedge.exe`),
+				filepath.Join(dir, `Google\Chrome\Application\chrome.exe`),
+			} {
+				if _, err := os.Stat(exe); err != nil {
+					continue
+				}
+				cmd := exec.Command(exe, "--app="+url, "--start-maximized")
+				if err := cmd.Start(); err == nil {
+					return nil
+				}
+			}
+		}
 		return exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
 	case "darwin":
 		return exec.Command("open", url).Start()

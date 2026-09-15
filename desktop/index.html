@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>szuDesktop — 深大校园服务台（原型）</title>
+<title>szuDesktop — 深大校园服务台</title>
+<!-- favicon：--app 模式的窗口图标和任务栏图标都用它。别删。 -->
+<link rel="icon" href="assets/szudesktop.ico">
 <!--
   szuDesktop 像素风原型（星露谷 × 深大荔枝）
   ----------------------------------------
@@ -269,8 +271,8 @@
   /* 服务农田底下那条空地（格子铺不满剩下的）。
      高度按实测给，别给太大 —— 会把整张卡撑高、把右栏也拉长。
      横向用百分比、纵向用 bottom：它是卡片内部的固定高度区，两种单位都稳。 */
-  .farm-deco{position:relative; height:156px; margin-top:12px;}
-  .farm-deco img{position:absolute; image-rendering:pixelated; display:block; opacity:.95;}
+  /* farm-deco（农田下方的花草条）已删：客户端壳要求一屏放下，
+     156px 的纯装饰条太奢侈。花草装饰集中在两侧留白和草地横条里。 */
 
   /* 草叶随风摆：以图片底部为轴，左右各歪一点点 */
   .sway{transform-origin:50% 100%; animation:sway 3.6s ease-in-out infinite;}
@@ -589,6 +591,49 @@
 
   footer{color:var(--cream-line); text-align:center; padding:8px 0 16px;}
   ::selection{background:var(--accent); color:#fff;}
+  /* ---------- 客户端壳：一屏放下，不出现页面级滚动 ----------
+     规矩：titlebar/天空/栅栏/草地/talk/dock/收成架/木牌/footer 全部钉死，
+     只有三个栏内部各自滚（左栏 pscroll、中栏 pscroll、右栏 aside）。
+     服务农田钉在中栏底部，窗口太矮时农田自己滚，不顶碎页面。 */
+  html, body{height:100%; overflow:hidden;}
+  body{display:flex; flex-direction:column;}
+  body > header.sky{flex:0 0 auto;}
+  .titlebar{flex:0 0 auto;}
+  .sky .hud{padding:8px 0 4px;}
+  .sky .sign{margin:2px auto 6px;}
+  .sign h1{font-size:20px;}
+  .sky .tab.art{width:84px; height:66px;}
+  .sky .tabs.art{padding:4px 6px; gap:6px;}
+  .fence{height:10px; flex:0 0 auto;}
+  .grassband{height:30px; flex:0 0 auto;}
+  main.wrap{flex:1 1 auto; min-height:0; display:flex; flex-direction:column; padding-bottom:4px; overflow:hidden;}
+  .stage{flex:1 1 auto; min-height:0; overflow:hidden; padding:2px 0 8px;}
+  /* 三个栏都变成纵向弹性盒；没包 pscroll 的面板用自身滚动兜底
+     （校园网/教务/图书馆/一卡通/设置这些视图走这条路） */
+  .stage > .panel{min-height:0; display:flex; flex-direction:column; overflow-y:auto;}
+  .stage > aside:not(.panel){min-height:0; display:flex; flex-direction:column; gap:14px; overflow-y:auto;}
+  .pscroll{flex:1 1 auto; min-height:64px; overflow-y:auto;}
+  .panel > h2, .panel > hr.rule{flex:0 0 auto;}
+  .farm{flex:0 1 auto; min-height:104px; overflow-y:auto;}
+  .talk{flex:0 0 auto; margin:4px 0 2px;}
+  .dock{flex:0 0 auto; padding:2px 0 4px;}
+  /* 祝尼魔散步条改成贴地装饰：钉在 main.wrap 底边，藏在木牌/footer 后面探头 */
+  .farmstrip{position:absolute; bottom:0; left:16px; right:16px; height:46px; z-index:0; pointer-events:none; padding:0;}
+  main.wrap > .harvest, main.wrap > .plank, main.wrap > footer{position:relative; z-index:1;}
+  .harvest{padding:4px 0 2px;}
+  .plank{margin-top:4px;}
+  footer{flex:0 0 auto; padding:2px 0 4px; font-size:11px;}
+  /* 窗口太矮（<760px）或太窄（<1080px）时退回普通页面滚动，别硬塞 */
+  @media (max-height:760px), (max-width:1080px){
+    html, body{height:auto; overflow:visible;}
+    body{display:block;}
+    main.wrap{display:block;}
+    .stage{overflow:visible;}
+    .stage > .panel, .stage > aside:not(.panel){display:block; overflow:visible;}
+    .pscroll{overflow:visible;}
+    .farm{overflow:visible;}
+    .farmstrip{position:static;}
+  }
 </style>
 </head>
 <body>
@@ -749,7 +794,7 @@
   <span class="dot r" aria-hidden="true"></span>
   <span class="dot y" aria-hidden="true"></span>
   <span class="dot g" aria-hidden="true"></span>
-  <span style="margin-left:6px">szuDesktop <span class="cy">v0.1.2</span> — 内测 · 与深圳大学官方无关</span>
+  <span style="margin-left:6px">szuDesktop <span class="cy">v0.2.0</span> — 内测 · 与深圳大学官方无关</span>
   <span class="sp"></span>
   <span class="wbtn" data-say="min" title="最小化">—</span>
   <span class="wbtn" data-say="max" title="最大化"><img src="assets/art/maximize.png" alt=""></span>
@@ -912,6 +957,9 @@
         <span class="chipmini">共 <b id="svc-total" class="cb">0</b> 项</span></h2>
       <hr class="rule">
       <input class="search" id="svc-search" type="text" placeholder="搜索服务…" aria-label="搜索服务">
+      <!-- 客户端壳：这一段是左栏唯一的滚动区（见 CSS 里 .pscroll）。
+           标题和搜索框在外面钉住，服务列表/按钮/宠物在里头滚。 -->
+      <div class="pscroll">
       <div id="svc-groups"></div>
       <hr class="rule">
       <button class="btn block" data-say="add">＋ 添加服务</button>
@@ -953,11 +1001,15 @@
         </div>
       </div>
       <p class="cm" id="pet-say" style="margin-top:6px">它在围栏里打量你。</p>
+      </div><!-- /pscroll 左栏滚动区 -->
     </aside>
 
     <section class="panel">
       <h2><svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-straw"/></svg>任务 · <span class="cg">保持在线</span>
         <span class="chipmini">进行中</span></h2>
+      <!-- 客户端壳：中栏滚动区。任务/加载牌/状态/按钮/进度条都在这里滚，
+           下面的服务农田钉在面板底部，始终可见。 -->
+      <div class="pscroll">
       <hr class="rule">
       <!-- 原版 "Loading…" 木牌：只在"正在连内核"时露一下，连上就收起来 -->
       <div id="sys-loading" class="sys-loading">
@@ -970,7 +1022,6 @@
       </ul>
       <p class="cm" id="sys-note" style="margin-top:2px">正在找本地内核……</p>
 
-      <hr class="rule">
       <div class="stats">
         <div class="stat"><div class="k">IP 地址</div><div class="v cb" id="stat-ip">—</div></div>
         <div class="stat"><div class="k">认证协议</div><div class="v ct" id="stat-zone">—</div></div>
@@ -992,39 +1043,12 @@
       <div class="bar"><i style="width:40%;background:var(--ok)"></i></div>
       <div class="barrow"><span class="cm">本月流量</span><span><b class="cb">12.4 GB</b> <span class="cm">/ 40 GB（演示）</span></span></div>
       <div class="bar"><i style="width:31%;background:var(--blue)"></i></div>
+      </div><!-- /pscroll 中栏滚动区 -->
 
       <hr class="rule">
       <h2><svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-pump"/></svg>服务农田
         <span class="chipmini"><b class="cg">1</b> 已开垦 / <b id="plot-todo" class="cm">0</b> 待开垦</span></h2>
       <div class="farm" id="farm"></div>
-
-      <!-- 农田格子底下空出来的这一条（实测约 190px 高，格子铺不满留下的）。
-           在这儿种点野花野草，正好把"田"的意象补全，也不挡任何内容。
-           两排错开摆，不要挤成一条直线。 -->
-      <div class="farm-deco" aria-hidden="true">
-        <!-- 后排：高一点的草和树丛 -->
-        <img class="sway"    src="assets/art/flora/tallgrass.png" style="left:4%;   bottom:76px; width:36px;">
-        <img class="sway s2" src="assets/art/flora/berrybush.png" style="left:26%;  bottom:74px; width:40px;">
-        <img class="sway s3" src="assets/art/flora/fern.png"      style="left:52%;  bottom:72px; width:34px;">
-        <img class="sway s4" src="assets/art/flora/tallgrass.png" style="left:76%;  bottom:76px; width:34px;">
-        <img                 src="assets/art/flora/rock.png"      style="left:92%;  bottom:70px; width:26px;">
-        <img class="chick"   src="assets/art/flora/chicken.png"   style="left:14%;  bottom:104px; width:36px;">
-
-        <!-- 前排：贴地的小花小草 -->
-        <img class="sway"    src="assets/art/flora/tuft.png"      style="left:2%;   bottom:6px;  width:30px;">
-        <img                 src="assets/art/flora/daisy.png"     style="left:13%;  bottom:10px; width:18px;">
-        <img class="sway s2" src="assets/art/flora/mushroom.png"  style="left:20%;  bottom:6px;  width:24px;">
-        <img class="sway s3" src="assets/art/flora/poppy.png"     style="left:33%;  bottom:10px; width:18px;">
-        <img class="sway s4" src="assets/art/flora/pumpkin.png"   style="left:42%;  bottom:6px;  width:28px;">
-        <img                 src="assets/art/flora/dandelion.png" style="left:55%;  bottom:10px; width:16px;">
-        <img class="sway"    src="assets/art/flora/bluebell.png"  style="left:64%;  bottom:6px;  width:18px;">
-        <img class="sway s2" src="assets/art/flora/tuft.png"      style="left:73%;  bottom:10px; width:28px;">
-        <img                 src="assets/art/flora/lavender.png"  style="left:84%;  bottom:6px;  width:16px;">
-        <img class="sway s3" src="assets/art/flora/dandeseed.png" style="left:93%;  bottom:10px; width:20px;">
-
-        <img class="bfly"    src="assets/art/flora/butterfly.png" style="left:38%;  bottom:128px; width:20px;">
-        <img class="bfly"    src="assets/art/flora/butterfly.png" style="left:82%;  bottom:150px; width:18px; animation-delay:-4s;">
-      </div>
     </section>
 
     <aside>
@@ -1111,6 +1135,7 @@
         <hr class="rule">
         <ul class="feed">
           <li><span class="dot" style="background:var(--ok)"></span>登录了 <span class="cb">SZU_WLAN</span> · 昨天</li>
+          <li><span class="dot" style="background:var(--gold)"></span>客户端壳上线：一屏放下不滚动 · 今天</li>
           <li><span class="dot" style="background:var(--blue)"></span>更新到 <span class="cy">v0.1.2</span> · 周一</li>
           <li><span class="dot" style="background:var(--muted)"></span>自动重连生效 <span class="cg">2</span> 次</li>
         </ul>
