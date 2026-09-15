@@ -32,3 +32,6 @@ desktop/_*.html
 desktop/assets/_*.html
 desktop/design/_*.html
 desktop/design/_*.png
+
+# EasierConnect 参考源码（第三方代码，只留本地不进库）
+design/vpn-ref-*.go.txt
