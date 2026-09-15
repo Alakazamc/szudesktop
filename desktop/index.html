@@ -233,6 +233,74 @@
   @media (max-width:760px){ .tab.art{width:76px; height:60px;} .tab.art .lb{font-size:12px;}
     .tab.art .badge{top:8px; right:8px; font-size:10px;} }
 
+  /* ---------- 背景土地上的花草动物 ----------
+     页面底子是犁过的土地（见 body 的 background），大片空着。
+     这里铺一层"种"上去的东西：花、草丛、蘑菇、石头、小树，还有走动的鸡和猫。
+
+     ⚠️ 能露出来的地方只有两处，布点必须围着这两处来：
+       1. 版心 .wrap（1180px 居中）左右两侧的留白 —— 主角
+       2. 三栏卡片之间那两条 14px 的竖缝 —— 只能放最小的花
+     卡片本身是米色不透明的，铺在卡片底下的等于白铺；页脚上方也没空间。
+     一开始想当然地在"页面底部"种了一排，结果发现底部全是内容，还盖住了页脚文字。
+
+     位置一律用 calc(50% ± 590px …) 锚到版心边缘，不要写死百分比。
+     原因：左右留白随窗口宽度剧烈变化——1241px 视口只剩 30px，1440px 有 130px，
+     1920px 有 370px。写死百分比的话窄屏会压到卡片上、宽屏又离得太远，锚边缘才永远贴身。
+
+     层叠：这一层 z-index:0，正文 .wrap 要抬到 1 之上，否则花草会盖住卡片。 */
+  .ground{position:absolute; inset:0; z-index:0; pointer-events:none; overflow:hidden;}
+  .ground img{position:absolute; image-rendering:pixelated; display:block;
+    filter:drop-shadow(2px 2px 0 rgba(0,0,0,.32));}
+  /* 让正文浮在花草之上 */
+  .wrap{position:relative; z-index:1;}
+
+  /* 锚到版心左右边缘：L 用 right 贴左边缘（越往外 offset 越大），R 用 left 贴右边缘。
+     版心半宽 590px，从半个视口减掉就是边缘位置。 */
+  .ground .L{right:calc(50% + 590px);}
+  .ground .R{left:calc(50% + 590px);}
+
+  /* 卡片内部的空地：直接把装饰塞进 .panel 里（.panel 本来就是 position:relative）。
+     只能放在"确定没内容"的地方 —— 一旦压到文字就毁了。
+     用法：<img class="in-deco" style="right:8px; bottom:6px; width:24px" src="..."> */
+  .in-deco{position:absolute; image-rendering:pixelated; pointer-events:none;
+    opacity:.92; filter:drop-shadow(1px 1px 0 rgba(0,0,0,.16));}
+  .in-deco.sway{transform-origin:50% 100%;}
+
+  /* 服务农田底下那条空地（格子铺不满剩下的）。
+     高度按实测给，别给太大 —— 会把整张卡撑高、把右栏也拉长。
+     横向用百分比、纵向用 bottom：它是卡片内部的固定高度区，两种单位都稳。 */
+  .farm-deco{position:relative; height:156px; margin-top:12px;}
+  .farm-deco img{position:absolute; image-rendering:pixelated; display:block; opacity:.95;}
+
+  /* 草叶随风摆：以图片底部为轴，左右各歪一点点 */
+  .sway{transform-origin:50% 100%; animation:sway 3.6s ease-in-out infinite;}
+  @keyframes sway{0%,100%{transform:rotate(-2.5deg)} 50%{transform:rotate(2.5deg)}}
+  .sway.s2{animation-duration:4.4s; animation-delay:-1.3s;}
+  .sway.s3{animation-duration:3.1s; animation-delay:-2.2s;}
+  .sway.s4{animation-duration:5s;   animation-delay:-.7s;}
+
+  /* 鸡：一边点头啄食一边挪动 */
+  .chick{animation:peck 2.2s steps(3) infinite;}
+  @keyframes peck{0%,60%,100%{transform:translateY(0) rotate(0)}
+    70%{transform:translateY(1px) rotate(-7deg)} 85%{transform:translateY(0) rotate(5deg)}}
+
+  /* 猫：躺着打盹，偶尔动一下 */
+  .catnap{animation:catnap 5.2s ease-in-out infinite;}
+  @keyframes catnap{0%,88%,100%{transform:scaleY(1)} 92%{transform:scaleY(.94)}}
+
+  /* 蝴蝶：绕着圈飞 */
+  .bfly{animation:bflyfly 9s ease-in-out infinite;}
+  @keyframes bflyfly{
+    0%,100%{transform:translate(0,0)}
+    25%{transform:translate(22px,-16px)}
+    50%{transform:translate(44px,4px)}
+    75%{transform:translate(18px,18px)}
+  }
+
+  /* 窗宽不足时留白太窄（1560px 以下只剩不到 190px，花草会贴到卡片上），
+     索性撤掉这一层，只留页脚那点空间——反正窄屏本来就该专心看内容。 */
+  @media (max-width:1560px){ .ground{display:none;} }
+
   /* ---------- 面板 ---------- */
   .panel{background:var(--cream); border:4px solid var(--frame);
     box-shadow:inset 0 0 0 2px var(--accent), 5px 5px 0 rgba(0,0,0,.28); padding:12px; position:relative;}
@@ -630,6 +698,50 @@
 <i class="frame-side l" aria-hidden="true"></i>
 <i class="frame-side r" aria-hidden="true"></i>
 
+<!-- 背景土地上的花草动物。
+     位置全部用 calc(50% ± 590px ...) 锚到版心边缘（为什么见上面 CSS 的注释）。
+     纵向从 340px 铺到 1620px —— 上面留给标题牌和标签栏，下面避开页脚文字。
+     卡片是不透明的，所以只有「左右留白」和「卡片缝隙」这两处能露出东西。 -->
+<div class="ground" aria-hidden="true">
+  <!-- 左侧留白：右边缘贴版心左边缘，偏移越大越靠外 -->
+  <img class="L" src="assets/art/flora/tree.png" style="right:calc(50% + 590px + 10px); top:360px; width:56px;">
+  <img class="L s2" src="assets/art/flora/tallgrass.png" style="right:calc(50% + 590px + 66px); top:500px; width:38px;">
+  <img class="L" src="assets/art/flora/berrybush.png" style="right:calc(50% + 590px + 14px); top:640px; width:42px;">
+  <img class="L s3" src="assets/art/flora/fern.png" style="right:calc(50% + 590px + 70px); top:790px; width:36px;">
+  <img class="L s2" src="assets/art/flora/tuft.png" style="right:calc(50% + 590px + 18px); top:930px; width:32px;">
+  <img class="L" src="assets/art/flora/pumpkin.png" style="right:calc(50% + 590px + 74px); top:1060px; width:30px;">
+  <img class="L chick" src="assets/art/flora/chicken.png" style="right:calc(50% + 590px + 16px); top:1150px; width:38px;">
+  <img class="L s4" src="assets/art/flora/tallgrass.png" style="right:calc(50% + 590px + 12px); top:1280px; width:36px;">
+  <img class="L" src="assets/art/flora/rock.png" style="right:calc(50% + 590px + 68px); top:1370px; width:28px;">
+  <img class="L s2" src="assets/art/flora/mushroom.png" style="right:calc(50% + 590px + 64px); top:1460px; width:24px;">
+  <img class="L catnap" src="assets/art/flora/cat.png" style="right:calc(50% + 590px + 20px); top:1540px; width:50px;">
+
+  <!-- 右侧留白 -->
+  <img class="R s2" src="assets/art/flora/tree.png" style="left:calc(50% + 590px + 10px); top:380px; width:56px;">
+  <img class="R s3" src="assets/art/flora/tallgrass.png" style="left:calc(50% + 590px + 66px); top:530px; width:38px;">
+  <img class="R" src="assets/art/flora/mushroom.png" style="left:calc(50% + 590px + 16px); top:670px; width:26px;">
+  <img class="R s4" src="assets/art/flora/fern.png" style="left:calc(50% + 590px + 72px); top:810px; width:36px;">
+  <img class="R s2" src="assets/art/flora/tuft.png" style="left:calc(50% + 590px + 18px); top:950px; width:32px;">
+  <img class="R" src="assets/art/flora/berrybush.png" style="left:calc(50% + 590px + 68px); top:1080px; width:42px;">
+  <img class="R s2" src="assets/art/flora/pumpkin.png" style="left:calc(50% + 590px + 14px); top:1200px; width:30px;">
+  <img class="R" src="assets/art/flora/rock.png" style="left:calc(50% + 590px + 70px); top:1330px; width:28px;">
+  <img class="R chick" src="assets/art/flora/chicken.png" style="left:calc(50% + 590px + 16px); top:1420px; width:38px;">
+  <img class="R catnap" src="assets/art/flora/cat.png" style="left:calc(50% + 590px + 20px); top:1530px; width:50px;">
+  <img class="R s3" src="assets/art/flora/mushroom.png" style="left:calc(50% + 590px + 66px); top:1610px; width:24px;">
+
+  <!-- ⚠️ 卡片之间那两条 14px 的竖缝：试过在里面种花，全被卡片盖住了，
+       缝本身装不下 14px 的图（还有边框和投影）。这条路走不通，别再加回来。
+       要塞的话塞进卡片内部（.in-deco），见下面那段。 -->
+
+  <!-- 会飞的：落在两侧留白里，绕着圈飞 -->
+  <img class="bfly" src="assets/art/flora/butterfly.png" style="right:calc(50% + 590px + 30px); top:620px; width:20px;">
+  <img class="bfly" src="assets/art/flora/butterfly.png" style="right:calc(50% + 590px + 100px); top:1010px; width:18px; animation-delay:-3.5s;">
+  <img class="bfly" src="assets/art/flora/butterfly.png" style="right:calc(50% + 590px + 56px); top:1440px; width:18px; animation-delay:-7s;">
+  <img class="bfly" src="assets/art/flora/butterfly.png" style="left:calc(50% + 590px + 40px); top:760px; width:20px; animation-delay:-6s;">
+  <img class="bfly" src="assets/art/flora/butterfly.png" style="left:calc(50% + 590px + 120px); top:1250px; width:18px; animation-delay:-1.5s;">
+  <img class="bfly" src="assets/art/flora/butterfly.png" style="left:calc(50% + 590px + 70px); top:1520px; width:18px; animation-delay:-4.5s;">
+</div>
+
 <div class="titlebar">
   <span class="dot r" aria-hidden="true"></span>
   <span class="dot y" aria-hidden="true"></span>
@@ -882,6 +994,34 @@
       <h2><svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-pump"/></svg>服务农田
         <span class="chipmini"><b class="cg">1</b> 已开垦 / <b id="plot-todo" class="cm">0</b> 待开垦</span></h2>
       <div class="farm" id="farm"></div>
+
+      <!-- 农田格子底下空出来的这一条（实测约 190px 高，格子铺不满留下的）。
+           在这儿种点野花野草，正好把"田"的意象补全，也不挡任何内容。
+           两排错开摆，不要挤成一条直线。 -->
+      <div class="farm-deco" aria-hidden="true">
+        <!-- 后排：高一点的草和树丛 -->
+        <img class="sway"    src="assets/art/flora/tallgrass.png" style="left:4%;   bottom:76px; width:36px;">
+        <img class="sway s2" src="assets/art/flora/berrybush.png" style="left:26%;  bottom:74px; width:40px;">
+        <img class="sway s3" src="assets/art/flora/fern.png"      style="left:52%;  bottom:72px; width:34px;">
+        <img class="sway s4" src="assets/art/flora/tallgrass.png" style="left:76%;  bottom:76px; width:34px;">
+        <img                 src="assets/art/flora/rock.png"      style="left:92%;  bottom:70px; width:26px;">
+        <img class="chick"   src="assets/art/flora/chicken.png"   style="left:14%;  bottom:104px; width:36px;">
+
+        <!-- 前排：贴地的小花小草 -->
+        <img class="sway"    src="assets/art/flora/tuft.png"      style="left:2%;   bottom:6px;  width:30px;">
+        <img                 src="assets/art/flora/daisy.png"     style="left:13%;  bottom:10px; width:18px;">
+        <img class="sway s2" src="assets/art/flora/mushroom.png"  style="left:20%;  bottom:6px;  width:24px;">
+        <img class="sway s3" src="assets/art/flora/poppy.png"     style="left:33%;  bottom:10px; width:18px;">
+        <img class="sway s4" src="assets/art/flora/pumpkin.png"   style="left:42%;  bottom:6px;  width:28px;">
+        <img                 src="assets/art/flora/dandelion.png" style="left:55%;  bottom:10px; width:16px;">
+        <img class="sway"    src="assets/art/flora/bluebell.png"  style="left:64%;  bottom:6px;  width:18px;">
+        <img class="sway s2" src="assets/art/flora/tuft.png"      style="left:73%;  bottom:10px; width:28px;">
+        <img                 src="assets/art/flora/lavender.png"  style="left:84%;  bottom:6px;  width:16px;">
+        <img class="sway s3" src="assets/art/flora/dandeseed.png" style="left:93%;  bottom:10px; width:20px;">
+
+        <img class="bfly"    src="assets/art/flora/butterfly.png" style="left:38%;  bottom:128px; width:20px;">
+        <img class="bfly"    src="assets/art/flora/butterfly.png" style="left:82%;  bottom:150px; width:18px; animation-delay:-4s;">
+      </div>
     </section>
 
     <aside>

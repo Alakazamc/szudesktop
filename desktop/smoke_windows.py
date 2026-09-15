@@ -177,13 +177,23 @@ try:
     try:
         _, _, body = http("/")
         page = body.decode("utf-8", "ignore")
+        # 先把 <style>...</style> 整段抠掉再抽路径。
+        # 为什么：CSS 注释里为了说明用法会写示例，比如
+        #     /* 用法：<img class="in-deco" src="..."> */
+        # 这种"路径"是给人看的，不是真资源，正则一抓就误报 404。
+        # 前一次冒烟就是这么挂的：报 /... -> 404，看着像图坏了，其实是注释。
+        scannable = re.sub(r"<style\b[^>]*>.*?</style>", "", page,
+                           flags=re.S | re.I)
         refs = set()
-        for m in re.finditer(r'(?:src|href)\s*=\s*"([^"]+)"', page):
+        for m in re.finditer(r'(?:src|href)\s*=\s*"([^"]+)"', scannable):
             u = m.group(1)
             if u.startswith(("http://", "https://", "data:", "#", "mailto:")):
                 continue
             # JS 模板串（形如 ${...}）是运行时才拼出真路径的，这里没法验，跳过
             if "${" in u or "+" in u:
+                continue
+            # 省略号占位（...、…、以及夹在中间的 ...）一律不是真路径
+            if "..." in u or "…" in u:
                 continue
             if u.startswith("/"):
                 refs.add(u)
@@ -198,8 +208,12 @@ try:
                     bad.append("%s -> %d" % (u, st))
             except Exception as e:
                 bad.append("%s -> %s" % (u, e))
-        line("页面共引用 %d 个资源" % len(refs), len(refs) > 0)
+        line("页面共引用 %d 个资源" % len(refs), len(refs) > 0, "共 " + str(len(refs)) + " 条")
+        # 出问题时把完整清单打出来。上次因为只打前 6 条、又截了长度，
+        # 只看到一个 "/..." ，白猜了半天空。
         line("全部能取到", not bad, ("; ".join(bad[:6]) if bad else "没有 404"))
+        for b in bad:
+            print("       × " + b)
     except Exception as e:
         line("资源路径检查", False, str(e))
 
@@ -209,9 +223,23 @@ try:
         page = body.decode("utf-8", "ignore")
         for m in MARKERS:
             line("含标记 " + m, m in page)
-        local = open(r"D:\szuNet\desktop\assets\index.html", encoding="utf-8").read()
-        line("与本地 index.html 一致", len(page) == len(local),
-             "内嵌 %d 字符 / 本地 %d 字符" % (len(page), len(local)))
+        # 注意这里比的是"构建时同步过去的那份"，不是 desktop/index.html。
+        # 因为同步是 build-windows.py 干的：master → assets/index.html → 嵌进二进制。
+        # 这一步挂掉通常意味着"改完页面没重新构建"，而不是页面本身有问题。
+        #
+        # ⚠️ 必须按字节比，不能 open(..., encoding=) 读成字符串再比长度。
+        # 为什么：这台机器 git core.autocrlf=true，工作区文件是 CRLF 的；
+        # 而 Python 文本模式读取会做换行归一化，把 \r\n 变成 \n，
+        # 于是"读出来的字符数"永远比"发出去的字节数"少——正好少一个换行数。
+        # 之前就是这个坑：1838 行 → 差 1838，看着像"内嵌的是旧版本"，
+        # 白折腾一轮重新构建。（文件其实一直是好的，字节数完全一致。）
+        local = open(r"D:\szuNet\desktop\assets\index.html", "rb").read()
+        line("与同步副本一致", body == local,
+             "内嵌 %d 字节 / 副本 %d 字节" % (len(body), len(local)))
+        # 顺手比一下 master，省得同步完忘了重新构建、或者反过来
+        master = open(r"D:\szuNet\desktop\index.html", "rb").read()
+        line("同步副本与 master 一致", master == local,
+             "master %d 字节" % len(master))
     except Exception as e:
         line("页面版本", False, str(e))
 
