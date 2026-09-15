@@ -1,9 +1,9 @@
 # szuNet
 
-深圳大学校园网的命令行工具。
+深圳大学校园网工具箱：命令行 + 桌面客户端 + 校外 VPN。
 
 自动判断你在**教学区**还是**宿舍区**，走对应的那套认证协议；连不上的时候，
-告诉你卡在哪一步。
+告诉你卡在哪一步；人在校外时，用内置的深信服协议客户端连回学校 VPN。
 
 Windows / macOS / Linux 三端通用，编译产物是**单个可执行文件**，
 不依赖 Python、Node 之类的运行时——下载下来就能跑。
@@ -174,13 +174,35 @@ szunet config delete
 | 内含 | `szudesktop.exe`（单文件约 8.6 MB）、`README-快速开始.txt`、`LICENSE` |
 | 界面 | 像素风（星露谷物语那一路），后端是内嵌的 szunet 内核 |
 
+### 桌面客户端长这样
+
+![szuDesktop 界面](docs/screenshot-desktop.png)
+
+像素风（星露谷物语那一路）：整页一屏放下不滚动，三栏内容用右下角的小木牌
+**◀ 1/4 ▶** 翻页；服务农田、宠物、收成架都在。窗口太矮或太窄时自动退回普通滚动。
+
 首次使用：打开程序 → 顶上点「校园网」进登录页 → 填校园卡号和密码 → 勾「记住账号密码」→ 登录
 （凭据同样进 Windows DPAPI，不明文落盘）。不勾「记住」也能登，账号只当次有效。
+概览页的「一键登录」会直接跳到登录页，登录这件事只在登录页发生。
 
 不做后台自动重连：要不要登录由你在登录页决定，程序不会在背后周期性发认证请求。
 
-命令行参数和 `szunet` 基本一致，另外多了 `--no-open`（不自动开浏览器）、
+命令行参数和 `szunet` 基本一致，另外多了 `--no-open`（不自动开窗口）、
 `--no-auto-login`（启动时不自动登录一次）、`--addr`（固定监听地址，默认随机端口）。
+
+### 校外 VPN（内置深信服协议客户端）
+
+深大校外访问内网用的官方方案是深信服 EasyConnect（`ssl.szu.edu.cn` /
+`svpn.szu.edu.cn`）。szuNet 内置了该协议的第三方 Go 实现（`internal/vpn`，
+基于开源项目 [EasierConnect](https://github.com/acd407/EasierConnect) 的逆向成果移植）：
+
+- **不用装 EasyConnect**：应用里填服务器地址 + 卡号密码（和统一身份认证相同）直接连
+- 登录后在本机开一个 **SOCKS5 代理**（默认 `127.0.0.1:7891`），浏览器代理指过去即可访问校内资源
+- 断线自动重连，支持短信 / 动态口令二步验证
+
+状态：**协议内核已完成，桌面界面接入开发中**。协议是逆向产物，学校网关固件升级
+可能使其失效；仅支持 IPv4 隧道，DNS 仍走本地解析（校内域名解析问题见
+`design/vpn-notes.md` 的风险清单）。
 
 ### 自己构建
 
@@ -228,10 +250,13 @@ python desktop/make_release.py
 
 ```
 cmd/szunet/           命令行入口
+desktop/              桌面客户端（Go 内嵌网页 UI + Windows 构建脚本）
 internal/crypto/      深澜协议用到的加密原语（HMAC-MD5、XXTEA 变体、自定义 Base64、SHA1）
-internal/portal/      两套认证协议的客户端 + 区域探测
+internal/portal/      两套认证协议的客户端 + 区域探测（协议指纹判区）
+internal/vpn/         深信服 EasyConnect 协议客户端（校外 VPN，SOCKS5 出口）
 internal/credential/  凭据存储，按平台分文件
 internal/diagnose/    诊断逻辑
+design/               设计脚本（点阵生成器、布局探针、协议学习笔记）
 docs/                 排查指南
 ```
 
@@ -265,6 +290,10 @@ git push origin v0.1.0
 - [zu1k/srun](https://github.com/zu1k/srun) — 多网卡绑定、自动探测 IP
 - [AatroxChen77/szu-net](https://github.com/AatroxChen77/szu-net) — 双区域策略引擎、断线保活思路
 - [Sleepstars/SZU_Utils](https://github.com/Sleepstars/SZU_Utils) — 双区识别脚本
+
+校外 VPN 的深信服协议部分移植自 [acd407/EasierConnect](https://github.com/acd407/EasierConnect)
+（lyc8503 原版的活跃 fork），协议细节与改造清单见 `design/vpn-notes.md`。
+EasyConnect 的一切权利属深信服所有。
 
 ## 许可
 
