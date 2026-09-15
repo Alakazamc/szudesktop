@@ -2,6 +2,7 @@ package portal
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"io"
 	"net"
 	"net/http"
@@ -21,6 +22,8 @@ type DetectResult struct {
 	DormPortalOK  bool // 宿舍区门户（172.30.255.42）通不通
 	TeachPortalOK bool // 教学区门户（net.szu.edu.cn）通不通
 	SrunDNSOK     bool // 教学区门户的域名能不能解析出来
+	SrunUsable    bool // 深澜的 get_challenge 是不是真的能用（协议指纹）
+	DormUsable    bool // 宿舍区 ePortal 的登录接口是不是真的在（协议指纹）
 	Notes         []string
 }
 
@@ -48,7 +51,26 @@ func Detect() *DetectResult {
 	r.DormPortalOK = reachable(DefaultDrcomHost + "/")
 	r.TeachPortalOK = reachable(DefaultSrunHost + "/")
 
+	// 光看"连不连得上"会判错区：宿舍区门户 172.30.255.42 在教学区也能连上
+	// （返回 200），但它的 /eportal/portal/login 是 404——也就是说教学区机器上
+	// 「两个门户都通」照样成立。以前这条规则会把教学区误判成宿舍区，
+	// 然后用 Dr.COM 协议去打 404。所以这里改用协议指纹：
+	// 谁真的提供了自己的认证接口，才算谁的地盘。
+	r.SrunUsable = srunUsable()
+	r.DormUsable = drcomUsable()
+
 	switch {
+	case r.SrunUsable && !r.DormUsable:
+		r.Zone = ZoneTeaching
+		r.Notes = append(r.Notes, "深澜握手成功、宿舍区没有 ePortal 接口 → 判定教学区")
+	case r.DormUsable && !r.SrunUsable:
+		r.Zone = ZoneDorm
+		r.Notes = append(r.Notes, "ePortal 登录接口在、深澜握手失败 → 判定宿舍区")
+	case r.SrunUsable && r.DormUsable:
+		r.Zone = ZoneDorm
+		r.Notes = append(r.Notes,
+			"两套接口都有回应（宿舍区常见），按宿舍区处理；"+
+				"如果登录报 ac_id 或协议错误，用 --zone teaching 手动指定")
 	case r.DormPortalOK && r.TeachPortalOK:
 		// 这是宿舍区未认证时最常见的情况，容易误判成教学区，所以放第一个判断。
 		r.Zone = ZoneDorm
@@ -116,6 +138,81 @@ func reachable(rawURL string) bool {
 	defer resp.Body.Close()
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
 	return true
+}
+
+// noProxyClient 造一个明确不走系统代理的 HTTP 客户端。
+//
+// 开着代理时，net.szu.edu.cn 这类内网域名会被代理抢走解析，
+// 探测结果就不可信了。所以探测一律绕开代理。
+func noProxyClient(timeout time.Duration) *http.Client {
+	return &http.Client{
+		Timeout: timeout,
+		Transport: &http.Transport{
+			Proxy:           nil,
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+}
+
+// fetch 取回响应体，只用于探测。
+func fetch(client *http.Client, rawURL string, limit int64) (int, []byte) {
+	resp, err := client.Get(rawURL)
+	if err != nil {
+		return 0, nil
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, limit))
+	return resp.StatusCode, body
+}
+
+// srunUsable 判断深澜的认证接口是不是真的在这张网上。
+//
+// 判据是 get_challenge 能不能握手成功：这是深澜登录的第一步，
+// 返回 error=ok 且带 challenge，就说明这台机器确实归深澜管。
+// 用 probe 这个假账号，只握手、不登录，不碰真实凭据。
+func srunUsable() bool {
+	client := noProxyClient(5 * time.Second)
+	code, body := fetch(client,
+		DefaultSrunHost+"/cgi-bin/get_challenge?callback=_&username=probe&ip=", 1<<16)
+	if code == 0 {
+		return false
+	}
+
+	// 返回是 JSONP：_({...})，要先把外壳剥掉才能解析。
+	raw := strings.TrimSpace(string(body))
+	if i := strings.Index(raw, "("); i >= 0 {
+		if j := strings.LastIndex(raw, ")"); j > i {
+			raw = raw[i+1 : j]
+		}
+	}
+
+	var resp struct {
+		Challenge string `json:"challenge"`
+		Error     string `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(raw), &resp); err != nil {
+		return false
+	}
+	return resp.Error == "ok" && resp.Challenge != ""
+}
+
+// drcomUsable 判断宿舍区的 ePortal 登录接口是不是真的在这张网上。
+//
+// 这里特意请求登录接口本身而不是门户首页：首页在教学区也能返回 200，
+// 只有 /eportal/portal/login 在（哪怕账号为空会报错）才说明真有 ePortal。
+// 账号密码留空，不会触发任何真实认证。
+func drcomUsable() bool {
+	client := noProxyClient(5 * time.Second)
+	code, body := fetch(client,
+		DefaultDrcomHost+"/eportal/portal/login?callback=dr1003&login_method=1&user_account=&user_password=", 1<<16)
+	if code == 0 || code == http.StatusNotFound {
+		return false
+	}
+	// ePortal 无论成功失败都返回 dr1003(...) 这种 JSONP，拿它当指纹。
+	return strings.Contains(string(body), "dr1003")
 }
 
 // dnsResolvable 检查一个域名能不能解析出地址。
