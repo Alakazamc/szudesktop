@@ -15,7 +15,7 @@
     两套字体全部本地加载，断网照常显示，不依赖任何 CDN。
     size-adjust:133% 是把 2048 设计单位缩放成 16px 网格，保证在小字号下不糊。
   · 想加服务：改 SERVICE 数组即可，左栏列表 / 服务农田 / 工具栏会一起变。
-  · 接真后端：搜 TODO(szunet)，一键登录 / 断线诊断之后走 szuNet CLI 的本地服务。
+  · 接真后端：一键登录 / 断线诊断走本地服务（/api/login、/api/diag），服务不可用时退回演示。
   · 文字上色的小语法：[[b|文字]] → b 蓝 / g 绿 / y 金 / r 红 / t 青 / p 紫 / m 淡
 -->
 <link rel="stylesheet" href="assets/fonts/fusion-pixel.css">
@@ -1363,7 +1363,7 @@
 const SERVICE = [
   { id:"net",   name:"校园网认证", color:"#4A7FB5", status:"planted", group:"常用",
     icon:"dwarf.png",
-    say:"点[[g|一键登录]]试试。现在是[[y|演示模式]]，还没接 szunet 内核。" },
+    say:"点[[g|一键登录]]去登录页填账号。[[b|教学区]]和[[b|宿舍区]]都会自动判，不用自己选。" },
   { id:"card",  name:"一卡通余额", color:"#C97C0A", status:"todo", group:"常用",
     icon:"diamond.png",
     say:"余额在右上角显示了。[[y|交易流水]]后面补上。" },
@@ -1396,8 +1396,8 @@ const SERVICE = [
 const SAY = {
   add:   "想好要种什么了？改 index.html 里的 [[g|SERVICE]] 数组，或者直接告诉我，马上开垦。",
   sort:  "拖动排序还没做。你先想好[[y|哪几个工具最常用]]，我来排。",
-  login: "演示模式：还没接 szunet 内核。接上之后，这里就是真的[[g|一键登录]]。",
-  diag:  "诊断逻辑在 szuNet CLI 里已经能跑了（[[b|szunet diag]]），就差接进来。",
+  login: "现在没连上本地内核，这是[[y|演示]]效果。用 szudesktop.exe 启动就有真结果。",
+  diag:  "现在没连上本地内核，这是[[y|演示]]效果。正常启动 szudesktop.exe 后，这里会列出区域判定和协议指纹。",
   close: "别关！这只是个[[y|网页原型]]，右上角的叉是装饰。",
   min:   "最小化也先别按，假的。",
   max:   "已经很大了。",
@@ -1612,7 +1612,7 @@ document.querySelectorAll("[data-say]").forEach(el =>
      · 满 100 升一级，等级越高越容易是开心脸
      · 超过 24 小时没理它，按天扣亲密度（星露谷的老规矩）
    猫的表情跟着网络走：netOK 为假就趴窝睡觉，登录成功乐一下，断线诊断蔫一会儿。
-   TODO(szunet): netOK 现在写死为 true，接真内核后换成 portal.Detect() 的结果。 */
+   netOK 由 refreshStatus() 按内核返回的 internet_ok 更新。 */
 const PET_KEY = "szuDesktop.pet.v1";
 const PET_TODAY = new Date().toDateString();
 const pet = Object.assign(
