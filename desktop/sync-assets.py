@@ -3,19 +3,22 @@
 为什么要有这一步：Go 的 go:embed 只能嵌入「本包目录及其子目录」里的文件，
 待嵌入的资源不允许通过 .. 往上跳。
 
-所以页面（index.html）和字体放在 desktop/assets/ 供浏览器直接打开，
-打包时再复制一份到 desktop/internal/ui/assets/ 让 embed 能看见。
+页面唯一源文件是 desktop/index.html；字体和图片源文件放在 desktop/assets/。
+本脚本先生成 desktop/assets/index.html，再把整套资源复制到
+ desktop/internal/ui/assets/，让 embed 能看见。
 
-改完页面后跑一次这个脚本即可。两个目录内容完全一致，别手改 ui 下面那份。
-
-⚠️ 更推荐用 desktop/build-windows.py：它会先把 index.html 主副本复制到 assets/，
-再调本脚本，最后编译 + 字节校验。只跑这个脚本的话，忘了复制主副本就会把旧页面编进去。
+两个 index.html 副本都是构建产物，已经忽略，别手改。直接运行本脚本或
+ desktop/build-windows.py 都会从唯一源文件重新生成，不会把旧页面编进去。
 """
 import os, shutil
 
 ROOT = os.path.dirname(os.path.abspath(__file__))  # desktop/ 自身，别写死盘符
+MASTER = os.path.join(ROOT, "index.html")
 SRC = os.path.join(ROOT, "assets")
 DST = os.path.join(ROOT, "internal", "ui", "assets")
+
+# index.html 的唯一源文件在 desktop/；assets/ 下那份是生成物。
+shutil.copy2(MASTER, os.path.join(SRC, "index.html"))
 
 if os.path.isdir(DST):
     shutil.rmtree(DST)

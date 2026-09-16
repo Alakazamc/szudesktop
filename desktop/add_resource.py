@@ -22,6 +22,7 @@
 编译之后（build-windows.py 里已经接上了）。
 """
 import os
+import re
 import struct
 import sys
 
@@ -205,10 +206,14 @@ def version_info(ver, exe_name):
         body = pad4(body)
         return struct.pack("<H", len(body)) + body[2:]
 
-    parts = ver.split(".")
+    # Windows 固定版本字段只能放四段数字；展示文字仍保留 beta0.1 这类标签。
+    # beta0.1 -> 0.1.0.0，0.1.0-beta.1 -> 0.1.0.1。
+    parts = [int(x) for x in re.findall(r"\d+", ver)]
+    if not parts:
+        parts = [0]
     while len(parts) < 4:
-        parts.append("0")
-    ms, mn, bld, rev = (int(x) for x in parts[:4])
+        parts.append(0)
+    ms, mn, bld, rev = parts[:4]
     # 版本号打包成两个 DWORD
     ms_hex = (ms << 16) | mn
     ls_hex = (bld << 16) | rev

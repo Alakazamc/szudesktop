@@ -19,8 +19,10 @@ credentials.json
 .DS_Store
 Thumbs.db
 
-# 页面资源的副本：源在 desktop/assets，打包时由 desktop/sync-assets.py
-# 复制到 desktop/internal/ui/assets 供 go:embed 使用（embed 不能往上级目录跳）
+# 页面资源的生成副本：desktop/index.html 是唯一界面源文件。
+# build-windows.py 会先生成 desktop/assets/index.html，再复制整个 assets/
+# 到 desktop/internal/ui/assets 供 go:embed 使用。
+desktop/assets/index.html
 desktop/internal/ui/assets/
 
 # 渲染自检的中间产物

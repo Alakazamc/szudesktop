@@ -162,7 +162,7 @@ try:
     print("\n[5b] 美术素材能不能取到")
     # 这些是从 stardewOS 拿来的图。少一张页面就会有块空白，
     # 但浏览器不会报错，所以必须在这里挑几张关键的打一遍。
-    for path in ["/art/m1.png", "/art/face-abigail.png", "/art/coursor.png",
+    for path in ["/art/m1.png", "/art/calendar.png", "/art/coursor.png",
                  "/art/junimo-green.png", "/art/loading.png", "/art/bird.gif",
                  "/art/dwarf.png", "/art/maximize.png"]:
         try:

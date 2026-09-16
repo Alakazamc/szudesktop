@@ -231,9 +231,13 @@ python desktop/smoke_windows.py   # 桌面端 40 项冒烟
 
 ### 发布
 
+首个公开测试版为 `beta0.1`。发布前必须依次通过全仓测试、页面静态检查、真实点击验收和 Windows 整机冒烟，再生成 ZIP：
+
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+python desktop/build-windows.py
+python desktop/design/check_login_e2e.py
+python desktop/smoke_windows.py
+python desktop/make_release.py
 ```
 
 ## 致谢

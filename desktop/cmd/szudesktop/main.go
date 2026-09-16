@@ -18,7 +18,7 @@ import (
 	"github.com/Alakazamc/szudesktop/internal/portal"
 )
 
-const version = "0.2.1"
+const version = "beta0.1"
 
 func main() {
 	fs := flag.NewFlagSet("szudesktop", flag.ExitOnError)
