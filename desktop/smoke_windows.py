@@ -39,6 +39,8 @@ MARKERS = [
     "sys-mode", "btn-logout", "stat-zone", "refreshStatus",
     # 登录页：元素 + 驱动它的函数，两样都得在
     "lg-login", "refreshLogin", "doLoginPage", "doLogoutPage", "doForgetPage",
+    # 校外 VPN 页面：入口、操作函数和未来校内服务状态
+    "view-vpn", "vpnConnect", "vpnAuth", "vpnDisconnect", "vpnProxyToggle", "campus-badge",
 ]
 
 ok_all = True
@@ -87,7 +89,7 @@ try:
         raise SystemExit(1)
 
     print("\n[2] 接口")
-    for path in ["/api/status", "/api/diag", "/api/credential", "/api/vpn/status"]:
+    for path in ["/api/status", "/api/diag", "/api/credential", "/api/vpn/status", "/api/campus/status"]:
         try:
             st, ct, body = http(path)
             parsed = json.loads(body.decode("utf-8"))

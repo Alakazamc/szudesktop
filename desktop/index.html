@@ -644,6 +644,27 @@
     .loginbody{flex-direction:column;}
     .loginart p{max-width:none;}
   }
+  /* ---------- 校外 VPN ---------- */
+  .vpnwrap{grid-column:1 / -1; max-width:900px; margin:0 auto; width:100%;}
+  .vpn-grid{display:grid; grid-template-columns:minmax(0,1fr) minmax(260px,.8fr); gap:18px;}
+  .vpn-form{display:flex; flex-direction:column; gap:7px;}
+  .vpn-form .lf{font-size:12px; color:var(--cream);}
+  .vpn-row{display:grid; grid-template-columns:1fr 120px; gap:8px;}
+  .vpn-actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:5px;}
+  .vpn-note{min-height:22px; color:var(--cream); line-height:1.6;}
+  .vpn-note.ok{color:var(--ok);} .vpn-note.bad{color:var(--bad);} .vpn-note.warn{color:var(--gold);}
+  .vpn-state{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px;}
+  .vpn-state > div{background:var(--cream-hi); border:2px solid var(--cream-line); padding:7px 8px; min-width:0;}
+  .vpn-state .k{font-size:11px; color:var(--muted);}
+  .vpn-state .v{font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .vpn-log{height:190px; overflow-y:auto; background:#2D2530; border:3px solid var(--frame); padding:8px; color:#F6E9C8; font-family:var(--mono); font-size:11px; line-height:1.65; white-space:pre-wrap;}
+  .vpn-log .error{color:#FF9A8C;} .vpn-log .warn{color:#FFD27A;} .vpn-log .ok{color:#B9F28F;}
+  .campus-card{margin-top:12px; padding:8px 10px; background:var(--cream-dim); border:2px solid var(--cream-line); line-height:1.6;}
+  .campus-card .v{color:var(--blue); word-break:break-all;}
+  @media (max-width:760px){
+    .vpn-grid{grid-template-columns:1fr;}
+    .vpn-row{grid-template-columns:1fr;}
+  }
   /* 窗口太矮（<760px）或太窄（<1080px）时退回普通页面滚动，别硬塞 */
   @media (max-height:760px), (max-width:1080px){
     html, body{height:auto; overflow:visible;}
@@ -951,6 +972,8 @@
         <img src="assets/art/m1.png" alt=""><span class="lb">概览</span></span>
       <span class="tab art" data-view="network" title="校园网">
         <img src="assets/art/m2.png" alt=""><span class="lb">校园网</span></span>
+      <span class="tab art" data-view="vpn" title="校外 VPN">
+        <img src="assets/art/m4.png" alt=""><span class="lb">校外 VPN</span></span>
       <span class="tab art" data-view="jw" title="教务">
         <img src="assets/art/m3.png" alt=""><span class="lb">教务</span></span>
       <span class="tab art" data-view="lib" title="图书馆">
@@ -1249,6 +1272,66 @@
     </div>
   </section>
 
+  <!-- 校外 VPN：连接校园网内资源，不等同于校园网认证 -->
+  <section id="view-vpn" class="stage" style="display:none">
+    <div class="panel vpnwrap">
+      <h2><svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-blue"/></svg>校外 VPN
+        <span class="chipmini" id="vpn-badge">未连接</span></h2>
+      <hr class="rule">
+      <div class="vpn-grid">
+        <div class="vpn-form">
+          <label class="lf" for="vpn-server">VPN 服务器</label>
+          <input class="inp" id="vpn-server" type="text" autocomplete="url" value="ssl.szu.edu.cn:443" placeholder="例如 ssl.szu.edu.cn:443">
+
+          <div class="vpn-row">
+            <div>
+              <label class="lf" for="vpn-user">VPN 账号</label>
+              <input class="inp" id="vpn-user" type="text" autocomplete="username" placeholder="VPN / 统一身份账号">
+            </div>
+            <div>
+              <label class="lf" for="vpn-port">SOCKS 端口</label>
+              <input class="inp" id="vpn-port" type="number" min="1024" max="65535" value="7891" inputmode="numeric">
+            </div>
+          </div>
+
+          <label class="lf" for="vpn-pass">VPN 密码</label>
+          <input class="inp" id="vpn-pass" type="password" autocomplete="current-password" placeholder="只在本次连接中使用">
+
+          <div id="vpn-auth-row" style="display:none">
+            <label class="lf" for="vpn-code">二步验证码</label>
+            <div class="vpn-actions">
+              <input class="inp" id="vpn-code" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="短信或动态口令">
+              <button class="btn" id="vpn-auth">提交验证码</button>
+            </div>
+          </div>
+
+          <label class="switch"><input type="checkbox" id="vpn-proxy" checked><span class="track"></span>
+            <span class="cm">连接后打开系统代理</span></label>
+
+          <div class="vpn-actions">
+            <button class="btn" id="vpn-connect">连接 VPN</button>
+            <button class="btn ghost" id="vpn-disconnect">断开</button>
+            <button class="btn ghost" id="vpn-proxy-toggle">打开系统代理</button>
+          </div>
+          <div class="vpn-note" id="vpn-note">校外访问校内资源时使用。VPN 密码不会显示在状态或日志里。</div>
+
+          <div class="campus-card">
+            <div><span class="cm">校内后端服务</span> <b id="campus-badge" class="cy">未配置</b></div>
+            <div id="campus-note" class="cm">后续可配置仅校园网环境可访问的后端地址。</div>
+            <div id="campus-url" class="v"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="vpn-state" id="vpn-state"></div>
+          <hr class="rule">
+          <div class="cm" style="margin-bottom:5px">连接日志</div>
+          <div class="vpn-log" id="vpn-log">等待 VPN 状态……</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- 对话框 -->
   <div class="talk">
     <span class="name">荔宝</span>
@@ -1540,16 +1623,22 @@ const tabs = document.querySelectorAll("#tabs .tab");
 const vOverview = document.getElementById("view-overview");
 const vPh = document.getElementById("view-placeholder");
 const vLogin = document.getElementById("view-login");
-/* 校园网标签进来的是登录页，其余还没做好的走占位页 */
+const vVpn = document.getElementById("view-vpn");
+/* 校园网标签进登录页，校外 VPN 有独立操作页，其余还没做好的走占位页 */
 tabs.forEach(t => t.addEventListener("click", () => {
   tabs.forEach(x => x.classList.remove("active"));
   t.classList.add("active");
   const v = t.dataset.view;
   const login = (v === "network" || v === "login");
+  const vpn = v === "vpn";
   vOverview.style.display = v === "overview" ? "grid" : "none";
   vLogin.style.display = login ? "grid" : "none";
-  vPh.style.display = (v === "overview" || login) ? "none" : "block";
+  vVpn.style.display = vpn ? "grid" : "none";
+  vPh.style.display = (v === "overview" || login || vpn) ? "none" : "block";
+  vpnActive = vpn;
+  if (!vpnActive && vpnTimer){ clearTimeout(vpnTimer); vpnTimer = null; }
   if (login){ refreshLogin(); say("在这页登就行。勾上[[g|记住]]以后开机就能自动登。"); return; }
+  if (vpn){ refreshVPN(); scheduleVPNRefresh(); say("人在校外时，先连[[b|校外 VPN]]，再访问校园网里的服务。"); return; }
   if (v !== "overview"){
     document.getElementById("ph-title").textContent = t.textContent.trim().replace(/\d+$/, "") + " · 装修中";
     document.getElementById("ph-text").textContent = (SAY.ph[v] || "这一页还在装修。").replace(/\[\[\w\|(.*?)\]\]/g, "$1");
@@ -1871,6 +1960,183 @@ async function doDiag(){
   (d.advices || []).forEach((a, i) => { t += (i === 0 ? "\n\n建议：" : "\n") + "· " + a; });
   type(modalText, t);
 }
+
+/* ================= 校外 VPN =================
+   VPN 页面只负责调用本地接口，不把 VPN 密码写入状态、日志或 localStorage。
+   校内后端暂时只显示配置状态，等接口契约确定后再加白名单 API。 */
+let vpnBusy = false;
+let vpnTimer = null;
+let vpnActive = false;
+
+function vpnText(id, text){
+  const el = document.getElementById(id);
+  if (el) el.textContent = text == null ? "—" : String(text);
+}
+function vpnState(pairs){
+  const box = document.getElementById("vpn-state");
+  box.innerHTML = "";
+  pairs.forEach(([k, v]) => {
+    const cell = document.createElement("div");
+    const key = document.createElement("div"); key.className = "k"; key.textContent = k;
+    const val = document.createElement("div"); val.className = "v"; val.textContent = v == null ? "—" : String(v);
+    cell.append(key, val); box.appendChild(cell);
+  });
+}
+function vpnNote(text, kind){
+  const el = document.getElementById("vpn-note");
+  el.className = "vpn-note" + (kind ? " " + kind : "");
+  el.textContent = text;
+}
+function vpnErrorMessage(res, fallback){
+  if (res && res.message) return res.message;
+  if (res && res.status) return "本地接口返回 HTTP " + res.status;
+  return fallback;
+}
+async function vpnRequest(path, init){
+  try{
+    const r = await fetch(path, Object.assign({headers:{"Content-Type":"application/json"}}, init));
+    let body = null;
+    try{ body = await r.json(); }catch(e){}
+    if (!r.ok) return Object.assign({status:r.status}, body || {});
+    return body || {};
+  }catch(e){ return null; }
+}
+function vpnLogText(logs){
+  if (!logs || !logs.length) return "暂无日志。";
+  return logs.map(x => "[" + (x.time || "--:--:--") + "] " + (x.level || "info") + "  " + (x.message || "")).join("\\n");
+}
+function renderVPN(st){
+  if (!st){
+    vpnText("vpn-badge", "没连上内核");
+    vpnState([["运行模式", "演示"], ["连接状态", "不可用"], ["SOCKS 地址", "—"], ["系统代理", "—"]]);
+    vpnText("vpn-log", "页面没有连上 szudesktop 本地内核。请用 exe 启动，而不是直接双击 HTML。" );
+    vpnNote("演示模式：VPN 按钮不会真的建立隧道。", "bad");
+    return;
+  }
+  const labels = {idle:"未连接", logging_in:"登录中", need_sms:"等待短信验证码", need_totp:"等待动态口令", connecting:"建立隧道中", connected:"已连接", broken:"连接异常"};
+  const label = st.state_label || labels[st.state] || st.state || "未知";
+  vpnText("vpn-badge", label);
+  vpnState([
+    ["连接状态", label],
+    ["分配 IP", st.assigned_ip || "—"],
+    ["SOCKS 地址", st.socks_addr || "—"],
+    ["系统代理", st.proxy && st.proxy.enabled ? "已打开" : "未打开"],
+  ]);
+  vpnText("vpn-log", vpnLogText(st.logs));
+  const authRow = document.getElementById("vpn-auth-row");
+  if (authRow) authRow.style.display = st.needs_auth ? "block" : "none";
+  const connect = document.getElementById("vpn-connect");
+  const disconnect = document.getElementById("vpn-disconnect");
+  const auth = document.getElementById("vpn-auth");
+  const proxyToggle = document.getElementById("vpn-proxy-toggle");
+  if (connect) connect.disabled = !!st.busy || st.connected || st.running;
+  if (disconnect) disconnect.disabled = !!st.busy && !st.connected && !st.running;
+  if (auth) auth.disabled = !!st.busy;
+  if (proxyToggle){
+    const proxyOn = !!(st.proxy && st.proxy.enabled);
+    proxyToggle.disabled = !!st.busy || !st.connected;
+    proxyToggle.textContent = proxyOn ? "关闭系统代理" : "打开系统代理";
+    proxyToggle.className = proxyOn ? "btn" : "btn ghost";
+  }
+  if (st.state === "need_sms") vpnNote("服务器要求短信验证码。", "warn");
+  else if (st.state === "need_totp") vpnNote("服务器要求动态口令。", "warn");
+  else if (st.state === "connected") vpnNote(st.proxy && st.proxy.enabled ? "VPN 已连接，系统代理已打开。" : "VPN 已连接，可手动打开系统代理。", "ok");
+  else if (st.state === "broken") vpnNote(st.last_error || "VPN 连接异常。", "bad");
+}
+async function refreshCampusGateway(){
+  const data = await api("/api/campus/status");
+  if (!data){
+    vpnText("campus-badge", "未连接内核");
+    vpnText("campus-note", "启动 szudesktop.exe 后才能读取本地配置。");
+    vpnText("campus-url", "");
+    return;
+  }
+  vpnText("campus-badge", data.state_label || (data.configured ? "已配置" : "未配置"));
+  vpnText("campus-note", data.message || "");
+  vpnText("campus-url", data.base_url || "");
+}
+async function refreshVPN(){
+  const st = await vpnRequest("/api/vpn/status");
+  renderVPN(st);
+  await refreshCampusGateway();
+}
+function scheduleVPNRefresh(){
+  if (vpnTimer) clearTimeout(vpnTimer);
+  if (!vpnActive) return;
+  vpnTimer = setTimeout(async () => { await refreshVPN(); scheduleVPNRefresh(); }, 1500);
+}
+async function vpnConnect(){
+  if (vpnBusy) return;
+  vpnBusy = true;
+  const btn = document.getElementById("vpn-connect");
+  const old = btn.textContent; btn.textContent = "连接中…";
+  vpnNote("正在登录 VPN，稍等……");
+  try{
+    const port = Number(document.getElementById("vpn-port").value || 7891);
+    const res = await vpnRequest("/api/vpn/connect", {method:"POST", body:JSON.stringify({
+      server:document.getElementById("vpn-server").value.trim(),
+      username:document.getElementById("vpn-user").value.trim(),
+      password:document.getElementById("vpn-pass").value,
+      socks_port:port,
+      enable_proxy:document.getElementById("vpn-proxy").checked,
+    })});
+    if (!res){ vpnNote("没连上本地内核，请确认是用 exe 启动。", "bad"); return; }
+    if (!res.ok){ vpnNote(vpnErrorMessage(res, "VPN 连接失败。"), "bad"); return; }
+    vpnNote(res.message || "VPN 请求已提交。", res.status && res.status.state === "broken" ? "bad" : "ok");
+    document.getElementById("vpn-pass").value = "";
+    if (res.status) renderVPN(res.status); else await refreshVPN();
+  } finally {
+    btn.textContent = old; vpnBusy = false; scheduleVPNRefresh();
+  }
+}
+async function vpnAuth(){
+  if (vpnBusy) return;
+  const code = document.getElementById("vpn-code").value.trim();
+  if (!code){ vpnNote("验证码不能为空。", "bad"); return; }
+  vpnBusy = true;
+  vpnNote("正在提交验证码……");
+  try{
+    const res = await vpnRequest("/api/vpn/auth", {method:"POST", body:JSON.stringify({code, enable_proxy:document.getElementById("vpn-proxy").checked})});
+    if (!res){ vpnNote("没连上本地内核。", "bad"); return; }
+    if (!res.ok){ vpnNote(vpnErrorMessage(res, "验证码验证失败。"), "bad"); return; }
+    document.getElementById("vpn-code").value = "";
+    vpnNote(res.message || "验证码通过。", "ok");
+    if (res.status) renderVPN(res.status); else await refreshVPN();
+  } finally { vpnBusy = false; scheduleVPNRefresh(); }
+}
+async function vpnDisconnect(){
+  if (vpnBusy) return;
+  vpnBusy = true; vpnNote("正在断开 VPN 并恢复系统代理……");
+  try{
+    const res = await vpnRequest("/api/vpn/disconnect", {method:"POST"});
+    if (!res){ vpnNote("没连上本地内核，无法断开。", "bad"); return; }
+    if (!res.ok){ vpnNote(vpnErrorMessage(res, "VPN 断开失败。"), "bad"); return; }
+    document.getElementById("vpn-pass").value = "";
+    document.getElementById("vpn-code").value = "";
+    vpnNote(res.message || "VPN 已断开，系统代理已恢复。", "ok");
+    if (res.status) renderVPN(res.status); else await refreshVPN();
+  } finally { vpnBusy = false; scheduleVPNRefresh(); }
+}
+async function vpnProxyToggle(){
+  if (vpnBusy) return;
+  const button = document.getElementById("vpn-proxy-toggle");
+  const turningOn = button.textContent.indexOf("打开") >= 0;
+  vpnBusy = true;
+  vpnNote(turningOn ? "正在打开系统代理……" : "正在关闭系统代理……");
+  try{
+    const res = await vpnRequest("/api/vpn/proxy", {method:"POST", body:JSON.stringify({enabled:turningOn})});
+    if (!res){ vpnNote("没连上本地内核。", "bad"); return; }
+    if (!res.ok){ vpnNote(vpnErrorMessage(res, "系统代理操作失败。"), "bad"); return; }
+    vpnNote(turningOn ? "系统代理已打开。" : "系统代理已关闭，原设置已恢复。", "ok");
+    await refreshVPN();
+  } finally { vpnBusy = false; scheduleVPNRefresh(); }
+}
+document.getElementById("vpn-connect").onclick = vpnConnect;
+document.getElementById("vpn-auth").onclick = vpnAuth;
+document.getElementById("vpn-disconnect").onclick = vpnDisconnect;
+document.getElementById("vpn-proxy-toggle").onclick = vpnProxyToggle;
+document.getElementById("vpn-code").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); vpnAuth(); } });
+
 /* ================= 校园网登录页 =================
    点顶上「校园网」标签进来的那一页。这里管四件事：
      · 进页面时把当前区域、在线状态、存过的账号显示出来

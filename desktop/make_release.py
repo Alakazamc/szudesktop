@@ -29,7 +29,7 @@ DIST = os.path.join(ROOT, "dist")
 EXE = os.path.join(DIST, "szudesktop-windows-amd64.exe")
 MAIN_GO = os.path.join(DESKTOP, "cmd", "szudesktop", "main.go")
 
-README = """szuDesktop 深大校园服务台（beta0.1 · Windows）
+README = """szuDesktop 深大校园服务台（beta0.2 · Windows）
 =================================================
 
 这是什么
@@ -47,6 +47,14 @@ README = """szuDesktop 深大校园服务台（beta0.1 · Windows）
    - 不勾也能登录，本次用完即丢。
 4. 程序会自动识别教学区（深澜）或宿舍区（Dr.COM）并走对应认证。
    本程序不会在后台每 30 秒自动重登；需要登录时由你点击按钮。
+5. 在校外点顶部「校外 VPN」，填 VPN 账号密码后连接。
+   需要短信验证码或动态口令时，在页面输入；连接后可选择打开 Windows 系统代理。
+   断开 VPN 会恢复连接前的系统代理设置。VPN 密码不会显示在状态或日志里。
+
+校内后端服务
+------------
+beta0.2 已预留校内后端服务的本地托管入口，但具体业务接口尚未接入。
+后续确定接口协议后，再按白名单接入课表、一卡通等服务，不开放任意网址转发。
 
 常见问题
 --------

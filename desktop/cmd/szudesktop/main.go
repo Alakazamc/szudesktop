@@ -18,7 +18,7 @@ import (
 	"github.com/Alakazamc/szudesktop/internal/portal"
 )
 
-const version = "beta0.1"
+const version = "beta0.2"
 
 func main() {
 	fs := flag.NewFlagSet("szudesktop", flag.ExitOnError)
@@ -30,6 +30,7 @@ func main() {
 	noOpen := fs.Bool("no-open", false, "不自动打开浏览器")
 	srunHost := fs.String("host-teaching", portal.DefaultSrunHost, "教学区深澜门户")
 	drcomHost := fs.String("host-dorm", portal.DefaultDrcomHost, "宿舍区 Dr.COM 门户")
+	campusBackend := fs.String("campus-backend", "", "未来校内后端的 HTTPS 地址（可选）")
 	zone := fs.String("zone", "auto", "强制指定区域：auto / teaching / dorm")
 	showVer := fs.Bool("version", false, "看版本")
 
@@ -41,14 +42,15 @@ func main() {
 	}
 
 	srv := ui.New(ui.Options{
-		Addr:      *addr,
-		User:      *user,
-		Password:  *pass,
-		AutoLogin: !*noAuto,
-		NoOpen:    *noOpen,
-		SrunHost:  *srunHost,
-		DrcomHost: *drcomHost,
-		Zone:      *zone,
+		Addr:          *addr,
+		User:          *user,
+		Password:      *pass,
+		AutoLogin:     !*noAuto,
+		NoOpen:        *noOpen,
+		SrunHost:      *srunHost,
+		DrcomHost:     *drcomHost,
+		CampusBackend: *campusBackend,
+		Zone:          *zone,
 	})
 
 	if err := srv.Run(); err != nil {

@@ -65,6 +65,7 @@ type vpnStatusResp struct {
 	State      string         `json:"state"`
 	StateLabel string         `json:"state_label"`
 	Connected  bool           `json:"connected"`
+	Running    bool           `json:"running"`
 	Busy       bool           `json:"busy"`
 	NeedsAuth  bool           `json:"needs_auth"`
 	AuthType   string         `json:"auth_type,omitempty"`
@@ -99,6 +100,7 @@ func (m *vpnManager) status() vpnStatusResp {
 	m.mu.Lock()
 	client, server, socksAddr := m.client, m.server, m.socksAddr
 	busy := m.busy
+	running := m.running
 	logs := append([]vpnLog(nil), m.logs...)
 	m.mu.Unlock()
 
@@ -108,7 +110,7 @@ func (m *vpnManager) status() vpnStatusResp {
 	}
 	out := vpnStatusResp{
 		State: vpnStateName(st), StateLabel: st.Label(), Connected: st == vpn.StateConnected,
-		Busy: busy, Server: server, SocksAddr: socksAddr, AssignedIP: ip,
+		Running: running, Busy: busy, Server: server, SocksAddr: socksAddr, AssignedIP: ip,
 		LastError: lastErr, Logs: logs, Proxy: sysproxy.Query(),
 	}
 	if st == vpn.StateNeedSMS {

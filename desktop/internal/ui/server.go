@@ -35,21 +35,23 @@ var assetsFS embed.FS
 
 // Options 是起服务时可调的开关。
 type Options struct {
-	Addr      string // 监听地址，默认 127.0.0.1:0（随机端口）
-	User      string // 覆盖保存的账号
-	Password  string // 覆盖保存的密码
-	AutoLogin bool   // 启动后自动登录一次
-	SrunHost  string
-	DrcomHost string
-	NoOpen    bool   // 不自动开浏览器
-	Zone      string // auto / teaching / dorm；自动判错时允许手动指定
+	Addr          string // 监听地址，默认 127.0.0.1:0（随机端口）
+	User          string // 覆盖保存的账号
+	Password      string // 覆盖保存的密码
+	AutoLogin     bool   // 启动后自动登录一次
+	SrunHost      string
+	DrcomHost     string
+	CampusBackend string // 未来校内后端的固定 HTTPS 地址
+	NoOpen        bool   // 不自动开浏览器
+	Zone          string // auto / teaching / dorm；自动判错时允许手动指定
 }
 
 // Server 是本地服务。
 type Server struct {
-	opts  Options
-	store credential.Store
-	vpn   *vpnManager
+	opts   Options
+	store  credential.Store
+	vpn    *vpnManager
+	campus *campusGateway
 
 	mu       sync.Mutex
 	lastErr  string
@@ -67,7 +69,11 @@ func New(opts Options) *Server {
 	if opts.Zone == "" {
 		opts.Zone = "auto"
 	}
-	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager()}
+	campus, err := newCampusGateway(opts.CampusBackend)
+	if err != nil {
+		campus = &campusGateway{}
+	}
+	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager(), campus: campus}
 }
 
 func parseZone(raw string) (portal.Zone, bool) {
@@ -220,6 +226,7 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 	mux.HandleFunc("/api/vpn/auth", s.handleVPNAuth)
 	mux.HandleFunc("/api/vpn/disconnect", s.handleVPNDisconnect)
 	mux.HandleFunc("/api/vpn/proxy", s.handleVPNProxy)
+	mux.HandleFunc("/api/campus/status", s.handleCampusStatus)
 }
 
 /* ---------- 接口 ---------- */
