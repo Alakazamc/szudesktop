@@ -78,13 +78,26 @@ try:
         raise SystemExit(1)
 
     print("\n[2] 接口")
-    for path in ["/api/status", "/api/diag", "/api/credential"]:
+    for path in ["/api/status", "/api/diag", "/api/credential", "/api/vpn/status"]:
         try:
             st, ct, body = http(path)
             parsed = json.loads(body.decode("utf-8"))
             line(path, st == 200 and "json" in ct, "%d, %d 字节, %d 个字段" % (st, len(body), len(parsed)))
         except Exception as e:
             line(path, False, "%s: %s" % (type(e).__name__, e))
+
+    print("\n[2b] VPN 状态接口")
+    try:
+        _, _, body = http("/api/vpn/status")
+        d = json.loads(body.decode("utf-8"))
+        line("默认状态未登录", d.get("state") == "idle", str(d.get("state_label", "")))
+        line("SOCKS 只绑本机", d.get("socks_addr") == "127.0.0.1:7891", str(d.get("socks_addr", "")))
+        line("系统代理状态可读", isinstance(d.get("proxy"), dict), str(d.get("proxy", {}).get("note", ""))[:60])
+        sensitive = {"password", "passwd", "pwd", "token", "twfid"}
+        line("VPN 响应不含秘密字段", not sensitive.intersection(k.lower() for k in d.keys()),
+             "字段: " + ", ".join(sorted(d.keys())))
+    except Exception as e:
+        line("VPN 状态接口", False, str(e))
 
     print("\n[3] 状态内容")
     try:

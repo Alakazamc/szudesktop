@@ -48,6 +48,7 @@ type Options struct {
 type Server struct {
 	opts  Options
 	store credential.Store
+	vpn   *vpnManager
 
 	mu       sync.Mutex
 	lastErr  string
@@ -62,7 +63,7 @@ func New(opts Options) *Server {
 	if opts.DrcomHost == "" {
 		opts.DrcomHost = portal.DefaultDrcomHost
 	}
-	return &Server{opts: opts, store: credential.Default()}
+	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager()}
 }
 
 // creds 按「命令行参数 > 已保存的凭据」的顺序取账号密码。
@@ -181,6 +182,11 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 	mux.HandleFunc("/api/logout", s.handleLogout)
 	mux.HandleFunc("/api/diag", s.handleDiag)
 	mux.HandleFunc("/api/credential", s.handleCredential)
+	mux.HandleFunc("/api/vpn/status", s.handleVPNStatus)
+	mux.HandleFunc("/api/vpn/connect", s.handleVPNConnect)
+	mux.HandleFunc("/api/vpn/auth", s.handleVPNAuth)
+	mux.HandleFunc("/api/vpn/disconnect", s.handleVPNDisconnect)
+	mux.HandleFunc("/api/vpn/proxy", s.handleVPNProxy)
 }
 
 /* ---------- 接口 ---------- */
