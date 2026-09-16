@@ -1,6 +1,6 @@
 import struct, os
 
-D = r"D:\szuNet\desktop\assets\fonts"
+D = r"D:\szudesktop\desktop\assets\fonts"
 for n in ["svbold.ttf", "svthin.ttf"]:
     p = os.path.join(D, n)
     d = open(p, "rb").read()

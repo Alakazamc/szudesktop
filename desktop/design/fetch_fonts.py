@@ -1,6 +1,6 @@
 import os, urllib.request, re
 
-OUT = r"D:\szuNet\desktop\assets\fonts"
+OUT = r"D:\szudesktop\desktop\assets\fonts"
 os.makedirs(OUT, exist_ok=True)
 
 SV = "https://cdn.jsdelivr.net/gh/abmasud1214/pufferdle@master/src/Fonts/"

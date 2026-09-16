@@ -14,7 +14,7 @@ import re
 import subprocess
 import sys
 
-PAGEDIR = r"D:\szuNet\desktop"
+PAGEDIR = r"D:\szudesktop\desktop"
 PAGE = os.path.join(PAGEDIR, "index.html")
 
 

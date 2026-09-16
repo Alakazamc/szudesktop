@@ -2,8 +2,8 @@
 import os, re, subprocess, tempfile
 
 EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-HTML = r"D:\szuNet\desktop\index.html"
-OUTDIR = r"D:\szuNet\desktop\design"
+HTML = r"D:\szudesktop\desktop\index.html"
+OUTDIR = r"D:\szudesktop\desktop\design"
 PAGEDIR = os.path.dirname(HTML)   # 临时副本必须和 index.html 同目录，相对路径（字体）才会生效
 ud = os.path.join(tempfile.gettempdir(), "edge_slice_szunet")
 

@@ -15,7 +15,7 @@ import os
 import re
 import sys
 
-PAGE = r"D:\szuNet\desktop\index.html"
+PAGE = r"D:\szudesktop\desktop\index.html"
 HALF = 590        # 版心半宽（1180/2）
 
 # 纵向范围：标题牌 + 标签栏占到 y≈325，footer 从 y≈1662 开始

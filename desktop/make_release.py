@@ -18,7 +18,7 @@ import re
 import sys
 import zipfile
 
-ROOT = r"D:\szuNet"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 项目根，从脚本位置推
 DESKTOP = os.path.join(ROOT, "desktop")
 DIST = os.path.join(ROOT, "dist")
 EXE = os.path.join(DIST, "szudesktop-windows-amd64.exe")

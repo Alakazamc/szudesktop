@@ -13,7 +13,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from clean_signs import read_png, write_png
 
-ART = r"D:\szuNet\desktop\assets\art"
+ART = r"D:\szudesktop\desktop\assets\art"
 
 # 头像块的边界（含木框）。多留 2px 免得切掉边框。
 FACE_TOP = 0

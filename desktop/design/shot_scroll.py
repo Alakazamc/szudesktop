@@ -13,8 +13,8 @@ import sys
 import time
 import urllib.request
 
-EXE = r"D:\szuNet\dist\szudesktop-windows-amd64.exe"
-TMPDIR = r"D:\szuNet\desktop"
+EXE = r"D:\szudesktop\dist\szudesktop-windows-amd64.exe"
+TMPDIR = r"D:\szudesktop\desktop"
 
 
 def find_edge():

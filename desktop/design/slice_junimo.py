@@ -14,7 +14,7 @@ import sys
 import zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ART = r"D:\szuNet\desktop\assets\art"
+ART = r"D:\szudesktop\desktop\assets\art"
 SRC = r"D:\stardewOS-main\stardewOS-main\img\loading-junimo.gif"
 
 # 5 只，从左到右。名字按颜色起，方便按需取用。

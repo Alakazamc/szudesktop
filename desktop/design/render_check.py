@@ -1,8 +1,8 @@
 import os, subprocess, tempfile
 
 EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-HTML = r"D:\szuNet\desktop\design\prototype-v2.html"
-OUT = r"D:\szuNet\desktop\design\prototype-v2.png"
+HTML = r"D:\szudesktop\desktop\design\prototype-v2.html"
+OUT = r"D:\szudesktop\desktop\design\prototype-v2.png"
 ud = os.path.join(tempfile.gettempdir(), "edge_shot_szunet")
 
 if os.path.exists(OUT):

@@ -13,7 +13,7 @@
 """
 import os, shutil
 
-ROOT = r"D:\szuNet\desktop"
+ROOT = os.path.dirname(os.path.abspath(__file__))  # desktop/ 自身，别写死盘符
 SRC = os.path.join(ROOT, "assets")
 DST = os.path.join(ROOT, "internal", "ui", "assets")
 

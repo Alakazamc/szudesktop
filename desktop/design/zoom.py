@@ -13,7 +13,7 @@ import os
 import subprocess
 import sys
 
-PAGEDIR = r"D:\szuNet\desktop"
+PAGEDIR = r"D:\szudesktop\desktop"
 PAGE = os.path.join(PAGEDIR, "index.html")
 OUTDIR = os.path.join(PAGEDIR, "design")
 VIEWW = int(os.environ.get("VIEWW", "1241"))   # 必须和 probe.py 的窗口宽度一致

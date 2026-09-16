@@ -16,7 +16,8 @@ import sys
 import time
 import urllib.request
 
-EXE = sys.argv[1] if len(sys.argv) > 1 else r"D:\szuNet\dist\szudesktop-windows-amd64.exe"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 项目根，从脚本位置推
+EXE = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "dist", "szudesktop-windows-amd64.exe")
 PORT = sys.argv[2] if len(sys.argv) > 2 else "18899"
 BASE = "http://127.0.0.1:" + PORT
 
@@ -209,11 +210,11 @@ try:
         # 于是"读出来的字符数"永远比"发出去的字节数"少——正好少一个换行数。
         # 之前就是这个坑：1838 行 → 差 1838，看着像"内嵌的是旧版本"，
         # 白折腾一轮重新构建。（文件其实一直是好的，字节数完全一致。）
-        local = open(r"D:\szuNet\desktop\assets\index.html", "rb").read()
+        local = open(os.path.join(ROOT, "desktop", "assets", "index.html"), "rb").read()
         line("与同步副本一致", body == local,
              "内嵌 %d 字节 / 副本 %d 字节" % (len(body), len(local)))
         # 顺手比一下 master，省得同步完忘了重新构建、或者反过来
-        master = open(r"D:\szuNet\desktop\index.html", "rb").read()
+        master = open(os.path.join(ROOT, "desktop", "index.html"), "rb").read()
         line("同步副本与 master 一致", master == local,
              "master %d 字节" % len(master))
     except Exception as e:

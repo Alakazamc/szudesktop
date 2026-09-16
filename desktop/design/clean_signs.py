@@ -13,7 +13,7 @@ import struct
 import zlib
 
 SRCDIR = r"D:\stardewOS-main\stardewOS-main\img"
-DSTDIR = r"D:\szuNet\desktop\assets\art"
+DSTDIR = r"D:\szudesktop\desktop\assets\art"
 
 # 牌心：左右上下各留出边框，中间这块是"可以随便涂"的纸面
 CARD = (34, 30, 196, 150)   # left, top, right, bottom

@@ -16,8 +16,8 @@ import sys
 import time
 import urllib.request
 
-EXE = r"D:\szuNet\dist\szudesktop-windows-amd64.exe"
-ART_DIR = r"D:\szuNet\desktop\assets\art"
+EXE = r"D:\szudesktop\dist\szudesktop-windows-amd64.exe"
+ART_DIR = r"D:\szudesktop\desktop\assets\art"
 
 
 def free_port():

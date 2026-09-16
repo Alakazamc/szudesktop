@@ -17,7 +17,7 @@ import sys
 
 from PIL import Image
 
-DEFAULT_OUT = r"D:\szuNet\desktop\assets\art\flora"
+DEFAULT_OUT = r"D:\szudesktop\desktop\assets\art\flora"
 
 
 def p(x):

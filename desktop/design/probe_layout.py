@@ -22,7 +22,7 @@ import subprocess
 import sys
 import tempfile
 
-DESKTOP = r"D:\szuNet\desktop"
+DESKTOP = r"D:\szudesktop\desktop"
 SRC = os.path.join(DESKTOP, "index.html")
 
 PROBE = """

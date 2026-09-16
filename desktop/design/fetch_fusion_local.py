@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 BASE = ("https://cdn.jsdelivr.net/npm/@vp-tw/cjk-web-fonts-fusion-pixel-font@0.0.1/"
         "dist/12px/proportional/zh_hans/")
 CSS_NAME = "Fusion-Pixel-12px-Proportional-Simplified-Chinese.css"
-OUT = r"D:\szuNet\desktop\assets\fonts"
+OUT = r"D:\szudesktop\desktop\assets\fonts"
 os.makedirs(OUT, exist_ok=True)
 
 req = urllib.request.Request(BASE + CSS_NAME, headers={"User-Agent": "Mozilla/5.0"})

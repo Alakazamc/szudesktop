@@ -15,8 +15,9 @@ import shutil
 import subprocess
 import sys
 
-DESKTOP = r"D:\szuNet\desktop"
-ROOT = r"D:\szuNet"
+# 路径都从脚本自己的位置推出来，项目目录改名/挪盘都不用改这里
+DESKTOP = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(DESKTOP)
 MASTER = os.path.join(DESKTOP, "index.html")           # 页面主副本（唯一应该手改的）
 ASSETS = os.path.join(DESKTOP, "assets")               # 浏览器直接打开用的副本
 UI_ASSETS = os.path.join(DESKTOP, "internal", "ui", "assets")  # go:embed 能看见的那份

@@ -12,7 +12,7 @@ import sys
 import time
 import urllib.request
 
-EXE = r"D:\szuNet\dist\szudesktop-windows-amd64.exe"
+EXE = r"D:\szudesktop\dist\szudesktop-windows-amd64.exe"
 
 
 def find_edge():

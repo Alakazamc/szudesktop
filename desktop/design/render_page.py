@@ -1,8 +1,8 @@
 import os, re, subprocess, tempfile
 
 EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-HTML = r"D:\szuNet\desktop\index.html"
-OUT = r"D:\szuNet\desktop\design\page-check.png"
+HTML = r"D:\szudesktop\desktop\index.html"
+OUT = r"D:\szudesktop\desktop\design\page-check.png"
 ud = os.path.join(tempfile.gettempdir(), "edge_shot_szunet")
 
 # 1) 量真实高度：小视口 + dump-dom 读 title

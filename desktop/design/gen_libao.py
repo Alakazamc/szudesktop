@@ -117,7 +117,7 @@ MODAL_OLD = re.compile(
     r'<svg width="46" height="52" viewBox="0 0 52 60" role="img" aria-label="荔宝">.*?</svg>',
     re.S)
 
-INDEX = r"D:\szuNet\desktop\index.html"
+INDEX = r"D:\szudesktop\desktop\index.html"
 
 
 def write_index():
@@ -146,7 +146,7 @@ def preview():
 .a{background:#ffdfb0;padding:20px;}.b{background:#1b284b;padding:20px;}img,svg{image-rendering:pixelated;}</style>
 <div class="a">__TALK__</div><div class="a">__MODAL__</div><div class="b">__TALK__</div>"""
     html = html.replace("__TALK__", svg_block(54, 58, "preview")).replace("__MODAL__", svg_block(92, 99, "preview2"))
-    out = r"D:\szuNet\desktop\design\_libao_preview.html"
+    out = r"D:\szudesktop\desktop\design\_libao_preview.html"
     open(out, "w", encoding="utf-8", newline="").write(html)
     print("预览页 ->", out)
 
