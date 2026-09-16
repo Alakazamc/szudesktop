@@ -96,6 +96,11 @@ func (s *Server) selectedZone(detected portal.Zone) portal.Zone {
 }
 
 // loginZone 用于认证操作：页面本次选择优先，其次启动参数，最后才自动探测。
+//
+// ⚠️ 这里必须用 portal.Probe() 而不是 portal.Detect()。
+// Detect() 在"能上外网"时会提前返回，Zone=online，于是登录会被判成
+// 「已经能上外网，不用再认证」而直接跳过——可是掉线重连恰恰要的就是认证。
+// Probe() 会把门户和指纹跑完，能真实回答"我该用哪套协议"。
 func (s *Server) loginZone(requested string) portal.Zone {
 	if zone, ok := parseZone(requested); ok {
 		return zone
@@ -103,7 +108,7 @@ func (s *Server) loginZone(requested string) portal.Zone {
 	if zone, ok := parseZone(s.opts.Zone); ok {
 		return zone
 	}
-	return portal.Detect().Zone
+	return portal.Probe().Zone
 }
 
 // creds 按「命令行参数 > 已保存的凭据」的顺序取账号密码。
@@ -342,8 +347,58 @@ func (s *Server) doLogin(user, pass, requestedZone string) portal.Result {
 	switch zone {
 	case portal.ZoneOnline:
 		s.clearErr()
+		// 老的写法到这里就 return「已经能上外网，不用再认证」，
+		// 结果是：明明点的是登录，程序却什么都没做就报成功。
+		// 用户看到的是"点了没反应/像是登录了但没生效"。
+		//
+		// 关键点：**能上外网 ≠ 你的账号在这个区已经认证过**。
+		// 比如本来就连着外网（有线、热点、别人的会话残留），
+		// 这时点登录是希望把自己的会话建立起来。
+		//
+		// 所以这里再判一层：如果指纹明确指向某个区，就按那套协议真的登录一次；
+		// 只有指纹也判不出区（真校外 / 校园网故障）才按"不用认证"处理。
+		if target := s.zoneFromFingerprint(); target != "" {
+			return s.loginWithProtocol(target, user, pass)
+		}
 		return portal.Result{OK: true, Message: "已经能上外网，不用再认证"}
 
+	case portal.ZoneTeaching, portal.ZoneDorm:
+		return s.loginWithProtocol(zone, user, pass)
+
+	default:
+		return s.remember("判断不出你在哪个区。确认一下是不是连着校园网（SZU_WLAN）")
+	}
+}
+
+// zoneFromFingerprint 用协议指纹判断该走哪套协议；判不出来返回空。
+//
+// 和 loginZone 的区别：这里不看"外网通不通"，只看"谁真的提供了认证接口"。
+// 已经联网、但想知道"我这个账号该用哪套协议登录"时用这个。
+func (s *Server) zoneFromFingerprint() portal.Zone {
+	det := portal.Probe()
+	if !det.Probed {
+		return ""
+	}
+	switch {
+	case det.SrunUsable && !det.DormUsable:
+		return portal.ZoneTeaching
+	case det.DormUsable:
+		// 两套都有回应是宿舍区的常见情况，按宿舍区走。
+		return portal.ZoneDorm
+	case det.SrunUsable:
+		return portal.ZoneTeaching
+	case det.DormPortalOK && !det.TeachPortalOK:
+		return portal.ZoneDorm
+	case det.TeachPortalOK && !det.DormPortalOK:
+		return portal.ZoneTeaching
+	default:
+		return ""
+	}
+}
+
+// loginWithProtocol 按指定区域真打一次认证请求。教学区和宿舍区各一套协议。
+func (s *Server) loginWithProtocol(zone portal.Zone, user, pass string) portal.Result {
+	switch zone {
 	case portal.ZoneTeaching:
 		res, err := portal.NewSrunClient(s.opts.SrunHost, user, pass).Login()
 		if err != nil {
@@ -365,10 +420,8 @@ func (s *Server) doLogin(user, pass, requestedZone string) portal.Result {
 		}
 		s.clearErr()
 		return *res
-
-	default:
-		return s.remember("判断不出你在哪个区。确认一下是不是连着校园网（SZU_WLAN）")
 	}
+	return s.remember("判断不出你在哪个区。确认一下是不是连着校园网（SZU_WLAN）")
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
@@ -410,6 +463,7 @@ type diagResp struct {
 	Zone        string   `json:"zone"`
 	ZoneLabel   string   `json:"zone_label"`
 	InternetOK  bool     `json:"internet_ok"`
+	Probed      bool     `json:"probed"` // 门户/指纹到底跑没跑过
 	DormPortal  bool     `json:"dorm_portal_ok"`
 	TeachPortal bool     `json:"teaching_portal_ok"`
 	DNSOK       bool     `json:"dns_ok"`
@@ -426,6 +480,7 @@ func (s *Server) handleDiag(w http.ResponseWriter, r *http.Request) {
 		Zone:        string(rep.Detect.Zone),
 		ZoneLabel:   rep.Detect.Zone.Label(),
 		InternetOK:  rep.Detect.InternetOK,
+		Probed:      rep.Detect.Probed,
 		DormPortal:  rep.Detect.DormPortalOK,
 		TeachPortal: rep.Detect.TeachPortalOK,
 		DNSOK:       rep.Detect.SrunDNSOK,

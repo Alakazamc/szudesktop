@@ -302,15 +302,20 @@ func cmdDetect(args []string) {
 	addCommonFlags(fs, &o)
 	_ = fs.Parse(args)
 
-	det := portal.Detect()
+	// detect 用 Probe()：哪怕现在能上外网，也把门户和指纹跑完，
+	// 这样输出里不会出现"没跑过"被误读成"探不到"的假 false。
+	det := portal.Probe()
 
 	if o.asJSON {
 		printJSON(map[string]any{
 			"zone":            det.Zone,
 			"zone_label":      det.Zone.Label(),
 			"internet_ok":     det.InternetOK,
+			"probed":          det.Probed,
 			"dorm_portal_ok":  det.DormPortalOK,
 			"teaching_portal": det.TeachPortalOK,
+			"srun_usable":     det.SrunUsable,
+			"dorm_usable":     det.DormUsable,
 			"srun_dns_ok":     det.SrunDNSOK,
 			"notes":           det.Notes,
 		})
@@ -321,6 +326,8 @@ func cmdDetect(args []string) {
 	fmt.Printf("外网连通: %s\n", yesNo(det.InternetOK))
 	fmt.Printf("宿舍门户: %s\n", yesNo(det.DormPortalOK))
 	fmt.Printf("教学门户: %s\n", yesNo(det.TeachPortalOK))
+	fmt.Printf("深澜指纹: %s\n", yesNo(det.SrunUsable))
+	fmt.Printf("ePortal指纹: %s\n", yesNo(det.DormUsable))
 	fmt.Printf("域名解析: %s\n", yesNo(det.SrunDNSOK))
 	if len(det.Notes) > 0 {
 		fmt.Println()
@@ -344,8 +351,11 @@ func cmdDiag(args []string) {
 			"zone":            rep.Detect.Zone,
 			"zone_label":      rep.Detect.Zone.Label(),
 			"internet_ok":     rep.Detect.InternetOK,
+			"probed":          rep.Detect.Probed,
 			"dorm_portal_ok":  rep.Detect.DormPortalOK,
 			"teaching_portal": rep.Detect.TeachPortalOK,
+			"srun_usable":     rep.Detect.SrunUsable,
+			"dorm_usable":     rep.Detect.DormUsable,
 			"srun_dns_ok":     rep.Detect.SrunDNSOK,
 			"notes":           rep.Detect.Notes,
 			"advices":         rep.Advices,
@@ -363,6 +373,8 @@ func cmdDiag(args []string) {
 	fmt.Printf("  外网连通: %s\n", yesNo(rep.Detect.InternetOK))
 	fmt.Printf("  宿舍门户: %s\n", yesNo(rep.Detect.DormPortalOK))
 	fmt.Printf("  教学门户: %s\n", yesNo(rep.Detect.TeachPortalOK))
+	fmt.Printf("  深澜指纹: %s\n", yesNo(rep.Detect.SrunUsable))
+	fmt.Printf("  ePortal指纹: %s\n", yesNo(rep.Detect.DormUsable))
 	fmt.Printf("  域名解析: %s\n", yesNo(rep.Detect.SrunDNSOK))
 
 	if rep.Online != nil {

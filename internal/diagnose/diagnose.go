@@ -21,15 +21,18 @@ type Report struct {
 
 // Run 执行一次诊断。
 // username / password 为空时跳过在线状态查询，只做网络侧探测。
+//
+// 这里用 portal.Probe() 而不是 portal.Detect()：诊断要回答的是
+// "万一下一秒掉线，程序会认为我在哪个区"，这个答案在已经联网时
+// 只有把探测跑完才知道。用 Detect() 会因为提前返回而给出假的"探不到"。
 func Run(username, password, srunHost, drcomHost string) *Report {
 	r := &Report{}
-	r.Detect = portal.Detect()
+	r.Detect = portal.Probe()
 
 	if r.Detect.Zone == portal.ZoneOnline {
 		r.Advices = append(r.Advices, "当前能正常上外网。如果只是想上网，不用做任何事")
-		// 已经在线时，区域探测会被"能上外网"这条快路径短路，看不到判区结果。
-		// 但掉线重登走的正是这套判区，所以这里把协议指纹单独报出来，
-		// 让人在在线状态下也能确认"真掉线了程序会认成哪个区"。
+		// 已经在线时不会去认证，但掉线重登走的正是这套判区，
+		// 所以把预判结论单独报出来，让人现在就能确认。
 		r.Advices = append(r.Advices, fingerprintAdvice(r.Detect))
 		return r
 	}
