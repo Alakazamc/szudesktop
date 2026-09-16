@@ -17,9 +17,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Alakazamc/szunet/internal/credential"
-	"github.com/Alakazamc/szunet/internal/diagnose"
-	"github.com/Alakazamc/szunet/internal/portal"
+	"github.com/Alakazamc/szudesktop/internal/credential"
+	"github.com/Alakazamc/szudesktop/internal/diagnose"
+	"github.com/Alakazamc/szudesktop/internal/portal"
 )
 
 const version = "0.1.0"

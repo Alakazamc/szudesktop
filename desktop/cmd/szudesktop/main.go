@@ -14,8 +14,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Alakazamc/szunet/desktop/internal/ui"
-	"github.com/Alakazamc/szunet/internal/portal"
+	"github.com/Alakazamc/szudesktop/desktop/internal/ui"
+	"github.com/Alakazamc/szudesktop/internal/portal"
 )
 
 const version = "0.2.0"

@@ -1,4 +1,4 @@
-module github.com/Alakazamc/szunet
+module github.com/Alakazamc/szudesktop
 
 go 1.26.6
 

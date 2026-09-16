@@ -1,14 +1,68 @@
-# szuNet
+# szuDesktop
 
-深圳大学校园网工具箱：命令行 + 桌面客户端 + 校外 VPN。
+深圳大学校园网客户端。像素风桌面应用 + 命令行，一套内核（Go），Windows / macOS / Linux
+都能编译成**单个可执行文件**，不依赖 Python、Node 之类的运行时。
 
 自动判断你在**教学区**还是**宿舍区**，走对应的那套认证协议；连不上的时候，
-告诉你卡在哪一步；人在校外时，用内置的深信服协议客户端连回学校 VPN。
+告诉你卡在哪一步。
 
-Windows / macOS / Linux 三端通用，编译产物是**单个可执行文件**，
-不依赖 Python、Node 之类的运行时——下载下来就能跑。
+![szuDesktop 界面](docs/screenshot-desktop.png)
 
 ---
+
+## 当前进度
+
+**首版只做校园网**：判区、登录、注销、断线诊断，都接了真内核。
+
+| 功能 | 状态 |
+|---|---|
+| 教学区登录（深澜 SRun） | ✅ 已实现 |
+| 宿舍区登录（Dr.COM ePortal） | ✅ 已实现，待真机复测 |
+| 自动判区（协议指纹，不靠连通性）+ 手动指定 | ✅ 已实现 |
+| 注销下线 / 断线诊断 / 账号存系统保险箱 | ✅ 已实现 |
+| 校外 VPN（内置深信服 EasyConnect 协议） | 🚧 协议内核已完成，界面接入开发中 |
+| 图书馆 / 一卡通 / 教务 / 服务等页面 | 🚧 开发中（目前是占位页） |
+| 余额、流量、在线时长等真实数据 | 🚧 开发中（界面上标「演示」的数字是写死的示例） |
+| macOS / Linux 客户端 | 🚧 开发中（先做 Windows） |
+
+## 怎么用
+
+### 下载
+
+到 [Releases](../../releases) 页面下载 `szudesktop-<版本>-windows-amd64.zip`，
+解压到任意位置，双击 `szudesktop.exe`（绿色版，不用安装）。
+
+### 首次使用
+
+1. 打开程序（会弹一个无边框窗口，任务栏图标是荔枝）
+2. 顶上点「**校园网**」标签，进登录页
+3. 填校园卡号和统一身份认证密码，勾「记住账号密码」（不勾也能登，这次有效）
+4. 点「登录」
+
+凭据存进 Windows 保险箱（DPAPI 加密），**不明文落盘**，换机器或换用户都解不开。
+不放心随时点「忘掉账号」。
+
+连不上就先点「断线诊断」：它会列出区域判定、门户可达性、协议指纹和对应的结论，
+比单纯一句「登录失败」有用得多。
+
+### 界面说明
+
+- **一屏放下，不滚动**：整页固定在一个窗口里，左中右三栏各自用右下角的小木牌
+  **◀ 1/4 ▶** 翻页；窗口太矮或太窄时自动退回普通滚动
+- 宠物、农田、收成架是游戏化外壳（星露谷那一路），不影响功能
+- **不做后台自动重连**：要不要登录由你在登录页决定，程序不会在背后周期性发认证请求
+- 关掉窗口不等于退出：程序还在后台。要彻底退，任务管理器结束 `szudesktop.exe`
+
+### 命令行参数
+
+| 参数 | 说明 |
+|---|---|
+| `--addr` | 固定监听地址（默认随机端口），如 `--addr 127.0.0.1:8620` |
+| `--no-open` | 只起服务，不自动开窗口 |
+| `--no-auto-login` | 启动时不自动登录一次 |
+| `-u / -p` | 临时指定账号密码（不落盘） |
+| `--zone` | 强制指定区域：`auto`（默认）/ `teaching` / `dorm` |
+| `--verbose` | 打印服务端原始返回，排错用 |
 
 ## 它解决什么问题
 
@@ -25,123 +79,26 @@ Windows / macOS / Linux 三端通用，编译产物是**单个可执行文件**�
 2. 连不上的时候，报错信息五花八门（`ldap auth error`、`Rad:userid error1`、
    `登陆失败[05]`……），但没人告诉你这些分别意味着什么。
 
-szuNet 同时对付这两件事：一个命令完成认证，一个命令完成诊断。
+szuDesktop 同时对付这两件事：一个按钮完成认证，一个按钮完成诊断。
 
-## 和同类工具有什么不一样
+判区**不看「门户能不能连上」，而看协议指纹**（深澜看 `get_challenge` 能不能握手、
+宿舍区看 ePortal 登录接口在不在）。原因是实测发现宿舍门户在教学区机器上首页也返回 200，
+只测连通性会在掉线时误判成宿舍区，然后拿 Dr.COM 协议去打一个 404 的接口。
+
+## 为什么自己做
 
 社区已经有十来个深大校园网工具了，这个项目的取舍是：
 
-- **三端原生单文件**。不少同类工具只做 Linux（面向路由器或服务器），
-  有的用 Python 写、要求目标机器装好 Python 和 Node.js 才能跑加密逻辑。
-  szuNet 用 Go 写成，加密逻辑是纯 Go 实现，交叉编译出来直接跑。
-- **凭据进系统保险箱**。密码不落明文盘：macOS 用钥匙串，Windows 用 DPAPI
-  （换机器、换用户都解不开），Linux 用 Secret Service。很多同类工具把密码
-  明文写在配置文件里。
-- **诊断优先**。`szunet diag` 不是简单地报"登录失败"，而是把区域判定、
-  门户可达性、域名解析、账号在线状态列出来，并给出对应的结论。
-  配套的排查思路见 [`docs/深圳大学校园网连不上排查指南.md`](docs/深圳大学校园网连不上排查指南.md)。
+- **带图形界面的单文件**。同类工具大多只有命令行，或者要装 Python / Node 运行时；
+  这个把界面编译进 exe，在本机回环地址起个小服务驱动内核，双击就能跑。
+- **三端原生单文件**。Go 写成，加密逻辑是纯 Go 实现，交叉编译出来直接跑。
+- **凭据进系统保险箱**。macOS 用钥匙串，Windows 用 DPAPI（换机器、换用户都解不开），
+  Linux 用 Secret Service。很多同类工具把密码明文写在配置文件里。
+- **诊断优先**。诊断不是简单报「登录失败」，而是把区域判定、门户可达性、
+  协议指纹、账号在线状态列出来，并给出对应结论。
+  配套排查思路见 [`docs/深圳大学校园网连不上排查指南.md`](docs/深圳大学校园网连不上排查指南.md)。
 - **认证请求强制直连**。显式禁用系统代理，避免请求被 Clash / Mihomo 这类工具
   抓走——这是校园网认证失败的一个高频原因，但很少有工具处理它。
-
-## 快速开始
-
-先看看你在哪个区、网络通不通：
-
-```bash
-szunet detect
-```
-
-把账号存起来（推荐，只存一次）：
-
-```bash
-szunet config set -u 2023xxxx -p 你的密码
-```
-
-登录：
-
-```bash
-szunet login
-```
-
-连不上？跑诊断：
-
-```bash
-szunet diag
-```
-
-## 安装
-
-### 直接下载
-
-到 [Releases](../../releases) 页面，按你的系统下载对应的文件：
-
-| 系统 | 文件 |
-|---|---|
-| Windows | `szunet-windows-amd64.exe` |
-| macOS（Apple 芯片） | `szunet-darwin-arm64` |
-| macOS（Intel） | `szunet-darwin-amd64` |
-| Linux | `szunet-linux-amd64` |
-
-下载后给它执行权限即可，不需要安装。
-
-```bash
-chmod +x szunet-darwin-arm64
-./szunet-darwin-arm64 detect
-```
-
-### 自己编译
-
-需要 Go 1.21 或更高版本。
-
-```bash
-git clone https://github.com/Alakazamc/szuNet.git
-cd szuNet
-go build -o szunet ./cmd/szunet
-```
-
-一次性编译出三端产物：
-
-```bash
-make cross
-```
-
-## 命令
-
-| 命令 | 作用 |
-|---|---|
-| `szunet login` | 登录。自动判断区域，走对应协议 |
-| `szunet logout` | 注销当前会话 |
-| `szunet status` | 看当前在哪个区、账号在不在线 |
-| `szunet detect` | 只探测网络区域，不做认证 |
-| `szunet diag` | 连不上时跑这个，给出排查结论 |
-| `szunet config set/show/delete` | 管理保存的账号密码 |
-| `szunet version` | 看版本 |
-
-## 参数
-
-| 参数 | 说明 |
-|---|---|
-| `-u, --user` | 校园卡号（6 位） |
-| `-p, --password` | 统一身份认证密码 |
-| `--zone` | 强制指定区域：`auto`（默认）/ `teaching` / `dorm` |
-| `--ip` | 直接指定认证服务器 IP，绕过域名解析 |
-| `--ac-id` | 指定深澜的 `ac_id`（教学区，一般不用手动给） |
-| `--host-teaching` | 教学区深澜门户地址（默认 `https://net.szu.edu.cn`） |
-| `--host-dorm` | 宿舍区 Dr.COM 门户地址（默认 `http://172.30.255.42`） |
-| `--json` | 以 JSON 输出，方便脚本调用 |
-| `--verbose` | 打印服务端原始返回，排错用 |
-
-账号密码的优先级：命令行参数 > 环境变量（`SZUNET_USERNAME` / `SZUNET_PASSWORD`）
-> 已保存的凭据。
-
-### 可以当库用
-
-`internal/portal` 里的两套协议客户端也可以直接 import：
-
-```go
-c := portal.NewSrunClient(portal.DefaultSrunHost, user, pass)
-res, err := c.Login()
-```
 
 ## 账号密码存在哪
 
@@ -149,65 +106,62 @@ res, err := c.Login()
 
 | 平台 | 存放方式 |
 |---|---|
-| macOS | 钥匙串（Keychain），条目 `service=szunet` |
 | Windows | DPAPI 加密后写文件，密钥由当前用户账户派生 |
+| macOS | 钥匙串（Keychain），条目 `service=szunet` |
 | Linux | Secret Service（gnome-keyring / KWallet）；机器上没有则退化成 `~/.szunet/credentials.json`，权限 600 |
 
-也可以完全不用保存功能，改用环境变量或每次从命令行传入。
+## 命令行 szunet
 
-删掉保存的凭据：
+同一个内核还带一个命令行工具，适合脚本和没有图形界面的机器。
 
 ```bash
-szunet config delete
+szunet detect          # 看看你在哪个区、网络通不通
+szunet config set -u 2023xxxx -p 你的密码   # 存一次账号（进系统保险箱）
+szunet login           # 登录
+szunet diag            # 连不上时跑这个
 ```
 
-## 桌面客户端 szuDesktop（Windows 首版）
-
-同仓库里还有一个图形界面的客户端，给不想敲命令行的人用。
-
-它做的事：把网页界面**编译进一个 exe**，在本机回环地址起个小服务让界面上的按钮
-能真的驱动校园网认证。所以它不碰窗口系统、不装运行时，双击就能跑，三端共用一份代码。
-
-| | |
+| 命令 | 作用 |
 |---|---|
-| 下载 | [Releases](../../releases) 里的 `szudesktop-<版本>-windows-amd64.zip` |
-| 内含 | `szudesktop.exe`（单文件约 8.6 MB）、`README-快速开始.txt`、`LICENSE` |
-| 界面 | 像素风（星露谷物语那一路），后端是内嵌的 szunet 内核 |
+| `szunet login` / `logout` | 登录 / 注销 |
+| `szunet status` | 看当前在哪个区、账号在不在线 |
+| `szunet detect` | 只探测网络区域，不做认证 |
+| `szunet diag` | 连不上时跑这个，给出排查结论 |
+| `szunet config set/show/delete` | 管理保存的账号密码 |
+| `szunet version` | 看版本 |
 
-### 桌面客户端长这样
+| 参数 | 说明 |
+|---|---|
+| `-u, --user` / `-p, --password` | 校园卡号 / 统一身份认证密码 |
+| `--zone` | 强制指定区域：`auto`（默认）/ `teaching` / `dorm` |
+| `--ip` | 直接指定认证服务器 IP，绕过域名解析 |
+| `--ac-id` | 指定深澜的 `ac_id`（教学区，一般不用手动给） |
+| `--host-teaching` | 教学区深澜门户（默认 `https://net.szu.edu.cn`） |
+| `--host-dorm` | 宿舍区 Dr.COM 门户（默认 `http://172.30.255.42`） |
+| `--json` | 以 JSON 输出，方便脚本调用 |
+| `--verbose` | 打印服务端原始返回，排错用 |
 
-![szuDesktop 界面](docs/screenshot-desktop.png)
+账号密码优先级：命令行参数 > 环境变量（`SZUNET_USERNAME` / `SZUNET_PASSWORD`）> 已保存的凭据。
 
-像素风（星露谷物语那一路）：整页一屏放下不滚动，三栏内容用右下角的小木牌
-**◀ 1/4 ▶** 翻页；服务农田、宠物、收成架都在。窗口太矮或太窄时自动退回普通滚动。
+`internal/portal` 里的两套协议客户端也可以直接 import 当库用：
 
-首次使用：打开程序 → 顶上点「校园网」进登录页 → 填校园卡号和密码 → 勾「记住账号密码」→ 登录
-（凭据同样进 Windows DPAPI，不明文落盘）。不勾「记住」也能登，账号只当次有效。
-概览页的「一键登录」会直接跳到登录页，登录这件事只在登录页发生。
+```go
+c := portal.NewSrunClient(portal.DefaultSrunHost, user, pass)
+res, err := c.Login()
+```
 
-不做后台自动重连：要不要登录由你在登录页决定，程序不会在背后周期性发认证请求。
+## 自己构建
 
-命令行参数和 `szunet` 基本一致，另外多了 `--no-open`（不自动开窗口）、
-`--no-auto-login`（启动时不自动登录一次）、`--addr`（固定监听地址，默认随机端口）。
-
-### 校外 VPN（内置深信服协议客户端）
-
-深大校外访问内网用的官方方案是深信服 EasyConnect（`ssl.szu.edu.cn` /
-`svpn.szu.edu.cn`）。szuNet 内置了该协议的第三方 Go 实现（`internal/vpn`，
-基于开源项目 [EasierConnect](https://github.com/acd407/EasierConnect) 的逆向成果移植）：
-
-- **不用装 EasyConnect**：应用里填服务器地址 + 卡号密码（和统一身份认证相同）直接连
-- 登录后在本机开一个 **SOCKS5 代理**（默认 `127.0.0.1:7891`），浏览器代理指过去即可访问校内资源
-- 断线自动重连，支持短信 / 动态口令二步验证
-
-状态：**协议内核已完成，桌面界面接入开发中**。协议是逆向产物，学校网关固件升级
-可能使其失效；仅支持 IPv4 隧道，DNS 仍走本地解析（校内域名解析问题见
-`design/vpn-notes.md` 的风险清单）。
-
-### 自己构建
+需要 Go 1.26+，以及 Python 3（只用于桌面端的构建脚本）。
 
 ```bash
-# 一键：同步页面 → 编译 → 塞图标和版本信息 → 校验
+git clone https://github.com/Alakazamc/szudesktop.git
+cd szudesktop
+
+# 命令行
+go build -o szunet ./cmd/szunet
+
+# 桌面端：同步页面 → 编译 → 塞图标和版本信息 → 校验
 python desktop/build-windows.py
 
 # 跑冒烟测试（起真服务、逐个打接口、检查页面引用的资源有没有 404）
@@ -231,11 +185,13 @@ python desktop/make_release.py
 
 ## 已知限制
 
+- **改完记得重新打开程序**：界面是编译进 exe 的，旧窗口不会自动更新。
 - `--ip` 用于绕过域名解析时，HTTPS 证书校验仍按原域名进行，不会降级成跳过校验。
 - 宿舍区 Dr.COM 的接口在不同楼栋、不同版本的 ePortal 上可能有细微差异，
   如果遇到解析不出来的返回，加 `--verbose` 看原始内容再提 issue。
 - 接口一旦被学校改动，认证就会失效——协议细节集中在
   `internal/portal/srun.go` 和 `internal/portal/drcom.go`，改动只涉及这两个文件。
+- 界面上的余额、流量、在线时长是演示数据（学校没有公开接口）。
 
 ## 免责声明
 
@@ -250,32 +206,34 @@ python desktop/make_release.py
 
 ```
 cmd/szunet/           命令行入口
-desktop/              桌面客户端（Go 内嵌网页 UI + Windows 构建脚本）
+desktop/              桌面客户端
+  index.html            界面源文件（唯一要改的那份）
+  build-windows.py      构建：同步页面 → 编译 → 注入图标版本 → 校验
+  smoke_windows.py      冒烟测试（40 项）
+  add_resource.py       纯 Python 改 PE 加图标/版本信息
+  internal/ui/          本地服务 + 界面接口（/api/*）
 internal/crypto/      深澜协议用到的加密原语（HMAC-MD5、XXTEA 变体、自定义 Base64、SHA1）
 internal/portal/      两套认证协议的客户端 + 区域探测（协议指纹判区）
-internal/vpn/         深信服 EasyConnect 协议客户端（校外 VPN，SOCKS5 出口）
+internal/vpn/         深信服 EasyConnect 协议客户端（校外 VPN，开发中）
 internal/credential/  凭据存储，按平台分文件
 internal/diagnose/    诊断逻辑
-design/               设计脚本（点阵生成器、布局探针、协议学习笔记）
+design/               设计与学习笔记（点阵生成器、布局探针、VPN 协议笔记）
 docs/                 排查指南
 ```
 
 ### 跑测试
 
 ```bash
-go test ./...
+go test ./...          # 加密原语有对照上游实现的测试向量
 go vet ./...
+python desktop/smoke_windows.py   # 桌面端 40 项冒烟
 ```
-
-`internal/crypto` 里有对照上游实现的测试向量，锁定 xEncode 和自定义 Base64 的行为。
 
 ### 发布
 
-打一个 `v*` 开头的 tag 就会触发 GitHub Actions，自动编译三端产物并附加到 Release：
-
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 ## 致谢
@@ -294,6 +252,8 @@ git push origin v0.1.0
 校外 VPN 的深信服协议部分移植自 [acd407/EasierConnect](https://github.com/acd407/EasierConnect)
 （lyc8503 原版的活跃 fork），协议细节与改造清单见 `design/vpn-notes.md`。
 EasyConnect 的一切权利属深信服所有。
+
+界面素材与字体版权归原作者所有，本地原型用途。
 
 ## 许可
 

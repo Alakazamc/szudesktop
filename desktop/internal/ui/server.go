@@ -21,9 +21,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Alakazamc/szunet/internal/credential"
-	"github.com/Alakazamc/szunet/internal/diagnose"
-	"github.com/Alakazamc/szunet/internal/portal"
+	"github.com/Alakazamc/szudesktop/internal/credential"
+	"github.com/Alakazamc/szudesktop/internal/diagnose"
+	"github.com/Alakazamc/szudesktop/internal/portal"
 )
 
 // 页面和字体全部嵌进来。embed 的路径相对本包目录，
