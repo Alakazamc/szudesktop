@@ -192,8 +192,8 @@ type statusResp struct {
 	Online     bool     `json:"online"`
 	OnlineIP   string   `json:"online_ip"`
 	Username   string   `json:"username"`
-	Saved      bool     `json:"saved"`       // 有没有存过凭据
-	StoreDesc  string   `json:"store_desc"`  // 凭据存在哪
+	Saved      bool     `json:"saved"`      // 有没有存过凭据
+	StoreDesc  string   `json:"store_desc"` // 凭据存在哪
 	LastError  string   `json:"last_error"`
 	Advices    []string `json:"advices"`
 }
@@ -348,15 +348,15 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 type diagResp struct {
-	Zone       string   `json:"zone"`
-	ZoneLabel  string   `json:"zone_label"`
-	InternetOK bool     `json:"internet_ok"`
-	DormPortal bool     `json:"dorm_portal_ok"`
-	TeachPortal bool    `json:"teaching_portal_ok"`
-	DNSOK      bool     `json:"dns_ok"`
-	Online     *bool    `json:"online,omitempty"`
-	Advices    []string `json:"advices"`
-	Notes      []string `json:"notes"`
+	Zone        string   `json:"zone"`
+	ZoneLabel   string   `json:"zone_label"`
+	InternetOK  bool     `json:"internet_ok"`
+	DormPortal  bool     `json:"dorm_portal_ok"`
+	TeachPortal bool     `json:"teaching_portal_ok"`
+	DNSOK       bool     `json:"dns_ok"`
+	Online      *bool    `json:"online,omitempty"`
+	Advices     []string `json:"advices"`
+	Notes       []string `json:"notes"`
 }
 
 func (s *Server) handleDiag(w http.ResponseWriter, r *http.Request) {

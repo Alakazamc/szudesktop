@@ -14,10 +14,10 @@ import (
 
 // vpnChannel 描述一条校外访问通道。
 type vpnChannel struct {
-	name    string // 通道名
-	url     string // 入口地址（可打开/下载）
-	kind    string // web（浏览器直接用）/ client（要先装客户端）
-	detail  string // 怎么登录、注意什么
+	name   string // 通道名
+	url    string // 入口地址（可打开/下载）
+	kind   string // web（浏览器直接用）/ client（要先装客户端）
+	detail string // 怎么登录、注意什么
 }
 
 var vpnChannels = []vpnChannel{
@@ -103,4 +103,3 @@ func openBrowser(url string) error {
 		return exec.Command("xdg-open", url).Start()
 	}
 }
-
