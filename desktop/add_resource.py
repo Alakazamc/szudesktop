@@ -26,6 +26,11 @@ import re
 import struct
 import sys
 
+# GitHub Windows Runner 可能使用 CP1252；中文构建日志统一输出为 UTF-8。
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 # Windows 资源类型编号
 RT_ICON = 3
 RT_GROUP_ICON = 14

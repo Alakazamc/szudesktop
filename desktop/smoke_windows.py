@@ -18,6 +18,11 @@ import tempfile
 import time
 import urllib.request
 
+# GitHub Windows Runner 可能使用 CP1252；中文测试日志统一输出为 UTF-8。
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 项目根，从脚本位置推
 EXE = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "dist", "szudesktop-windows-amd64.exe")
 PORT = sys.argv[2] if len(sys.argv) > 2 else "18899"

@@ -18,6 +18,11 @@ import re
 import sys
 import zipfile
 
+# GitHub Windows Runner 可能使用 CP1252；中文发布日志统一输出为 UTF-8。
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 项目根，从脚本位置推
 DESKTOP = os.path.join(ROOT, "desktop")
 DIST = os.path.join(ROOT, "dist")
