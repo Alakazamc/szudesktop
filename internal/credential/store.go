@@ -42,6 +42,11 @@ func Default() Store {
 
 // dir 返回配置目录 ~/.szunet。
 func dir() (string, error) {
+	// 测试/便携场景可显式隔离配置目录，避免冒烟测试覆盖真实账号。
+	// 正常双击客户端时不设置这个变量，仍使用 ~/.szunet。
+	if d := os.Getenv("SZUNET_CONFIG_DIR"); d != "" {
+		return d, nil
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err

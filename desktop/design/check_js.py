@@ -113,10 +113,10 @@ if missing:
 else:
     print("[OK] 没有「调用了但没定义」的函数（共 %d 个自定义名字）" % len(defined))
 
-# 4) 页面上带 id 的按钮/输入框，有没有被 JS 引用
-#    只挑交互控件（button/input），纯展示的 div 不管。
+# 4) 页面上带 id 的按钮/输入框/下拉框，有没有被 JS 引用
+#    只挑交互控件（button/input/select），纯展示的 div 不管。
 ctrl_ids = set()
-for m in re.finditer(r"<(button|input)\b[^>]*\bid=\"([^\"]+)\"", html):
+for m in re.finditer(r"<(button|input|select)\b[^>]*\bid=\"([^\"]+)\"", html):
     ctrl_ids.add(m.group(2))
 unused = sorted(i for i in ctrl_ids if i not in js)
 if unused:
@@ -125,7 +125,7 @@ if unused:
         print("     " + i)
     fails.append("有控件没接上")
 else:
-    print("[OK] 所有 button/input 控件都在 JS 里被引用了（共 %d 个）" % len(ctrl_ids))
+    print("[OK] 所有 button/input/select 控件都在 JS 里被引用了（共 %d 个）" % len(ctrl_ids))
 
 print()
 if fails:

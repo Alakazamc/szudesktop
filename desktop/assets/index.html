@@ -1223,6 +1223,13 @@
           <input class="inp" id="lg-pass" type="password" autocomplete="current-password"
                  placeholder="统一身份认证密码">
 
+          <label class="lf" for="lg-zone-pick">登录区域</label>
+          <select class="inp" id="lg-zone-pick">
+            <option value="auto">自动识别（推荐）</option>
+            <option value="teaching">教学区 / 图书馆（深澜）</option>
+            <option value="dorm">宿舍区（Dr.COM）</option>
+          </select>
+
           <label class="switch"><input type="checkbox" id="lg-save" checked><span class="track"></span>
             <span class="cm">记住账号密码</span></label>
 
@@ -1791,7 +1798,7 @@ juice();
    由 szudesktop 提供的页面则在同源下，接口全部可用。
    接口：
      GET    /api/status      网络区域 + 账号在线状态
-     POST   /api/login       一键登录
+     POST   /api/login       一键登录（可指定 auto / teaching / dorm）
      POST   /api/logout      注销
      GET    /api/diag        断线诊断
      GET    /api/credential  看存了哪个账号（不返回密码）
@@ -1867,7 +1874,7 @@ async function doDiag(){
 /* ================= 校园网登录页 =================
    点顶上「校园网」标签进来的那一页。这里管四件事：
      · 进页面时把当前区域、在线状态、存过的账号显示出来
-     · 登录（勾了「记住」就先存进系统保险箱，再用它登）
+     · 登录（认证成功后，勾了「记住」才存进系统保险箱）
      · 注销下线
      · 忘掉已存的账号
 
@@ -1876,6 +1883,7 @@ async function doDiag(){
 
 let lgSaved = false;   // 保险箱里有没有存过账号
 let lgBusy  = false;   // 防连点
+let lgRefreshSeq = 0;  // 较早发出的状态请求不能覆盖较新的登录结果
 
 /* 一句话提示。ok/bad 决定颜色（CSS 里有 .lgnote.ok / .lgnote.bad）。
    这里用 textContent 而不是打字机效果：服务端返回的原文里可能带
@@ -1908,9 +1916,11 @@ const LG_HINT = {
 };
 
 /* 进入登录页 / 登录完成后刷新页面上的状态 */
-async function refreshLogin(){
+async function refreshLogin(preserveNote=false){
+  const seq = ++lgRefreshSeq;
   const zoneEl = document.getElementById("lg-zone");
   const st = await api("/api/status");
+  if (seq !== lgRefreshSeq) return; // 已有更新的操作，这份旧结果作废
 
   if (!st){
     zoneEl.textContent = "没连上内核";
@@ -1939,14 +1949,16 @@ async function refreshLogin(){
     ["存放位置", st.saved ? st.store_desc : "—"],
   ]);
 
-  if (st.zone === "online" && !st.online){
-    lgNote("已经能上外网，不用认证。", "ok");
-  } else if (st.online){
-    lgNote("账号在线，可以直接用。", "ok");
-  } else if (lgSaved){
-    lgNote("卡号已填好，密码留空直接点登录就是用存好的那份。");
-  } else {
-    lgNote("填好卡号和密码就能登录。");
+  if (!preserveNote){
+    if (st.zone === "online" && !st.online){
+      lgNote("已经能上外网，不用认证。", "ok");
+    } else if (st.online){
+      lgNote("账号在线，可以直接用。", "ok");
+    } else if (lgSaved){
+      lgNote("卡号已填好，密码留空直接点登录就是用存好的那份。");
+    } else {
+      lgNote("填好卡号和密码就能登录。");
+    }
   }
 }
 
@@ -1970,23 +1982,16 @@ async function doLoginPage(){
   }
 
   lgBusy = true;
+  ++lgRefreshSeq; // 进入页面时尚未返回的旧刷新不能再覆盖本次登录结果
   const btn = document.getElementById("lg-login");
   const label = btn.textContent;
   btn.textContent = "登录中…";
   lgNote("正在认证，稍等……");
 
   try{
-    // 勾了记住：先存。存失败不拦着登录，只是提醒一句。
-    if (pass && save){
-      const saved = await api("/api/credential", {
-        method:"POST", body: JSON.stringify({ username:user, password:pass }),
-      });
-      if (saved) lgSaved = true;
-      else lgNote("账号没存进保险箱（不影响这次登录）……");
-    }
-
-    // 密码填了就明确带上；空着就让后端用存好的
-    const body = pass ? JSON.stringify({ username:user, password:pass }) : "{}";
+    // 先认证，成功后再决定是否保存。这样输错一次不会把错密码留在保险箱里。
+    const zone = document.getElementById("lg-zone-pick").value;
+    const body = JSON.stringify({ username:user, password:pass, zone });
     const res = await api("/api/login", { method:"POST", body });
 
     if (!res){
@@ -1995,7 +2000,19 @@ async function doLoginPage(){
     }
 
     if (res.ok){
-      lgNote(res.message || "登录成功。", "ok");
+      let message = res.message || "登录成功。";
+      if (pass && save){
+        const saved = await api("/api/credential", {
+          method:"POST", body: JSON.stringify({ username:user, password:pass }),
+        });
+        if (saved){
+          lgSaved = true;
+          message += " 账号已安全保存。";
+        } else {
+          message += " 但账号没能存进保险箱，下次需要重新输入。";
+        }
+      }
+      lgNote(message, "ok");
       document.getElementById("lg-pass").value = "";   // 用完就清掉，别留在框里
       netOK = true;
       petReact("happy", 4000);
@@ -2009,7 +2026,7 @@ async function doLoginPage(){
   } finally {
     btn.textContent = label;
     lgBusy = false;
-    await refreshLogin();
+    await refreshLogin(true);
   }
 }
 
@@ -2021,7 +2038,8 @@ async function doLogoutPage(){
   try{
     const user = document.getElementById("lg-user").value.trim();
     const pass = document.getElementById("lg-pass").value;
-    const body = (user && pass) ? JSON.stringify({ username:user, password:pass }) : "{}";
+    const zone = document.getElementById("lg-zone-pick").value;
+    const body = JSON.stringify({ username:user, password:pass, zone });
     const res = await api("/api/logout", { method:"POST", body });
     if (!res){ lgNote("没连上本地内核，这是演示效果。", "bad"); return; }
     lgNote(res.message || (res.ok ? "已注销。" : "注销失败。"), res.ok ? "ok" : "bad");

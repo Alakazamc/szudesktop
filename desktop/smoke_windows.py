@@ -11,8 +11,10 @@
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 
@@ -58,8 +60,10 @@ if not os.path.exists(EXE):
     print("!! 找不到可执行文件")
     sys.exit(2)
 
+SMOKE_CONFIG = tempfile.mkdtemp(prefix="szudesktop-smoke-", dir=os.path.join(ROOT, "dist"))
+proc_env = dict(os.environ, SZUNET_CONFIG_DIR=SMOKE_CONFIG)
 proc = subprocess.Popen([EXE, "--no-open", "--no-auto-login", "--addr", "127.0.0.1:" + PORT],
-                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=proc_env)
 try:
     # 等服务起来，最多 10 秒
     up = False
@@ -251,6 +255,8 @@ finally:
         proc.kill()
     # 双保险：按镜像名再杀一次
     subprocess.run(["taskkill", "/F", "/IM", os.path.basename(EXE)], capture_output=True)
+    # 测试凭据只存在这个临时目录；无论成功失败都清理，不碰 ~/.szunet 的真实凭据。
+    shutil.rmtree(SMOKE_CONFIG, ignore_errors=True)
 
 print("\n" + "=" * 62)
 print("结果:", "全部通过" if ok_all else "有失败项，见上面 [!!]")

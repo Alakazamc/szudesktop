@@ -41,7 +41,8 @@ type Options struct {
 	AutoLogin bool   // 启动后自动登录一次
 	SrunHost  string
 	DrcomHost string
-	NoOpen    bool // 不自动开浏览器
+	NoOpen    bool   // 不自动开浏览器
+	Zone      string // auto / teaching / dorm；自动判错时允许手动指定
 }
 
 // Server 是本地服务。
@@ -63,7 +64,40 @@ func New(opts Options) *Server {
 	if opts.DrcomHost == "" {
 		opts.DrcomHost = portal.DefaultDrcomHost
 	}
+	if opts.Zone == "" {
+		opts.Zone = "auto"
+	}
 	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager()}
+}
+
+func parseZone(raw string) (portal.Zone, bool) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "teaching", "srun":
+		return portal.ZoneTeaching, true
+	case "dorm", "dormitory", "drcom":
+		return portal.ZoneDorm, true
+	default:
+		return portal.ZoneUnknown, false
+	}
+}
+
+// selectedZone 用于状态显示：默认显示探测结果，启动参数可覆盖。
+func (s *Server) selectedZone(detected portal.Zone) portal.Zone {
+	if zone, ok := parseZone(s.opts.Zone); ok {
+		return zone
+	}
+	return detected
+}
+
+// loginZone 用于认证操作：页面本次选择优先，其次启动参数，最后才自动探测。
+func (s *Server) loginZone(requested string) portal.Zone {
+	if zone, ok := parseZone(requested); ok {
+		return zone
+	}
+	if zone, ok := parseZone(s.opts.Zone); ok {
+		return zone
+	}
+	return portal.Detect().Zone
 }
 
 // creds 按「命令行参数 > 已保存的凭据」的顺序取账号密码。
@@ -74,8 +108,7 @@ func (s *Server) creds() (string, string, error) {
 	}
 	c, err := s.store.Load()
 	if err != nil {
-		return "", "", fmt.Errorf("还没有保存账号密码。" +
-			"先跑 `szunet config set -u 你的卡号 -p 你的密码` 存一次，或者用 --user / --password 临时指定")
+		return "", "", fmt.Errorf("还没有保存账号密码。请在应用的校园网页填写校园卡号和密码；勾选记住后，认证成功才会安全保存")
 	}
 	if user == "" {
 		user = c.Username
@@ -107,7 +140,7 @@ func (s *Server) Run() error {
 	if s.opts.AutoLogin {
 		go func() {
 			time.Sleep(300 * time.Millisecond) // 先让服务起来，再打日志
-			res := s.doLogin("", "")
+			res := s.doLogin("", "", "")
 			if res.OK {
 				fmt.Printf("[自动登录] %s\n", res.Message)
 			} else {
@@ -208,19 +241,20 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	user, pass, credErr := s.creds()
 
 	det := portal.Detect()
+	zone := s.selectedZone(det.Zone)
 	out := statusResp{
-		Zone:       string(det.Zone),
-		ZoneLabel:  det.Zone.Label(),
+		Zone:       string(zone),
+		ZoneLabel:  zone.Label(),
 		InternetOK: det.InternetOK,
 		StoreDesc:  s.store.Describe(),
 	}
 	if credErr == nil {
 		out.Saved = true
 		out.Username = user
-		if det.Zone != portal.ZoneOnline && det.Zone != portal.ZoneOutside {
+		if zone != portal.ZoneOnline && zone != portal.ZoneOutside {
 			var st *portal.OnlineStatus
 			var err error
-			switch det.Zone {
+			switch zone {
 			case portal.ZoneTeaching:
 				st, err = portal.NewSrunClient(s.opts.SrunHost, user, pass).Status()
 			case portal.ZoneDorm:
@@ -253,11 +287,12 @@ type loginResp struct {
 
 // credRequest 是登录/注销请求里可选的临时账号。
 //
-// 页面上勾了「记住」就先存凭据，服务端从保险箱里取；没勾的话，把账号密码
-// 随请求一起带过来，用这一次就丢，不落盘。
+// 页面上没勾「记住」时，把账号密码随请求带来，用这一次就丢、不落盘。
+// 勾选保存由页面在认证成功后另调 credential 接口，避免把输错的密码存进去。
 type credRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Zone     string `json:"zone,omitempty"`
 }
 
 // readCredRequest 从请求体里读临时账号。请求体为空也允许（表示用已保存的）。
@@ -272,26 +307,32 @@ func readCredRequest(r *http.Request) credRequest {
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	req := readCredRequest(r)
-	res := s.doLogin(req.Username, req.Password)
+	res := s.doLogin(req.Username, req.Password, req.Zone)
 	writeJSON(w, loginResp{OK: res.OK, Message: res.Message})
 }
 
 // doLogin 登录一次。user/pass 是本次专用的临时账号，留空就用保存的凭据。
-func (s *Server) doLogin(user, pass string) portal.Result {
+// requestedZone 留空/auto 时自动识别，teaching/dorm 时强制走对应协议。
+func (s *Server) doLogin(user, pass, requestedZone string) portal.Result {
 	if user == "" || pass == "" {
-		var err error
-		user, pass, err = s.creds()
+		savedUser, savedPass, err := s.creds()
 		if err != nil {
 			return s.remember(err.Error())
 		}
+		if user == "" {
+			user = savedUser
+		}
+		if pass == "" {
+			pass = savedPass
+		}
 	}
 
-	det := portal.Detect()
+	zone := s.loginZone(requestedZone)
 	s.mu.Lock()
-	s.lastZone = det.Zone
+	s.lastZone = zone
 	s.mu.Unlock()
 
-	switch det.Zone {
+	switch zone {
 	case portal.ZoneOnline:
 		s.clearErr()
 		return portal.Result{OK: true, Message: "已经能上外网，不用再认证"}
@@ -327,17 +368,22 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	req := readCredRequest(r)
 	user, pass := req.Username, req.Password
 	if user == "" || pass == "" {
-		var err error
-		user, pass, err = s.creds()
+		savedUser, savedPass, err := s.creds()
 		if err != nil {
 			writeJSON(w, loginResp{OK: false, Message: err.Error()})
 			return
 		}
+		if user == "" {
+			user = savedUser
+		}
+		if pass == "" {
+			pass = savedPass
+		}
 	}
-	det := portal.Detect()
+	zone := s.loginZone(req.Zone)
 	var res *portal.Result
 	var e error
-	switch det.Zone {
+	switch zone {
 	case portal.ZoneTeaching:
 		res, e = portal.NewSrunClient(s.opts.SrunHost, user, pass).Logout()
 	case portal.ZoneDorm:
@@ -350,7 +396,7 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, loginResp{OK: false, Message: e.Error()})
 		return
 	}
-	writeJSON(w, loginResp{OK: res.OK, Zone: string(det.Zone), Message: res.Message})
+	writeJSON(w, loginResp{OK: res.OK, Zone: string(zone), Message: res.Message})
 }
 
 type diagResp struct {

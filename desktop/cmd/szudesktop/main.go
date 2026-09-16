@@ -18,7 +18,7 @@ import (
 	"github.com/Alakazamc/szudesktop/internal/portal"
 )
 
-const version = "0.2.0"
+const version = "0.2.1"
 
 func main() {
 	fs := flag.NewFlagSet("szudesktop", flag.ExitOnError)
@@ -30,6 +30,7 @@ func main() {
 	noOpen := fs.Bool("no-open", false, "不自动打开浏览器")
 	srunHost := fs.String("host-teaching", portal.DefaultSrunHost, "教学区深澜门户")
 	drcomHost := fs.String("host-dorm", portal.DefaultDrcomHost, "宿舍区 Dr.COM 门户")
+	zone := fs.String("zone", "auto", "强制指定区域：auto / teaching / dorm")
 	showVer := fs.Bool("version", false, "看版本")
 
 	_ = fs.Parse(os.Args[1:])
@@ -47,6 +48,7 @@ func main() {
 		NoOpen:    *noOpen,
 		SrunHost:  *srunHost,
 		DrcomHost: *drcomHost,
+		Zone:      *zone,
 	})
 
 	if err := srv.Run(); err != nil {
