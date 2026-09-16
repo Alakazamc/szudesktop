@@ -21,8 +21,18 @@ EXE = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "dist", "szudeskt
 PORT = sys.argv[2] if len(sys.argv) > 2 else "18899"
 BASE = "http://127.0.0.1:" + PORT
 
-# 这些字符串只在新版页面里出现，用来确认包进去的是当前代码
-MARKERS = ["sys-mode", "btn-logout", "stat-zone", "refreshStatus"]
+# 这些字符串只在新版页面里出现，用来确认包进去的是当前代码。
+#
+# ⚠️ 加标记时注意：光有 HTML 元素不代表功能能用。
+# 登录页翻车过一次——HTML 元素全在、按钮也画出来了，但 refreshLogin()
+# 和三个按钮的事件处理全都没写，点了完全没反应。当时这个列表里有
+# refreshStatus 却没有 refreshLogin，一字之差就漏过去了。
+# 所以这里除了元素 id，还要盯住「驱动它的那个函数存不存在」。
+MARKERS = [
+    "sys-mode", "btn-logout", "stat-zone", "refreshStatus",
+    # 登录页：元素 + 驱动它的函数，两样都得在
+    "lg-login", "refreshLogin", "doLoginPage", "doLogoutPage", "doForgetPage",
+]
 
 ok_all = True
 

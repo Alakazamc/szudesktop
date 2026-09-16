@@ -1864,6 +1864,200 @@ async function doDiag(){
   (d.advices || []).forEach((a, i) => { t += (i === 0 ? "\n\n建议：" : "\n") + "· " + a; });
   type(modalText, t);
 }
+/* ================= 校园网登录页 =================
+   点顶上「校园网」标签进来的那一页。这里管四件事：
+     · 进页面时把当前区域、在线状态、存过的账号显示出来
+     · 登录（勾了「记住」就先存进系统保险箱，再用它登）
+     · 注销下线
+     · 忘掉已存的账号
+
+   密码框永远不预填 —— 后端不会把密码回传给页面，这是故意的。
+   回来的人看到卡号已经填好，密码留空直接点登录，就是「用存好的那份」。 */
+
+let lgSaved = false;   // 保险箱里有没有存过账号
+let lgBusy  = false;   // 防连点
+
+/* 一句话提示。ok/bad 决定颜色（CSS 里有 .lgnote.ok / .lgnote.bad）。
+   这里用 textContent 而不是打字机效果：服务端返回的原文里可能带
+   各种符号，直接塞 innerHTML 不安全，而且这行是要人快速看清的。 */
+function lgNote(text, kind){
+  const el = document.getElementById("lg-note");
+  el.className = "lgnote" + (kind ? " " + kind : "");
+  el.textContent = text;
+}
+
+/* 底部那排「当前状态」小格子 */
+function lgState(pairs){
+  const box = document.getElementById("lg-state");
+  box.innerHTML = "";
+  pairs.forEach(([k, v]) => {
+    const cell = document.createElement("div");
+    const ke = document.createElement("div"); ke.className = "k"; ke.textContent = k;
+    const ve = document.createElement("div"); ve.className = "v"; ve.textContent = v;
+    cell.append(ke, ve);
+    box.appendChild(cell);
+  });
+}
+
+const LG_HINT = {
+  teaching: "你在教学区，走深澜认证。卡号是校园卡上的 6 位数字，密码是统一身份认证密码。",
+  dorm:     "你在宿舍区，走 Dr.COM 认证。如果登录被拒，先去自助服务确认套餐没到期。",
+  online:   "现在已经能上外网了，不用再认证。想换账号可以先注销下线。",
+  outside:  "看起来你在校外。校园网认证在这里用不上，要访问校内资源得走 VPN。",
+  unknown:  "两个认证门户都没探到。先确认连上了 SZU_WLAN 这张网。",
+};
+
+/* 进入登录页 / 登录完成后刷新页面上的状态 */
+async function refreshLogin(){
+  const zoneEl = document.getElementById("lg-zone");
+  const st = await api("/api/status");
+
+  if (!st){
+    zoneEl.textContent = "没连上内核";
+    document.getElementById("lg-hint").textContent =
+      "这个页面是直接双击打开的，连不上本地内核，所以登录按钮不会真的联网。用 szudesktop.exe 启动就是真的。";
+    lgNote("演示模式：点登录不会真的发请求。", "bad");
+    lgState([["运行模式", "演示"], ["网络区域", "—"], ["账号状态", "—"]]);
+    return;
+  }
+
+  LIVE = true;
+  lgSaved = !!st.saved;
+  zoneEl.textContent = st.zone_label;
+  document.getElementById("lg-hint").textContent = LG_HINT[st.zone] || LG_HINT.unknown;
+
+  // 存过账号就把卡号填好，省得每次手输；密码照旧留空
+  const userEl = document.getElementById("lg-user");
+  if (st.saved && st.username && !userEl.value) userEl.value = st.username;
+
+  lgState([
+    ["网络区域", st.zone_label],
+    ["外网",     st.internet_ok ? "通" : "不通"],
+    ["账号状态", st.online ? "在线" : "不在线"],
+    ["在线 IP",  st.online_ip || "—"],
+    ["已存账号", st.saved ? st.username : "没有"],
+    ["存放位置", st.saved ? st.store_desc : "—"],
+  ]);
+
+  if (st.zone === "online" && !st.online){
+    lgNote("已经能上外网，不用认证。", "ok");
+  } else if (st.online){
+    lgNote("账号在线，可以直接用。", "ok");
+  } else if (lgSaved){
+    lgNote("卡号已填好，密码留空直接点登录就是用存好的那份。");
+  } else {
+    lgNote("填好卡号和密码就能登录。");
+  }
+}
+
+/* 登录。
+   规则：密码框填了就用填的那份（勾了记住顺手存起来）；
+         密码框空着就用保险箱里存好的那份。 */
+async function doLoginPage(){
+  if (lgBusy) return;
+
+  const user = document.getElementById("lg-user").value.trim();
+  const pass = document.getElementById("lg-pass").value;
+  const save = document.getElementById("lg-save").checked;
+
+  if (!pass && !lgSaved){
+    lgNote("还没存过账号，这次得把卡号和密码都填上。", "bad");
+    return;
+  }
+  if (pass && !user){
+    lgNote("卡号还没填。", "bad");
+    return;
+  }
+
+  lgBusy = true;
+  const btn = document.getElementById("lg-login");
+  const label = btn.textContent;
+  btn.textContent = "登录中…";
+  lgNote("正在认证，稍等……");
+
+  try{
+    // 勾了记住：先存。存失败不拦着登录，只是提醒一句。
+    if (pass && save){
+      const saved = await api("/api/credential", {
+        method:"POST", body: JSON.stringify({ username:user, password:pass }),
+      });
+      if (saved) lgSaved = true;
+      else lgNote("账号没存进保险箱（不影响这次登录）……");
+    }
+
+    // 密码填了就明确带上；空着就让后端用存好的
+    const body = pass ? JSON.stringify({ username:user, password:pass }) : "{}";
+    const res = await api("/api/login", { method:"POST", body });
+
+    if (!res){
+      lgNote("没连上本地内核，这是演示效果。用 szudesktop.exe 启动就有真结果。", "bad");
+      return;
+    }
+
+    if (res.ok){
+      lgNote(res.message || "登录成功。", "ok");
+      document.getElementById("lg-pass").value = "";   // 用完就清掉，别留在框里
+      netOK = true;
+      petReact("happy", 4000);
+      petSay("网通了，它在窝里翻了个身。");
+      say("[[g|登录成功]]，可以开工了。");
+      await refreshStatus();
+    } else {
+      lgNote(res.message || "登录失败。", "bad");
+      say("登录没成。看下面那行提示，或者点[[y|断线诊断]]。");
+    }
+  } finally {
+    btn.textContent = label;
+    lgBusy = false;
+    await refreshLogin();
+  }
+}
+
+/* 注销下线。密码填了就用填的，否则用存好的。 */
+async function doLogoutPage(){
+  if (lgBusy) return;
+  lgBusy = true;
+  lgNote("正在注销……");
+  try{
+    const user = document.getElementById("lg-user").value.trim();
+    const pass = document.getElementById("lg-pass").value;
+    const body = (user && pass) ? JSON.stringify({ username:user, password:pass }) : "{}";
+    const res = await api("/api/logout", { method:"POST", body });
+    if (!res){ lgNote("没连上本地内核，这是演示效果。", "bad"); return; }
+    lgNote(res.message || (res.ok ? "已注销。" : "注销失败。"), res.ok ? "ok" : "bad");
+    if (res.ok) await refreshStatus();
+  } finally {
+    lgBusy = false;
+    await refreshLogin();
+  }
+}
+
+/* 忘掉已存的账号 */
+async function doForgetPage(){
+  if (lgBusy) return;
+  lgBusy = true;
+  try{
+    const res = await api("/api/credential", { method:"DELETE" });
+    if (!res){ lgNote("没连上本地内核，删不了。", "bad"); return; }
+    lgSaved = false;
+    document.getElementById("lg-user").value = "";
+    document.getElementById("lg-pass").value = "";
+    lgNote("已经把存的账号删掉了。", "ok");
+  } finally {
+    lgBusy = false;
+    await refreshLogin();
+  }
+}
+
+document.getElementById("lg-login").onclick  = () => doLoginPage();
+document.getElementById("lg-logout").onclick = () => doLogoutPage();
+document.getElementById("lg-forget").onclick = () => doForgetPage();
+/* 两个输入框里按回车直接登录 */
+["lg-user","lg-pass"].forEach(id =>
+  document.getElementById(id).addEventListener("keydown", e => {
+    if (e.key === "Enter"){ e.preventDefault(); doLoginPage(); }
+  }));
+
 /* ---------- HUD 时钟 ---------- */
 function tick(){
   const d = new Date();
