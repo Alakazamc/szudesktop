@@ -184,30 +184,23 @@ func cmdLogin(args []string) {
 
 	switch zone {
 	case portal.ZoneOnline:
-		if o.asJSON {
-			printJSON(map[string]any{"ok": true, "zone": zone, "message": "已经能上外网，不需要认证"})
+		// 能上外网不代表账号已经认证过：有线、手机热点、别人留下的会话
+		// 都会让外网通。所以这里不能直接说"不用认证"，要按指纹认出到底
+		// 该走哪套协议，真发一次认证请求，让服务端自己回答。
+		if target := portal.FingerprintZone(); target != "" {
+			res, err := loginByZone(target, &o, user, pass)
+			reportResult(res, err, target, o.asJSON, o.verbose)
 			return
 		}
-		fmt.Println("当前已经能上外网，不需要认证")
-		return
+		if o.asJSON {
+			printJSON(map[string]any{"ok": true, "zone": zone,
+				"message": "已经能上外网，且探不到校内认证门户，不需要认证"})
+			return
+		}
+		fmt.Println("当前已经能上外网，探不到校内认证门户，不需要认证")
 
-	case portal.ZoneTeaching:
-		c := portal.NewSrunClient(o.srunHost, user, pass)
-		if o.acID != "" {
-			c.AcID = o.acID
-		}
-		if o.serverIP != "" {
-			c.SetServerIP(o.serverIP)
-		}
-		res, err := c.Login()
-		reportResult(res, err, zone, o.asJSON, o.verbose)
-
-	case portal.ZoneDorm:
-		c := portal.NewDrcomClient(o.drcomHost, user, pass)
-		if o.serverIP != "" {
-			c.SetServerIP(o.serverIP)
-		}
-		res, err := c.Login()
+	case portal.ZoneTeaching, portal.ZoneDorm:
+		res, err := loginByZone(zone, &o, user, pass)
 		reportResult(res, err, zone, o.asJSON, o.verbose)
 
 	default:
@@ -218,6 +211,27 @@ func cmdLogin(args []string) {
 		}
 		fail(fmt.Errorf("判断不出你在哪个区。如果确定在校内，可以手动指定：" +
 			"szunet login --zone dorm 或 --zone teaching"))
+	}
+}
+
+// loginByZone 按区域挑对应协议发一次认证请求。
+func loginByZone(zone portal.Zone, o *options, user, pass string) (*portal.Result, error) {
+	switch zone {
+	case portal.ZoneDorm:
+		c := portal.NewDrcomClient(o.drcomHost, user, pass)
+		if o.serverIP != "" {
+			c.SetServerIP(o.serverIP)
+		}
+		return c.Login()
+	default:
+		c := portal.NewSrunClient(o.srunHost, user, pass)
+		if o.acID != "" {
+			c.AcID = o.acID
+		}
+		if o.serverIP != "" {
+			c.SetServerIP(o.serverIP)
+		}
+		return c.Login()
 	}
 }
 

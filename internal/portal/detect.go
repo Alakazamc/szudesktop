@@ -176,6 +176,28 @@ func zoneFingerprintNote(r *DetectResult) string {
 	}
 }
 
+// FingerprintZone 只按「认证接口指纹」定区，不看外网通不通。
+//
+// 用途很明确：已经能上外网、但用户就是想让程序真的去认证一次的时候
+// （换账号、换设备、上一个人留下的会话），需要一个"到底该打哪套协议"
+// 的答案。这时候外网通不通没有参考价值，只有谁真的提供了认证接口才算数。
+//
+// 返回空字符串表示两套接口都没指纹 —— 那就不该瞎猜，直接告诉用户
+// "探不到校内认证门户"。
+func FingerprintZone() Zone {
+	r := Probe()
+	switch {
+	case r.SrunUsable:
+		// 两套都有指纹时优先深澜：教学区是主场景，而宿舍区未认证时
+		// 宿舍门户在教学区也能连上，容易造成两边都通。
+		return ZoneTeaching
+	case r.DormUsable:
+		return ZoneDorm
+	default:
+		return ""
+	}
+}
+
 const dnsWarning = "注意：net.szu.edu.cn 这个域名解析不出来。如果开着代理或 DoH，" +
 	"它可能把域名解析抢走了，可以先关掉代理，或者用 --ip 直接指定服务器 IP"
 

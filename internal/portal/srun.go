@@ -161,13 +161,21 @@ func (c *SrunClient) Login() (*Result, error) {
 		return nil, fmt.Errorf("解析登录响应失败: %w", err)
 	}
 
-	raw := truncate(string(body), 400)
+	raw := truncate(string(body), 2000)
 
 	// error 为 ok 就是成功；suc_msg 里带 already_online 说明本来就在线，
 	// 这同样证明协议走通了，算成功，不主动去踢掉原有会话。
+	//
+	// 这里细分成两种"已在线"：
+	//   ip_already_online —— 这个网络出口已经有别的账号挂着，本次登录没生效；
+	//   already_online    —— 是自己这个账号本来就在线。
+	// 对用户来说结果都是"能上网"，但提示要给对，不然会以为换号成功了。
 	if resp.Error == "ok" {
 		msg := "认证成功"
-		if strings.Contains(resp.SucMsg, "already_online") {
+		switch {
+		case strings.Contains(resp.SucMsg, "ip_already_online"):
+			msg = "这个网络出口已经有账号在线了，本次登录没有生效"
+		case strings.Contains(resp.SucMsg, "already_online"):
 			msg = "该账号本来就在线，无需重复认证"
 		}
 		return &Result{OK: true, Message: msg, Raw: raw}, nil
@@ -317,18 +325,34 @@ func (c *SrunClient) get(rawURL string) ([]byte, error) {
 
 // friendlySrunError 把服务端返回的错误码翻成能看懂的话，并给出常见原因。
 // 这份对照关系来自官方 FAQ 和实际报错记录。
+//
+// 注意：服务端可能把关键信息放在 error / error_msg / suc_msg / res 任何一个
+// 字段里。比如"IP 已在线""ac_id 不对"这两种情况，error 都是 ok，
+// 只有 suc_msg 里才看得出区别，所以这里四个字段一起匹配。
 func friendlySrunError(resp srunPortalResp) string {
-	code := strings.ToLower(resp.Error + " " + resp.ErrorMsg)
+	code := strings.ToLower(strings.Join([]string{
+		resp.Error, resp.ErrorMsg, resp.SucMsg, resp.Res,
+	}, " "))
 
 	switch {
+	case strings.Contains(code, "ip_already_online"):
+		return "这个 IP 已经在线上，不用重复登录（同一个网络出口只能挂一个账号）"
 	case strings.Contains(code, "already_online"):
 		return "该账号已在线"
+	case strings.Contains(code, "challenge_expire"):
+		return "认证超时（challenge 过期）。网络太慢或者中途卡住了，重试一次即可"
+	case strings.Contains(code, "bad_request_parameters"):
+		return "学校服务器不认这组登录参数。如果反复出现，请把原始返回发给作者排查"
+	case strings.Contains(code, "auth_info_error"):
+		return "学校服务器没看懂这次认证请求（auth_info_error）。通常是 ac_id 或参数格式对不上"
 	case strings.Contains(code, "ldap"):
 		return "认证失败：密码不对（ldap auth error）。另外注意密码不要超过 16 位"
 	case strings.Contains(code, "userid"):
 		return "认证失败：账号不对（Rad:userid error）。账号是 6 位数的校园卡号"
 	case strings.Contains(code, "ac-type"):
 		return "认证失败：ac_id 用错了（Unknow ac-type）。可以加 --ac-id 手动指定"
+	case strings.Contains(code, "ac_id"):
+		return "认证失败：ac_id 用错了。可以加 --ac-id 手动指定（教学区常见值：1）"
 	case strings.Contains(code, "sign"):
 		return "认证失败：校验和不对（sign error）。加密环节出错，请把原始返回发给作者排查"
 	case strings.Contains(code, "decrypt"):

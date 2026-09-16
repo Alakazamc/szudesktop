@@ -37,3 +37,7 @@ desktop/design/_*.png
 
 # EasierConnect 参考源码（第三方代码，只留本地不进库）
 design/vpn-ref-*.go.txt
+
+# 排查协议的临时脚本/抓下来的页面（探完了就可以删，不需要进库）
+.scratch_probe/
+.portal_js.txt

@@ -374,26 +374,10 @@ func (s *Server) doLogin(user, pass, requestedZone string) portal.Result {
 //
 // 和 loginZone 的区别：这里不看"外网通不通"，只看"谁真的提供了认证接口"。
 // 已经联网、但想知道"我这个账号该用哪套协议登录"时用这个。
+//
+// 判区规则统一放在 portal.FingerprintZone()，免得命令行和界面两处走偏。
 func (s *Server) zoneFromFingerprint() portal.Zone {
-	det := portal.Probe()
-	if !det.Probed {
-		return ""
-	}
-	switch {
-	case det.SrunUsable && !det.DormUsable:
-		return portal.ZoneTeaching
-	case det.DormUsable:
-		// 两套都有回应是宿舍区的常见情况，按宿舍区走。
-		return portal.ZoneDorm
-	case det.SrunUsable:
-		return portal.ZoneTeaching
-	case det.DormPortalOK && !det.TeachPortalOK:
-		return portal.ZoneDorm
-	case det.TeachPortalOK && !det.DormPortalOK:
-		return portal.ZoneTeaching
-	default:
-		return ""
-	}
+	return portal.FingerprintZone()
 }
 
 // loginWithProtocol 按指定区域真打一次认证请求。教学区和宿舍区各一套协议。
