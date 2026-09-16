@@ -15,6 +15,11 @@ import shutil
 import subprocess
 import sys
 
+# GitHub Windows Runner 可能把控制台设成 CP1252；中文进度输出必须显式用 UTF-8。
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 # 路径都从脚本自己的位置推出来，项目目录改名/挪盘都不用改这里
 DESKTOP = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(DESKTOP)
