@@ -41,3 +41,6 @@ design/vpn-ref-*.go.txt
 # 排查协议的临时脚本/抓下来的页面（探完了就可以删，不需要进库）
 .scratch_probe/
 .portal_js.txt
+
+# 临时打包产物
+/outputs/

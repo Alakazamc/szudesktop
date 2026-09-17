@@ -23,6 +23,7 @@ import (
 
 	"github.com/Alakazamc/szudesktop/internal/credential"
 	"github.com/Alakazamc/szudesktop/internal/diagnose"
+	"github.com/Alakazamc/szudesktop/internal/netpref"
 	"github.com/Alakazamc/szudesktop/internal/portal"
 )
 
@@ -44,6 +45,7 @@ type Options struct {
 	CampusBackend string // 未来校内后端的固定 HTTPS 地址
 	NoOpen        bool   // 不自动开浏览器
 	Zone          string // auto / teaching / dorm；自动判错时允许手动指定
+	AcID          string // 深澜接入点编号；留空则按出口自动发现并缓存
 }
 
 // Server 是本地服务。
@@ -384,7 +386,12 @@ func (s *Server) zoneFromFingerprint() portal.Zone {
 func (s *Server) loginWithProtocol(zone portal.Zone, user, pass string) portal.Result {
 	switch zone {
 	case portal.ZoneTeaching:
-		res, err := portal.NewSrunClient(s.opts.SrunHost, user, pass).Login()
+		c := portal.NewSrunClient(s.opts.SrunHost, user, pass)
+		if s.opts.AcID != "" {
+			c.AcID = s.opts.AcID
+		}
+		attachAcIDCache(c, s.opts.AcID == "")
+		res, err := c.Login()
 		if err != nil {
 			return s.remember(err.Error())
 		}
@@ -406,6 +413,30 @@ func (s *Server) loginWithProtocol(zone portal.Zone, user, pass string) portal.R
 		return *res
 	}
 	return s.remember("判断不出你在哪个区。确认一下是不是连着校园网（SZU_WLAN）")
+}
+
+// attachAcIDCache 让客户端复用上次这张网成功的 ac_id，成功后写回缓存。
+//
+// ac_id 不是固定值：同一台笔记本插不同墙口、走有线还是路由器，
+// 接入点编号都可能变（教学区常见 1，接路由器后见过 12）。
+// 拿错就会报 Unknow ac-type。这里按"出口标识"分网缓存，
+// 换网后缓存命中不了，客户端会自动重新发现。
+//
+// onlyCache 为 false 时说明用户手动指定了 ac_id，那就别用缓存覆盖他的选择，
+// 但成功之后仍要记下来。
+func attachAcIDCache(c *portal.SrunClient, useCache bool) {
+	prefs := netpref.Load()
+	key := netpref.Egress()
+
+	if useCache {
+		if id := prefs.AcIDFor(key); id != "" {
+			c.SetLastAcID(id)
+		}
+	}
+	c.OnAcIDResolved = func(id string) {
+		prefs.SetAcID(key, id)
+		_ = prefs.Save()
+	}
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
@@ -454,6 +485,14 @@ type diagResp struct {
 	Online      *bool    `json:"online,omitempty"`
 	Advices     []string `json:"advices"`
 	Notes       []string `json:"notes"`
+
+	// AcID / AcIDTrusted 是深澜认证要用的接入点编号。
+	//
+	// 这东西跟着"插哪个墙口 / 走哪条线路"变，拿错会报 Unknow ac-type，
+	// 是校内登录失败最常见的原因。界面上要能看到它，排查才不用猜。
+	// Trusted 为 false 表示只是从门户页面猜的，未必是你真正所在的接入点。
+	AcID        string `json:"ac_id,omitempty"`
+	AcIDTrusted bool   `json:"ac_id_trusted"`
 }
 
 func (s *Server) handleDiag(w http.ResponseWriter, r *http.Request) {
@@ -475,6 +514,21 @@ func (s *Server) handleDiag(w http.ResponseWriter, r *http.Request) {
 		on := rep.Online.Online
 		out.Online = &on
 	}
+
+	// 顺带把接入点编号算出来给界面显示。
+	//
+	// 只在深澜指纹明确时才查：宿舍区走的是另一套协议，没有 ac_id 这回事，
+	// 白跑一轮探测只会拖慢诊断。
+	if rep.Detect.SrunUsable {
+		c := portal.NewSrunClient(s.opts.SrunHost, user, pass)
+		if s.opts.AcID != "" {
+			c.AcID = s.opts.AcID
+		}
+		id, source := c.ResolveAcIDWithSource()
+		out.AcID = id
+		out.AcIDTrusted = source != portal.AcIDSourceGuess
+	}
+
 	writeJSON(w, out)
 }
 

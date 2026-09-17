@@ -40,6 +40,11 @@ type Result struct {
 	OK      bool   // 是否成功
 	Message string // 给人看的一句话说明
 	Raw     string // 服务端原始返回，排错时有用
+	AcID    string // 本次实际用的接入点编号（深澜才有意义）
+
+	// AcIDSource 说明上面那个编号是怎么来的：manual / cache / redirect / guess。
+	// guess 表示只是从门户页面猜的，未必是你真正所在的接入点。
+	AcIDSource string
 }
 
 // OnlineStatus 描述账号在某个区域的在线情况。

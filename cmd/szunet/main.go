@@ -19,6 +19,7 @@ import (
 
 	"github.com/Alakazamc/szudesktop/internal/credential"
 	"github.com/Alakazamc/szudesktop/internal/diagnose"
+	"github.com/Alakazamc/szudesktop/internal/netpref"
 	"github.com/Alakazamc/szudesktop/internal/portal"
 )
 
@@ -231,7 +232,27 @@ func loginByZone(zone portal.Zone, o *options, user, pass string) (*portal.Resul
 		if o.serverIP != "" {
 			c.SetServerIP(o.serverIP)
 		}
+		attachAcIDCache(c)
 		return c.Login()
+	}
+}
+
+// attachAcIDCache 让客户端复用上次这张网成功的 ac_id，成功后写回缓存。
+//
+// ac_id 跟着"插哪个墙口 / 走哪条线路"变，所以缓存键用出口标识（网关优先），
+// 而不是写死一个值。换网后缓存命中不了，客户端会自动重新发现。
+//
+// 只缓存"可信来源"的结果：猜出来的值不写盘（见 portal.AcIDSource），
+// 否则会把一次侥幸固化下来，下次在别的网络里继续用错值。
+func attachAcIDCache(c *portal.SrunClient) {
+	prefs := netpref.Load()
+	key := netpref.Egress()
+	if id := prefs.AcIDFor(key); id != "" {
+		c.SetLastAcID(id)
+	}
+	c.OnAcIDResolved = func(id string) {
+		prefs.SetAcID(key, id)
+		_ = prefs.Save()
 	}
 }
 
@@ -320,6 +341,14 @@ func cmdDetect(args []string) {
 	// 这样输出里不会出现"没跑过"被误读成"探不到"的假 false。
 	det := portal.Probe()
 
+	// 顺带把 ac_id 也算出来给用户看。
+	//
+	// 这东西跟着"插哪个墙口 / 走哪条线路"变，是校内认证最常见的
+	// 失败原因（报 Unknow ac-type），但界面上以前完全看不到它，
+	// 排查时只能靠猜。这里显式打出来，并说明它可不可信。
+	user, pass, _ := resolveCredentials(&o)
+	acID, acIDSource := detectAcID(&o, user, pass)
+
 	if o.asJSON {
 		printJSON(map[string]any{
 			"zone":            det.Zone,
@@ -331,6 +360,9 @@ func cmdDetect(args []string) {
 			"srun_usable":     det.SrunUsable,
 			"dorm_usable":     det.DormUsable,
 			"srun_dns_ok":     det.SrunDNSOK,
+			"ac_id":           acID,
+			"ac_id_source":    string(acIDSource),
+			"ac_id_trusted":   acIDSource != portal.AcIDSourceGuess,
 			"notes":           det.Notes,
 		})
 		return
@@ -343,11 +375,40 @@ func cmdDetect(args []string) {
 	fmt.Printf("深澜指纹: %s\n", yesNo(det.SrunUsable))
 	fmt.Printf("ePortal指纹: %s\n", yesNo(det.DormUsable))
 	fmt.Printf("域名解析: %s\n", yesNo(det.SrunDNSOK))
+	fmt.Printf("接入点  : %s\n", describeAcID(acID, acIDSource))
+
 	if len(det.Notes) > 0 {
 		fmt.Println()
 		for _, n := range det.Notes {
 			fmt.Println("· " + n)
 		}
+	}
+}
+
+// detectAcID 算一次接入点编号，并说明它是否可信。
+func detectAcID(o *options, user, pass string) (string, portal.AcIDSource) {
+	c := portal.NewSrunClient(o.srunHost, user, pass)
+	if o.acID != "" {
+		c.AcID = o.acID
+	}
+	if o.serverIP != "" {
+		c.SetServerIP(o.serverIP)
+	}
+	attachAcIDCache(c)
+	return c.ResolveAcIDWithSource()
+}
+
+// describeAcID 把接入点编号和它的可信度讲成人话。
+func describeAcID(acID string, source portal.AcIDSource) string {
+	switch source {
+	case portal.AcIDSourceManual:
+		return acID + "（你手动指定的）"
+	case portal.AcIDSourceCache:
+		return acID + "（这张网上次认证成功用的）"
+	case portal.AcIDSourceRedirect:
+		return acID + "（网关跳转里读出来的，可信）"
+	default:
+		return acID + "（⚠️ 猜的，不一定对。掉线时点登录，让网关自己告诉我们才准）"
 	}
 }
 
