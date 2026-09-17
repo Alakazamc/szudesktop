@@ -421,7 +421,26 @@
      而且 Abigail / Robin 是游戏里的女性 NPC，拿来当"柯西"也不对。
      头像是在 index.html 里内联的，改它用 design/gen_avatar.py（点阵字符串
      → SVG，--write 写回，自带行宽校验）。 */
-  .who{display:flex; gap:10px; align-items:center;}
+  .who{display:flex; gap:10px; align-items:center; cursor:pointer;}
+  .who:hover{filter:brightness(1.06);}
+  /* 头像位：默认像素头像（SVG）和素材库里的图二选一，JS 切哪个显示 */
+  .who-av{flex:0 0 auto; width:52px; height:52px; display:flex; align-items:center;
+    justify-content:center; background:var(--cream); border:2px solid var(--frame); overflow:hidden;}
+  .who-av svg{display:block;}
+  .av-img{width:100%; height:100%; object-fit:contain; image-rendering:pixelated;}
+
+  /* 头像选择格：从星露谷素材库里挑 */
+  .avpick{display:grid; grid-template-columns:repeat(auto-fill,minmax(54px,1fr)); gap:8px;}
+  .avpick button{width:100%; aspect-ratio:1; padding:3px; background:var(--cream);
+    border:2px solid var(--frame); display:flex; align-items:center; justify-content:center;}
+  .avpick button img{width:100%; height:100%; object-fit:contain; image-rendering:pixelated;}
+  .avpick button svg{width:100%; height:100%;}
+  .avpick button:hover{background:var(--cream-hi);}
+  .avpick button.on{background:var(--cream-hi); box-shadow:inset 0 0 0 2px var(--accent);}
+
+  /* 关于作者 */
+  .about{display:flex; flex-direction:column; gap:8px; line-height:1.7;}
+  .about a{color:var(--blue); text-decoration:underline;}
   .avatar{width:52px; height:52px; flex:0 0 auto; display:block;}
   .kv{display:flex; justify-content:space-between; padding:2px 0;}
   /* 「正在连接内核」的原版木牌。连上内核后由 JS 加上 .hide 收起来 */
@@ -1151,11 +1170,14 @@
 
     <aside>
       <div class="panel">
-        <div class="who">
-          <svg width="52" height="52" viewBox="0 0 26 26" shape-rendering="crispEdges" role="img" aria-label="柯西：像素头像"><rect x="9" y="1" width="7" height="1" fill="#3A2410"/><rect x="7" y="2" width="3" height="1" fill="#3A2410"/><rect x="10" y="2" width="5" height="1" fill="#6B5233"/><rect x="15" y="2" width="2" height="1" fill="#3A2410"/><rect x="6" y="3" width="1" height="1" fill="#3A2410"/><rect x="7" y="3" width="10" height="1" fill="#6B5233"/><rect x="17" y="3" width="1" height="1" fill="#3A2410"/><rect x="5" y="4" width="1" height="1" fill="#3A2410"/><rect x="6" y="4" width="1" height="1" fill="#6B5233"/><rect x="7" y="4" width="10" height="1" fill="#4A3A22"/><rect x="17" y="4" width="1" height="1" fill="#6B5233"/><rect x="18" y="4" width="1" height="1" fill="#3A2410"/><rect x="4" y="5" width="1" height="1" fill="#3A2410"/><rect x="5" y="5" width="1" height="1" fill="#6B5233"/><rect x="6" y="5" width="12" height="1" fill="#4A3A22"/><rect x="18" y="5" width="1" height="1" fill="#6B5233"/><rect x="19" y="5" width="1" height="1" fill="#3A2410"/><rect x="4" y="6" width="1" height="1" fill="#3A2410"/><rect x="5" y="6" width="3" height="1" fill="#4A3A22"/><rect x="8" y="6" width="1" height="1" fill="#6B5233"/><rect x="9" y="6" width="10" height="1" fill="#4A3A22"/><rect x="19" y="6" width="1" height="1" fill="#3A2410"/><rect x="3" y="7" width="1" height="1" fill="#3A2410"/><rect x="4" y="7" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="7" width="2" height="1" fill="#4A3A22"/><rect x="7" y="7" width="2" height="1" fill="#6B5233"/><rect x="9" y="7" width="10" height="1" fill="#2A1A0C"/><rect x="19" y="7" width="1" height="1" fill="#4A3A22"/><rect x="20" y="7" width="1" height="1" fill="#3A2410"/><rect x="3" y="8" width="1" height="1" fill="#3A2410"/><rect x="4" y="8" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="8" width="1" height="1" fill="#4A3A22"/><rect x="6" y="8" width="2" height="1" fill="#2A1A0C"/><rect x="8" y="8" width="8" height="1" fill="#F0C098"/><rect x="16" y="8" width="2" height="1" fill="#2A1A0C"/><rect x="18" y="8" width="2" height="1" fill="#4A3A22"/><rect x="20" y="8" width="1" height="1" fill="#3A2410"/><rect x="3" y="9" width="1" height="1" fill="#3A2410"/><rect x="4" y="9" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="9" width="1" height="1" fill="#4A3A22"/><rect x="6" y="9" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="9" width="10" height="1" fill="#F0C098"/><rect x="17" y="9" width="1" height="1" fill="#2A1A0C"/><rect x="18" y="9" width="2" height="1" fill="#4A3A22"/><rect x="20" y="9" width="1" height="1" fill="#3A2410"/><rect x="3" y="10" width="1" height="1" fill="#3A2410"/><rect x="4" y="10" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="10" width="1" height="1" fill="#4A3A22"/><rect x="6" y="10" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="10" width="2" height="1" fill="#F0C098"/><rect x="9" y="10" width="2" height="1" fill="#3A2410"/><rect x="11" y="10" width="2" height="1" fill="#F0C098"/><rect x="13" y="10" width="2" height="1" fill="#3A2410"/><rect x="15" y="10" width="1" height="1" fill="#F0C098"/><rect x="16" y="10" width="1" height="1" fill="#2A1A0C"/><rect x="17" y="10" width="3" height="1" fill="#4A3A22"/><rect x="20" y="10" width="1" height="1" fill="#3A2410"/><rect x="3" y="11" width="1" height="1" fill="#3A2410"/><rect x="4" y="11" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="11" width="1" height="1" fill="#4A3A22"/><rect x="6" y="11" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="11" width="2" height="1" fill="#F0C098"/><rect x="9" y="11" width="2" height="1" fill="#3A2410"/><rect x="11" y="11" width="2" height="1" fill="#F0C098"/><rect x="13" y="11" width="2" height="1" fill="#3A2410"/><rect x="15" y="11" width="1" height="1" fill="#F0C098"/><rect x="16" y="11" width="1" height="1" fill="#2A1A0C"/><rect x="17" y="11" width="3" height="1" fill="#4A3A22"/><rect x="20" y="11" width="1" height="1" fill="#3A2410"/><rect x="3" y="12" width="1" height="1" fill="#3A2410"/><rect x="4" y="12" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="12" width="1" height="1" fill="#4A3A22"/><rect x="6" y="12" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="12" width="10" height="1" fill="#F0C098"/><rect x="17" y="12" width="1" height="1" fill="#2A1A0C"/><rect x="18" y="12" width="2" height="1" fill="#4A3A22"/><rect x="20" y="12" width="1" height="1" fill="#3A2410"/><rect x="3" y="13" width="1" height="1" fill="#3A2410"/><rect x="4" y="13" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="13" width="3" height="1" fill="#F0C098"/><rect x="8" y="13" width="1" height="1" fill="#E0A87A"/><rect x="9" y="13" width="6" height="1" fill="#F0C098"/><rect x="15" y="13" width="1" height="1" fill="#E0A87A"/><rect x="16" y="13" width="2" height="1" fill="#F0C098"/><rect x="18" y="13" width="1" height="1" fill="#4A3A22"/><rect x="19" y="13" width="1" height="1" fill="#3A2410"/><rect x="3" y="14" width="1" height="1" fill="#3A2410"/><rect x="4" y="14" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="14" width="3" height="1" fill="#F0C098"/><rect x="8" y="14" width="1" height="1" fill="#E0A87A"/><rect x="9" y="14" width="1" height="1" fill="#F0C098"/><rect x="10" y="14" width="3" height="1" fill="#B05A48"/><rect x="13" y="14" width="1" height="1" fill="#E0A87A"/><rect x="14" y="14" width="4" height="1" fill="#F0C098"/><rect x="18" y="14" width="1" height="1" fill="#2A1A0C"/><rect x="19" y="14" width="1" height="1" fill="#3A2410"/><rect x="3" y="15" width="1" height="1" fill="#3A2410"/><rect x="4" y="15" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="15" width="5" height="1" fill="#F0C098"/><rect x="10" y="15" width="3" height="1" fill="#E0A87A"/><rect x="13" y="15" width="5" height="1" fill="#F0C098"/><rect x="18" y="15" width="1" height="1" fill="#2A1A0C"/><rect x="19" y="15" width="1" height="1" fill="#3A2410"/><rect x="4" y="16" width="1" height="1" fill="#3A2410"/><rect x="5" y="16" width="1" height="1" fill="#2A1A0C"/><rect x="6" y="16" width="10" height="1" fill="#F0C098"/><rect x="16" y="16" width="1" height="1" fill="#2A1A0C"/><rect x="17" y="16" width="1" height="1" fill="#3A2410"/><rect x="5" y="17" width="1" height="1" fill="#3A2410"/><rect x="6" y="17" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="17" width="7" height="1" fill="#F0C098"/><rect x="14" y="17" width="1" height="1" fill="#2A1A0C"/><rect x="15" y="17" width="1" height="1" fill="#3A2410"/><rect x="6" y="18" width="2" height="1" fill="#3A2410"/><rect x="8" y="18" width="1" height="1" fill="#2A1A0C"/><rect x="9" y="18" width="4" height="1" fill="#F0C098"/><rect x="13" y="18" width="1" height="1" fill="#2A1A0C"/><rect x="14" y="18" width="2" height="1" fill="#3A2410"/><rect x="6" y="19" width="1" height="1" fill="#3A2410"/><rect x="7" y="19" width="3" height="1" fill="#D9B98A"/><rect x="10" y="19" width="1" height="1" fill="#F0C098"/><rect x="11" y="19" width="3" height="1" fill="#D9B98A"/><rect x="14" y="19" width="1" height="1" fill="#3A2410"/><rect x="5" y="20" width="1" height="1" fill="#3A2410"/><rect x="6" y="20" width="4" height="1" fill="#5E9C3A"/><rect x="10" y="20" width="2" height="1" fill="#F0C098"/><rect x="12" y="20" width="5" height="1" fill="#5E9C3A"/><rect x="17" y="20" width="1" height="1" fill="#3A2410"/><rect x="4" y="21" width="1" height="1" fill="#3A2410"/><rect x="5" y="21" width="6" height="1" fill="#5E9C3A"/><rect x="11" y="21" width="1" height="1" fill="#F0C098"/><rect x="12" y="21" width="6" height="1" fill="#5E9C3A"/><rect x="18" y="21" width="1" height="1" fill="#3A2410"/><rect x="3" y="22" width="1" height="1" fill="#3A2410"/><rect x="4" y="22" width="7" height="1" fill="#5E9C3A"/><rect x="11" y="22" width="1" height="1" fill="#F0C098"/><rect x="12" y="22" width="8" height="1" fill="#5E9C3A"/><rect x="20" y="22" width="1" height="1" fill="#3A2410"/><rect x="2" y="23" width="1" height="1" fill="#3A2410"/><rect x="3" y="23" width="7" height="1" fill="#5E9C3A"/><rect x="10" y="23" width="1" height="1" fill="#D9B98A"/><rect x="11" y="23" width="1" height="1" fill="#C97C0A"/><rect x="12" y="23" width="1" height="1" fill="#D9B98A"/><rect x="13" y="23" width="8" height="1" fill="#5E9C3A"/><rect x="21" y="23" width="1" height="1" fill="#3A2410"/><rect x="2" y="24" width="1" height="1" fill="#3A2410"/><rect x="3" y="24" width="7" height="1" fill="#4C7F2E"/><rect x="10" y="24" width="1" height="1" fill="#D9B98A"/><rect x="11" y="24" width="1" height="1" fill="#C97C0A"/><rect x="12" y="24" width="1" height="1" fill="#D9B98A"/><rect x="13" y="24" width="8" height="1" fill="#4C7F2E"/><rect x="21" y="24" width="1" height="1" fill="#3A2410"/><rect x="3" y="25" width="18" height="1" fill="#3A2410"/></svg>
-          <div>
-            <div><b class="cy">柯西</b> <span class="cm">· 大三</span></div>
-            <div class="cm">卡号 <span class="cb">2023***21</span></div>
+        <div class="who" id="who-card" title="点这里改名字 / 头像 / 学院专业">
+          <span class="who-av">
+          <svg id="av-svg" width="52" height="52" viewBox="0 0 26 26" shape-rendering="crispEdges" role="img" aria-label="像素头像"><rect x="9" y="1" width="7" height="1" fill="#3A2410"/><rect x="7" y="2" width="3" height="1" fill="#3A2410"/><rect x="10" y="2" width="5" height="1" fill="#6B5233"/><rect x="15" y="2" width="2" height="1" fill="#3A2410"/><rect x="6" y="3" width="1" height="1" fill="#3A2410"/><rect x="7" y="3" width="10" height="1" fill="#6B5233"/><rect x="17" y="3" width="1" height="1" fill="#3A2410"/><rect x="5" y="4" width="1" height="1" fill="#3A2410"/><rect x="6" y="4" width="1" height="1" fill="#6B5233"/><rect x="7" y="4" width="10" height="1" fill="#4A3A22"/><rect x="17" y="4" width="1" height="1" fill="#6B5233"/><rect x="18" y="4" width="1" height="1" fill="#3A2410"/><rect x="4" y="5" width="1" height="1" fill="#3A2410"/><rect x="5" y="5" width="1" height="1" fill="#6B5233"/><rect x="6" y="5" width="12" height="1" fill="#4A3A22"/><rect x="18" y="5" width="1" height="1" fill="#6B5233"/><rect x="19" y="5" width="1" height="1" fill="#3A2410"/><rect x="4" y="6" width="1" height="1" fill="#3A2410"/><rect x="5" y="6" width="3" height="1" fill="#4A3A22"/><rect x="8" y="6" width="1" height="1" fill="#6B5233"/><rect x="9" y="6" width="10" height="1" fill="#4A3A22"/><rect x="19" y="6" width="1" height="1" fill="#3A2410"/><rect x="3" y="7" width="1" height="1" fill="#3A2410"/><rect x="4" y="7" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="7" width="2" height="1" fill="#4A3A22"/><rect x="7" y="7" width="2" height="1" fill="#6B5233"/><rect x="9" y="7" width="10" height="1" fill="#2A1A0C"/><rect x="19" y="7" width="1" height="1" fill="#4A3A22"/><rect x="20" y="7" width="1" height="1" fill="#3A2410"/><rect x="3" y="8" width="1" height="1" fill="#3A2410"/><rect x="4" y="8" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="8" width="1" height="1" fill="#4A3A22"/><rect x="6" y="8" width="2" height="1" fill="#2A1A0C"/><rect x="8" y="8" width="8" height="1" fill="#F0C098"/><rect x="16" y="8" width="2" height="1" fill="#2A1A0C"/><rect x="18" y="8" width="2" height="1" fill="#4A3A22"/><rect x="20" y="8" width="1" height="1" fill="#3A2410"/><rect x="3" y="9" width="1" height="1" fill="#3A2410"/><rect x="4" y="9" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="9" width="1" height="1" fill="#4A3A22"/><rect x="6" y="9" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="9" width="10" height="1" fill="#F0C098"/><rect x="17" y="9" width="1" height="1" fill="#2A1A0C"/><rect x="18" y="9" width="2" height="1" fill="#4A3A22"/><rect x="20" y="9" width="1" height="1" fill="#3A2410"/><rect x="3" y="10" width="1" height="1" fill="#3A2410"/><rect x="4" y="10" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="10" width="1" height="1" fill="#4A3A22"/><rect x="6" y="10" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="10" width="2" height="1" fill="#F0C098"/><rect x="9" y="10" width="2" height="1" fill="#3A2410"/><rect x="11" y="10" width="2" height="1" fill="#F0C098"/><rect x="13" y="10" width="2" height="1" fill="#3A2410"/><rect x="15" y="10" width="1" height="1" fill="#F0C098"/><rect x="16" y="10" width="1" height="1" fill="#2A1A0C"/><rect x="17" y="10" width="3" height="1" fill="#4A3A22"/><rect x="20" y="10" width="1" height="1" fill="#3A2410"/><rect x="3" y="11" width="1" height="1" fill="#3A2410"/><rect x="4" y="11" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="11" width="1" height="1" fill="#4A3A22"/><rect x="6" y="11" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="11" width="2" height="1" fill="#F0C098"/><rect x="9" y="11" width="2" height="1" fill="#3A2410"/><rect x="11" y="11" width="2" height="1" fill="#F0C098"/><rect x="13" y="11" width="2" height="1" fill="#3A2410"/><rect x="15" y="11" width="1" height="1" fill="#F0C098"/><rect x="16" y="11" width="1" height="1" fill="#2A1A0C"/><rect x="17" y="11" width="3" height="1" fill="#4A3A22"/><rect x="20" y="11" width="1" height="1" fill="#3A2410"/><rect x="3" y="12" width="1" height="1" fill="#3A2410"/><rect x="4" y="12" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="12" width="1" height="1" fill="#4A3A22"/><rect x="6" y="12" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="12" width="10" height="1" fill="#F0C098"/><rect x="17" y="12" width="1" height="1" fill="#2A1A0C"/><rect x="18" y="12" width="2" height="1" fill="#4A3A22"/><rect x="20" y="12" width="1" height="1" fill="#3A2410"/><rect x="3" y="13" width="1" height="1" fill="#3A2410"/><rect x="4" y="13" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="13" width="3" height="1" fill="#F0C098"/><rect x="8" y="13" width="1" height="1" fill="#E0A87A"/><rect x="9" y="13" width="6" height="1" fill="#F0C098"/><rect x="15" y="13" width="1" height="1" fill="#E0A87A"/><rect x="16" y="13" width="2" height="1" fill="#F0C098"/><rect x="18" y="13" width="1" height="1" fill="#4A3A22"/><rect x="19" y="13" width="1" height="1" fill="#3A2410"/><rect x="3" y="14" width="1" height="1" fill="#3A2410"/><rect x="4" y="14" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="14" width="3" height="1" fill="#F0C098"/><rect x="8" y="14" width="1" height="1" fill="#E0A87A"/><rect x="9" y="14" width="1" height="1" fill="#F0C098"/><rect x="10" y="14" width="3" height="1" fill="#B05A48"/><rect x="13" y="14" width="1" height="1" fill="#E0A87A"/><rect x="14" y="14" width="4" height="1" fill="#F0C098"/><rect x="18" y="14" width="1" height="1" fill="#2A1A0C"/><rect x="19" y="14" width="1" height="1" fill="#3A2410"/><rect x="3" y="15" width="1" height="1" fill="#3A2410"/><rect x="4" y="15" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="15" width="5" height="1" fill="#F0C098"/><rect x="10" y="15" width="3" height="1" fill="#E0A87A"/><rect x="13" y="15" width="5" height="1" fill="#F0C098"/><rect x="18" y="15" width="1" height="1" fill="#2A1A0C"/><rect x="19" y="15" width="1" height="1" fill="#3A2410"/><rect x="4" y="16" width="1" height="1" fill="#3A2410"/><rect x="5" y="16" width="1" height="1" fill="#2A1A0C"/><rect x="6" y="16" width="10" height="1" fill="#F0C098"/><rect x="16" y="16" width="1" height="1" fill="#2A1A0C"/><rect x="17" y="16" width="1" height="1" fill="#3A2410"/><rect x="5" y="17" width="1" height="1" fill="#3A2410"/><rect x="6" y="17" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="17" width="7" height="1" fill="#F0C098"/><rect x="14" y="17" width="1" height="1" fill="#2A1A0C"/><rect x="15" y="17" width="1" height="1" fill="#3A2410"/><rect x="6" y="18" width="2" height="1" fill="#3A2410"/><rect x="8" y="18" width="1" height="1" fill="#2A1A0C"/><rect x="9" y="18" width="4" height="1" fill="#F0C098"/><rect x="13" y="18" width="1" height="1" fill="#2A1A0C"/><rect x="14" y="18" width="2" height="1" fill="#3A2410"/><rect x="6" y="19" width="1" height="1" fill="#3A2410"/><rect x="7" y="19" width="3" height="1" fill="#D9B98A"/><rect x="10" y="19" width="1" height="1" fill="#F0C098"/><rect x="11" y="19" width="3" height="1" fill="#D9B98A"/><rect x="14" y="19" width="1" height="1" fill="#3A2410"/><rect x="5" y="20" width="1" height="1" fill="#3A2410"/><rect x="6" y="20" width="4" height="1" fill="#5E9C3A"/><rect x="10" y="20" width="2" height="1" fill="#F0C098"/><rect x="12" y="20" width="5" height="1" fill="#5E9C3A"/><rect x="17" y="20" width="1" height="1" fill="#3A2410"/><rect x="4" y="21" width="1" height="1" fill="#3A2410"/><rect x="5" y="21" width="6" height="1" fill="#5E9C3A"/><rect x="11" y="21" width="1" height="1" fill="#F0C098"/><rect x="12" y="21" width="6" height="1" fill="#5E9C3A"/><rect x="18" y="21" width="1" height="1" fill="#3A2410"/><rect x="3" y="22" width="1" height="1" fill="#3A2410"/><rect x="4" y="22" width="7" height="1" fill="#5E9C3A"/><rect x="11" y="22" width="1" height="1" fill="#F0C098"/><rect x="12" y="22" width="8" height="1" fill="#5E9C3A"/><rect x="20" y="22" width="1" height="1" fill="#3A2410"/><rect x="2" y="23" width="1" height="1" fill="#3A2410"/><rect x="3" y="23" width="7" height="1" fill="#5E9C3A"/><rect x="10" y="23" width="1" height="1" fill="#D9B98A"/><rect x="11" y="23" width="1" height="1" fill="#C97C0A"/><rect x="12" y="23" width="1" height="1" fill="#D9B98A"/><rect x="13" y="23" width="8" height="1" fill="#5E9C3A"/><rect x="21" y="23" width="1" height="1" fill="#3A2410"/><rect x="2" y="24" width="1" height="1" fill="#3A2410"/><rect x="3" y="24" width="7" height="1" fill="#4C7F2E"/><rect x="10" y="24" width="1" height="1" fill="#D9B98A"/><rect x="11" y="24" width="1" height="1" fill="#C97C0A"/><rect x="12" y="24" width="1" height="1" fill="#D9B98A"/><rect x="13" y="24" width="8" height="1" fill="#4C7F2E"/><rect x="21" y="24" width="1" height="1" fill="#3A2410"/><rect x="3" y="25" width="18" height="1" fill="#3A2410"/></svg>
+          <img id="av-img" class="av-img" src="" alt="" style="display:none">
+          </span>
+          <div style="min-width:0">
+            <div><b class="cy" id="who-name">柯西</b> <span class="cm" id="who-grade"></span></div>
+            <div class="cm" id="who-meta">卡号 <span class="cb">2023***21</span></div>
           </div>
         </div>
         <hr class="rule">
@@ -1425,6 +1447,67 @@
           <hr class="rule">
           <div class="cm" style="margin-bottom:5px">连接日志</div>
           <div class="vpn-log" id="vpn-log">等待 VPN 状态……</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 设置页：改名字 / 头像 / 学院专业，还有「关于作者」。
+       这些只存在本机 localStorage，不上传、不进任何请求。 -->
+  <section id="view-settings" class="stage" style="display:none">
+    <div class="panel loginwrap">
+      <h2><svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-star"/></svg>设置
+        <span class="chipmini">只存在这台电脑</span></h2>
+      <hr class="rule">
+
+      <nav class="subtabs" id="subtabs-set" aria-label="设置二级菜单">
+        <span class="subtab active" data-pane="set-me">我的名片</span>
+        <span class="subtab" data-pane="set-about">关于</span>
+      </nav>
+
+      <!-- 我的名片 -->
+      <div class="pane active" id="set-me">
+        <div class="card">
+          <h3>名字</h3>
+          <div class="body">
+            <input class="inp" id="set-name" type="text" maxlength="16" placeholder="叫什么都行">
+            <p class="cm" style="margin-top:6px">只存在本机，不上传。</p>
+          </div>
+        </div>
+        <div class="card">
+          <h3>学院 / 专业 / 年级</h3>
+          <div class="body">
+            <input class="inp" id="set-college" type="text" maxlength="24" placeholder="学院（读不到就自己填）">
+            <input class="inp" id="set-major"   type="text" maxlength="24" placeholder="专业">
+            <input class="inp" id="set-grade"   type="text" maxlength="12" placeholder="年级，如 大三">
+            <p class="cm" style="margin-top:6px">填了就显示在右上方，留空就不显示。</p>
+          </div>
+        </div>
+        <div class="card">
+          <h3>头像</h3>
+          <div class="body">
+            <div class="avpick" id="av-pick"></div>
+            <p class="cm" style="margin-top:6px">从星露谷素材库里挑一个。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 关于 -->
+      <div class="pane" id="set-about">
+        <div class="card">
+          <h3>关于作者</h3>
+          <div class="body about">
+            <p><b class="cy">柯西</b> <span class="cm">（Alakazamc）</span></p>
+            <p>主页：<a href="https://alakazamc-github-io.vercel.app/" target="_blank" rel="noopener">alakazamc-github-io.vercel.app</a></p>
+          </div>
+        </div>
+        <div class="card">
+          <h3>关于这个工具</h3>
+          <div class="body about">
+            <p class="cm">szuDesktop 是第三方作品，与深圳大学无关，学校不对它负责。</p>
+            <p class="cm">不使用官方系统时，请用自己的账号，遵守学校的校园网管理规定。</p>
+            <p class="cm" id="set-ver"></p>
+          </div>
         </div>
       </div>
     </div>
@@ -1722,21 +1805,25 @@ const vOverview = document.getElementById("view-overview");
 const vPh = document.getElementById("view-placeholder");
 const vLogin = document.getElementById("view-login");
 const vVpn = document.getElementById("view-vpn");
-/* 校园网标签进登录页，校外 VPN 有独立操作页，其余还没做好的走占位页 */
+const vSet = document.getElementById("view-settings");
+/* 校园网标签进登录页，校外 VPN 有独立操作页，设置有独立页，其余还没做好的走占位页 */
 tabs.forEach(t => t.addEventListener("click", () => {
   tabs.forEach(x => x.classList.remove("active"));
   t.classList.add("active");
   const v = t.dataset.view;
   const login = (v === "network" || v === "login");
   const vpn = v === "vpn";
+  const set = v === "set";
   vOverview.style.display = v === "overview" ? "grid" : "none";
   vLogin.style.display = login ? "grid" : "none";
   vVpn.style.display = vpn ? "grid" : "none";
-  vPh.style.display = (v === "overview" || login || vpn) ? "none" : "block";
+  vSet.style.display = set ? "grid" : "none";
+  vPh.style.display = (v === "overview" || login || vpn || set) ? "none" : "block";
   vpnActive = vpn;
   if (!vpnActive && vpnTimer){ clearTimeout(vpnTimer); vpnTimer = null; }
   if (login){ refreshLogin(); say("在这页登就行。勾上[[g|记住]]以后开机就能自动登。"); return; }
   if (vpn){ refreshVPN(); scheduleVPNRefresh(); say("人在校外时，先连[[b|校外 VPN]]，再访问校园网里的服务。"); return; }
+  if (set){ renderMe(); say("名字、头像、学院专业都在[[g|我的名片]]里改，关于作者在[[y|关于]]。"); return; }
   if (v !== "overview"){
     document.getElementById("ph-title").textContent = t.textContent.trim().replace(/\d+$/, "") + " · 装修中";
     document.getElementById("ph-text").textContent = (SAY.ph[v] || "这一页还在装修。").replace(/\[\[\w\|(.*?)\]\]/g, "$1");
@@ -2121,6 +2208,108 @@ const bDiag = document.getElementById("btn-net-diag");
 if (bDiag) bDiag.onclick = () => { goSub("net-diag"); runDiagPane(); };
 const bDiagRun = document.getElementById("btn-net-diag-run");
 if (bDiagRun) bDiagRun.onclick = () => runDiagPane();
+
+/* ================= 我的名片：名字 / 头像 / 学院专业 =================
+   只写 localStorage，不进任何网络请求。
+   学院 / 专业 / 年级：读得到就读，读不到就让人自己填，绝不瞎编。 */
+const AVATARS = [
+  { id:"default",      label:"默认像素头像", svg:true },
+  { id:"junimo-green", label:"祝尼魔（绿）" },
+  { id:"junimo-pink",  label:"祝尼魔（粉）" },
+  { id:"dwarf",        label:"矮人" },
+  { id:"star",         label:"星星" },
+  { id:"star1",        label:"星星（金）" },
+  { id:"diamond",      label:"钻石" },
+  { id:"icon1",        label:"小图标" },
+  { id:"bird",         label:"小鸟" }
+];
+const ME_KEY = "szudesktop.me.v1";
+const ME_DEF = { name:"柯西", avatar:"default", college:"", major:"", grade:"" };
+let me = Object.assign({}, ME_DEF);
+try{
+  const raw = localStorage.getItem(ME_KEY);
+  if (raw) me = Object.assign(me, JSON.parse(raw));
+}catch(e){ /* 存不了就用默认值，不影响别的 */ }
+function saveMe(){ try{ localStorage.setItem(ME_KEY, JSON.stringify(me)); }catch(e){} }
+
+/* 把名片画到右上方那张卡上 */
+function paintMe(){
+  const nm = document.getElementById("who-name");
+  if (!nm) return;
+  const gd = document.getElementById("who-grade");
+  const mt = document.getElementById("who-meta");
+  const svg = document.getElementById("av-svg");
+  const img = document.getElementById("av-img");
+  nm.textContent = me.name || "柯西";
+  if (gd) gd.textContent = me.grade ? "· " + me.grade : "";
+  /* 学院专业读不到就留空，不编造 */
+  const parts = [me.college, me.major].filter(Boolean);
+  if (mt) mt.textContent = parts.length ? parts.join(" · ") : "还没填学院专业";
+  const a = AVATARS.filter(x => x.id === me.avatar)[0] || AVATARS[0];
+  const useSvg = !!a.svg;
+  if (svg) svg.style.display = useSvg ? "block" : "none";
+  if (img){
+    if (useSvg){ img.style.display = "none"; }
+    else { img.src = "assets/art/" + a.id + ".png"; img.alt = a.label; img.style.display = "block"; }
+  }
+}
+function markAv(){
+  document.querySelectorAll("#av-pick button").forEach(b => {
+    b.classList.toggle("on", b.dataset.av === me.avatar);
+  });
+}
+/* 设置页：填好输入框，并把头像候选画出来 */
+function renderMe(){
+  paintMe();
+  const put = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ""; };
+  put("set-name", me.name); put("set-college", me.college);
+  put("set-major", me.major); put("set-grade", me.grade);
+  const box = document.getElementById("av-pick");
+  if (box && !box.dataset.built){
+    box.dataset.built = "1";
+    const src = document.getElementById("av-svg");
+    AVATARS.forEach(a => {
+      const b = document.createElement("button");
+      b.type = "button"; b.title = a.label; b.dataset.av = a.id;
+      if (a.svg){
+        /* 复用右上那张默认头像的图形 */
+        b.innerHTML = '<svg viewBox="0 0 26 26" shape-rendering="crispEdges">'
+          + (src ? src.innerHTML : "") + '</svg>';
+      } else {
+        b.innerHTML = '<img src="assets/art/' + a.id + '.png" alt="' + a.label + '">';
+      }
+      b.addEventListener("click", () => {
+        me.avatar = a.id; saveMe(); markAv(); paintMe();
+        if (typeof petSay === "function") petSay("换了个头像，精神多了。");
+      });
+      box.appendChild(b);
+    });
+    markAv();
+  }
+  const ver = document.getElementById("set-ver");
+  if (ver){
+    const vb = document.getElementById("ver");
+    ver.textContent = vb ? "版本 " + vb.textContent.trim() : "";
+  }
+}
+/* 输入即存 */
+[["set-name","name"],["set-college","college"],["set-major","major"],["set-grade","grade"]]
+.forEach(pair => {
+  const el = document.getElementById(pair[0]);
+  if (!el) return;
+  el.addEventListener("input", () => {
+    const v = el.value.trim();
+    me[pair[1]] = (pair[1] === "name" && !v) ? "柯西" : v;
+    saveMe(); paintMe();
+  });
+});
+/* 点右上那张卡 → 直接去设置页 */
+const whoCard = document.getElementById("who-card");
+if (whoCard) whoCard.addEventListener("click", () => {
+  const t = document.querySelector('#tabs .tab[data-view="set"]');
+  if (t) t.click();
+});
+paintMe();
 
 /* ================= 校外 VPN =================
    VPN 页面只负责调用本地接口，不把 VPN 密码写入状态、日志或 localStorage。
