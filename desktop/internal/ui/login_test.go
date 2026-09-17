@@ -25,7 +25,7 @@ func TestDoLoginUsesRequestedTeachingZone(t *testing.T) {
 	defer portal.Close()
 
 	s := New(Options{SrunHost: portal.URL, Zone: "auto"})
-	res := s.doLogin("123456", "not-real", "teaching")
+	res := s.doLogin("123456", "not-real", "teaching", "")
 	if !res.OK || !sawChallenge || !sawLogin {
 		t.Fatalf("forced teaching login did not complete: result=%+v challenge=%v login=%v", res, sawChallenge, sawLogin)
 	}
@@ -44,7 +44,7 @@ func TestDoLoginUsesRequestedDormZone(t *testing.T) {
 	defer portal.Close()
 
 	s := New(Options{DrcomHost: portal.URL, Zone: "auto"})
-	res := s.doLogin("123456", "not-real", "dorm")
+	res := s.doLogin("123456", "not-real", "dorm", "")
 	if !res.OK || !sawLogin {
 		t.Fatalf("forced dorm login did not complete: result=%+v login=%v", res, sawLogin)
 	}

@@ -41,7 +41,7 @@ func TestLoginStillAuthenticatesWhenAlreadyOnline(t *testing.T) {
 	s := New(Options{SrunHost: srun.URL, Zone: "auto"})
 
 	// 直接按"指纹认出了教学区"的路径验证：登录必须真的打出去。
-	res := s.loginWithProtocol(portal.ZoneTeaching, "123456", "not-real")
+	res := s.loginWithProtocol(portal.ZoneTeaching, "123456", "not-real", "")
 	if !res.OK || !sawLogin {
 		t.Fatalf("指纹认出教学区后必须真的走一次深澜认证: result=%+v sawLogin=%v", res, sawLogin)
 	}
@@ -64,7 +64,7 @@ func TestLoginWithProtocolDormHitsEportal(t *testing.T) {
 	defer drcom.Close()
 
 	s := New(Options{DrcomHost: drcom.URL, Zone: "auto"})
-	res := s.loginWithProtocol(portal.ZoneDorm, "123456", "not-real")
+	res := s.loginWithProtocol(portal.ZoneDorm, "123456", "not-real", "")
 	if !res.OK || !sawLogin {
 		t.Fatalf("宿舍区必须走 ePortal 认证: result=%+v sawLogin=%v", res, sawLogin)
 	}

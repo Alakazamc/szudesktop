@@ -153,7 +153,7 @@ func (s *Server) Run() error {
 	if s.opts.AutoLogin {
 		go func() {
 			time.Sleep(300 * time.Millisecond) // 先让服务起来，再打日志
-			res := s.doLogin("", "", "")
+			res := s.doLogin("", "", "", "")
 			if res.OK {
 				fmt.Printf("[自动登录] %s\n", res.Message)
 			} else {
@@ -297,6 +297,10 @@ type loginResp struct {
 	OK      bool   `json:"ok"`
 	Zone    string `json:"zone"`
 	Message string `json:"message"`
+	// 下面两个只是给界面显示"这次用哪个接入点登录的"，用户不需要懂，
+	// 但报错时能看到，方便一眼判断是不是编号认错了。
+	AcID        string `json:"ac_id,omitempty"`
+	AcIDTrusted bool   `json:"ac_id_trusted"`
 }
 
 // credRequest 是登录/注销请求里可选的临时账号。
@@ -307,6 +311,9 @@ type credRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Zone     string `json:"zone,omitempty"`
+	// AcID 是深澜的接入点编号。留空表示"你自动判断"；
+	// 只有界面上出现 ac_id / ac-type 报错、且自动判断一直不对时才由用户指定。
+	AcID string `json:"ac_id,omitempty"`
 }
 
 // readCredRequest 从请求体里读临时账号。请求体为空也允许（表示用已保存的）。
@@ -321,13 +328,20 @@ func readCredRequest(r *http.Request) credRequest {
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	req := readCredRequest(r)
-	res := s.doLogin(req.Username, req.Password, req.Zone)
-	writeJSON(w, loginResp{OK: res.OK, Message: res.Message})
+	res := s.doLogin(req.Username, req.Password, req.Zone, req.AcID)
+	writeJSON(w, loginResp{
+		OK:          res.OK,
+		Message:     res.Message,
+		AcID:        res.AcID,
+		AcIDTrusted: res.AcIDSource != "" && res.AcIDSource != string(portal.AcIDSourceGuess),
+	})
 }
 
 // doLogin 登录一次。user/pass 是本次专用的临时账号，留空就用保存的凭据。
 // requestedZone 留空/auto 时自动识别，teaching/dorm 时强制走对应协议。
-func (s *Server) doLogin(user, pass, requestedZone string) portal.Result {
+// acID 留空时按"这次填的 > 上次这张网成功的 > 现场探测"的顺序自动定，
+// 确认对了还会记下来，所以正常情况下用户根本不需要知道有这个东西。
+func (s *Server) doLogin(user, pass, requestedZone, acID string) portal.Result {
 	if user == "" || pass == "" {
 		savedUser, savedPass, err := s.creds()
 		if err != nil {
@@ -360,12 +374,12 @@ func (s *Server) doLogin(user, pass, requestedZone string) portal.Result {
 		// 所以这里再判一层：如果指纹明确指向某个区，就按那套协议真的登录一次；
 		// 只有指纹也判不出区（真校外 / 校园网故障）才按"不用认证"处理。
 		if target := s.zoneFromFingerprint(); target != "" {
-			return s.loginWithProtocol(target, user, pass)
+			return s.loginWithProtocol(target, user, pass, acID)
 		}
 		return portal.Result{OK: true, Message: "已经能上外网，不用再认证"}
 
 	case portal.ZoneTeaching, portal.ZoneDorm:
-		return s.loginWithProtocol(zone, user, pass)
+		return s.loginWithProtocol(zone, user, pass, acID)
 
 	default:
 		return s.remember("判断不出你在哪个区。确认一下是不是连着校园网（SZU_WLAN）")
@@ -383,14 +397,20 @@ func (s *Server) zoneFromFingerprint() portal.Zone {
 }
 
 // loginWithProtocol 按指定区域真打一次认证请求。教学区和宿舍区各一套协议。
-func (s *Server) loginWithProtocol(zone portal.Zone, user, pass string) portal.Result {
+// acID 是界面上"实在连不上才手动指定"的接入点编号，留空走自动。
+func (s *Server) loginWithProtocol(zone portal.Zone, user, pass, acID string) portal.Result {
 	switch zone {
 	case portal.ZoneTeaching:
 		c := portal.NewSrunClient(s.opts.SrunHost, user, pass)
-		if s.opts.AcID != "" {
-			c.AcID = s.opts.AcID
+		// 优先级：界面这次填的 > 启动参数 > 自动发现（含上次这张网缓存下来的）。
+		manual := acID
+		if manual == "" {
+			manual = s.opts.AcID
 		}
-		attachAcIDCache(c, s.opts.AcID == "")
+		if manual != "" {
+			c.AcID = manual
+		}
+		attachAcIDCache(c, manual == "")
 		res, err := c.Login()
 		if err != nil {
 			return s.remember(err.Error())

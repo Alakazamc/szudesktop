@@ -254,6 +254,10 @@
      行列数由 JS 按卡片数量算好写进 style，保证铺满不留大片空白。 */
   .pane{display:none; min-height:0;}
   .pane.active{flex:1 1 auto; display:grid; gap:12px; padding:8px 0 4px; align-content:stretch;}
+  /* 多列布局：卡片并排铺满，窄屏折回单列 */
+  .pane.cols-2{grid-template-columns:repeat(2, minmax(0,1fr));}
+  .pane.cols-3{grid-template-columns:repeat(3, minmax(0,1fr));}
+  @media (max-width:1080px){ .pane.cols-2, .pane.cols-3{grid-template-columns:1fr;} }
   .pane > .card{background:var(--cream-hi); border:2px solid var(--frame);
     box-shadow:inset 0 0 0 2px var(--cream-dim); padding:10px 12px; min-height:0;
     display:flex; flex-direction:column; overflow:hidden;}
@@ -636,8 +640,7 @@
   ::selection{background:var(--accent); color:#fff;}
   /* ---------- 客户端壳：一屏放下，不出现页面级滚动 ----------
      规矩：titlebar/天空/栅栏/草地/talk/dock/收成架/木牌/footer 全部钉死，
-     只有三个栏内部各自滚（左栏 pscroll、中栏 pscroll、右栏 aside）。
-     服务农田钉在中栏底部，窗口太矮时农田自己滚，不顶碎页面。 */
+     内容全走二级菜单拆页（.pane），任何一页都不滚。 */
   html, body{height:100%; overflow:hidden;}
   body{display:flex; flex-direction:column;}
   body > header.sky{flex:0 0 auto;}
@@ -651,13 +654,11 @@
   .grassband{height:30px; flex:0 0 auto;}
   main.wrap{flex:1 1 auto; min-height:0; display:flex; flex-direction:column; padding-bottom:4px; overflow:hidden;}
   .stage{flex:1 1 auto; min-height:0; overflow:hidden; padding:2px 0 8px;}
-  /* 三个栏都变成纵向弹性盒；没包 pscroll 的面板用自身滚动兜底
-     （校园网/教务/图书馆/一卡通/设置这些视图走这条路） */
-  .stage > .panel{min-height:0; display:flex; flex-direction:column; overflow-y:auto;}
+  /* 面板 = 纵向弹性盒：标题钉住，二级菜单 + 内容页占满剩余高度 */
+  .stage > .panel{min-height:0; display:flex; flex-direction:column; overflow:hidden;}
   .stage > aside:not(.panel){min-height:0; display:flex; flex-direction:column; gap:14px; overflow-y:auto;}
-  .pscroll{flex:1 1 auto; min-height:64px; overflow-y:auto;}
   .panel > h2, .panel > hr.rule{flex:0 0 auto;}
-  .farm{flex:0 1 auto; min-height:104px; overflow-y:auto;}
+  .farm{flex:1 1 auto; min-height:104px; min-width:0; display:grid; overflow:hidden;}
   .talk{flex:0 0 auto; margin:4px 0 2px;}
   .dock{flex:0 0 auto; padding:2px 0 4px;}
   /* 祝尼魔散步条改成贴地装饰：钉在 main.wrap 底边，藏在木牌/footer 后面探头 */
@@ -720,32 +721,13 @@
     main.wrap{display:block;}
     .stage{overflow:visible;}
     .stage > .panel, .stage > aside:not(.panel){display:block; overflow:visible;}
-    .pscroll{overflow:visible;}
     .farm{overflow:visible;}
     .farmstrip{position:static;}
   }
 
-  /* ---------- 翻页化：滚动条一根不留，改用右下角小木牌翻页 ---------- */
   /* 全站藏滚动条：内容还能滚（滚轮/拖拽都正常），只是不显示那根灰条 */
   *{scrollbar-width:none; -ms-overflow-style:none;}
   *::-webkit-scrollbar{display:none; width:0; height:0;}
-  /* 翻页器：钉在各滚动区底部（sticky），只有内容超过一页才出现 */
-  .pager{position:sticky; bottom:0; z-index:6; display:flex; justify-content:flex-end;
-    align-items:center; gap:5px; padding:3px 2px 1px; pointer-events:none;
-    background:linear-gradient(180deg, transparent, rgba(74,44,18,.14));}
-  .pager button{pointer-events:auto; width:22px; height:20px; padding:0;
-    border:2px solid var(--frame); background:var(--wood-mid); color:var(--cream);
-    font-family:var(--pix); font-size:10px; line-height:1;
-    box-shadow:inset 1px 1px 0 rgba(255,255,255,.25), 1px 2px 0 rgba(0,0,0,.25);}
-  .pager button:hover:not(:disabled){background:var(--wood-lite);}
-  .pager button:active:not(:disabled){transform:translateY(1px); box-shadow:inset 1px 1px 0 rgba(255,255,255,.15);}
-  .pager button:disabled{opacity:.35; box-shadow:none;}
-  .pager .pg-label{pointer-events:auto; background:var(--wood-dark); color:var(--cream);
-    border:2px solid var(--frame); padding:1px 6px; font-size:10px; line-height:1.5;}
-  /* 小窗回退模式下也保持同一套翻页器，只是不钉底了 */
-  @media (max-height:760px), (max-width:1080px){
-    .pager{position:static; justify-content:center;}
-  }
 </style>
 </head>
 <body>
@@ -1070,65 +1052,47 @@
 
   <!-- 概览 -->
   <section id="view-overview" class="stage">
-    <aside class="panel">
-      <h2><svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-lychee"/></svg>服务清单
-        <span class="chipmini">共 <b id="svc-total" class="cb">0</b> 项</span></h2>
-      <hr class="rule">
-      <input class="search" id="svc-search" type="text" placeholder="搜索服务…" aria-label="搜索服务">
-      <!-- 客户端壳：这一段是左栏唯一的滚动区（见 CSS 里 .pscroll）。
-           标题和搜索框在外面钉住，服务列表/按钮/宠物在里头滚。 -->
-      <div class="pscroll">
-      <div id="svc-groups"></div>
-      <hr class="rule">
-      <button class="btn block" data-say="add">＋ 添加服务</button>
-      <button class="btn ghost block" style="margin-top:8px" data-say="sort">⇅ 调整顺序</button>
-      <hr class="rule">
-      <div class="cm" style="display:flex; align-items:center; gap:6px">
-        <svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-lychee"/></svg>荔宝小贴士
-      </div>
-      <p style="margin-top:4px">连不上网别急着重启电脑，先跑
-        <span class="cb">szunet diag</span>，三步定位是哪张网的问题。</p>
-      <p style="margin-top:4px" class="cm">田里还空着 <b id="tip-todo" class="cy">0</b> 块地，想好种什么随时叫我。</p>
-      <div style="display:flex; gap:8px; margin-top:10px" aria-hidden="true">
-        <svg class="fruit" width="24" height="24" viewBox="0 0 16 16"><use href="#f-lychee"/></svg>
-        <svg class="fruit" width="24" height="24" viewBox="0 0 16 16"><use href="#f-pump"/></svg>
-        <svg class="fruit" width="24" height="24" viewBox="0 0 16 16"><use href="#f-cherry"/></svg>
-        <svg class="fruit" width="24" height="24" viewBox="0 0 16 16"><use href="#f-blue"/></svg>
-      </div>
+  <div class="panel loginwrap">
+    <h2><svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-lychee"/></svg>概览
+      <span class="chipmini">今天也要好好生活</span></h2>
+    <hr class="rule">
 
-      <hr class="rule">
-      <h2><svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-star"/></svg>
-        <span id="pet-name">荔园猫</span>
-        <span class="chipmini">Lv <b id="pet-lv" class="cy">1</b> · <span id="pet-mood">好奇</span></span></h2>
-      <div class="pet-wrap" id="pet-wrap" style="margin-top:8px">
-        <span class="pet-pen">
-          <svg width="56" height="62" viewBox="0 0 20 22" role="img" aria-label="荔园猫">
-            <use id="pet-use" href="#cat-normal"/>
-          </svg>
-          <span class="pet-hearts" id="pet-hearts" aria-hidden="true"></span>
-        </span>
-        <div style="flex:1; min-width:0">
-          <div class="kv"><span class="cm">亲密度</span><span><b id="pet-love" class="cr">0</b><span class="cm"> / 100</span></span></div>
-          <div class="petbar"><i id="pet-bar" style="width:0%"></i></div>
-          <div class="kv" style="margin-top:4px"><span class="cm">已陪伴</span><span><b id="pet-time" class="cb">0 分钟</b></span></div>
-          <div class="kv"><span class="cm">小鱼干</span><span><b id="pet-fish" class="cy">3</b><span class="cm"> 条（今日）</span></span></div>
-          <div style="display:flex; gap:6px; margin-top:6px">
-            <button class="btn" id="pet-pat">摸摸</button>
-            <button class="btn ghost" id="pet-feed">喂小鱼干</button>
+    <!-- 二级菜单：一层只放一屏放得下的量，放不下就再拆一页，而不是加滚动条 -->
+    <nav class="subtabs" id="subtabs-overview" aria-label="概览二级菜单">
+      <span class="subtab active" data-pane="ov-home">总览</span>
+      <span class="subtab" data-pane="ov-svc">服务</span>
+      <span class="subtab" data-pane="ov-farm">农田</span>
+      <span class="subtab" data-pane="ov-stats">统计</span>
+      <span class="subtab" data-pane="ov-feed">动态</span>
+      <span class="subtab" data-pane="ov-pet">荔宝</span>
+    </nav>
+
+    <!-- ① 总览 -->
+    <div class="pane active cols-2" id="ov-home">
+        <div class="card">
+          <h3>我的名片 <span class="cm">套餐余额在这里看</span></h3>
+          <div class="body">
+
+        <div class="who" id="who-card" title="点这里改名字 / 头像 / 学院专业">
+          <span class="who-av">
+          <svg id="av-svg" width="52" height="52" viewBox="0 0 26 26" shape-rendering="crispEdges" role="img" aria-label="像素头像"><rect x="9" y="1" width="7" height="1" fill="#3A2410"/><rect x="7" y="2" width="3" height="1" fill="#3A2410"/><rect x="10" y="2" width="5" height="1" fill="#6B5233"/><rect x="15" y="2" width="2" height="1" fill="#3A2410"/><rect x="6" y="3" width="1" height="1" fill="#3A2410"/><rect x="7" y="3" width="10" height="1" fill="#6B5233"/><rect x="17" y="3" width="1" height="1" fill="#3A2410"/><rect x="5" y="4" width="1" height="1" fill="#3A2410"/><rect x="6" y="4" width="1" height="1" fill="#6B5233"/><rect x="7" y="4" width="10" height="1" fill="#4A3A22"/><rect x="17" y="4" width="1" height="1" fill="#6B5233"/><rect x="18" y="4" width="1" height="1" fill="#3A2410"/><rect x="4" y="5" width="1" height="1" fill="#3A2410"/><rect x="5" y="5" width="1" height="1" fill="#6B5233"/><rect x="6" y="5" width="12" height="1" fill="#4A3A22"/><rect x="18" y="5" width="1" height="1" fill="#6B5233"/><rect x="19" y="5" width="1" height="1" fill="#3A2410"/><rect x="4" y="6" width="1" height="1" fill="#3A2410"/><rect x="5" y="6" width="3" height="1" fill="#4A3A22"/><rect x="8" y="6" width="1" height="1" fill="#6B5233"/><rect x="9" y="6" width="10" height="1" fill="#4A3A22"/><rect x="19" y="6" width="1" height="1" fill="#3A2410"/><rect x="3" y="7" width="1" height="1" fill="#3A2410"/><rect x="4" y="7" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="7" width="2" height="1" fill="#4A3A22"/><rect x="7" y="7" width="2" height="1" fill="#6B5233"/><rect x="9" y="7" width="10" height="1" fill="#2A1A0C"/><rect x="19" y="7" width="1" height="1" fill="#4A3A22"/><rect x="20" y="7" width="1" height="1" fill="#3A2410"/><rect x="3" y="8" width="1" height="1" fill="#3A2410"/><rect x="4" y="8" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="8" width="1" height="1" fill="#4A3A22"/><rect x="6" y="8" width="2" height="1" fill="#2A1A0C"/><rect x="8" y="8" width="8" height="1" fill="#F0C098"/><rect x="16" y="8" width="2" height="1" fill="#2A1A0C"/><rect x="18" y="8" width="2" height="1" fill="#4A3A22"/><rect x="20" y="8" width="1" height="1" fill="#3A2410"/><rect x="3" y="9" width="1" height="1" fill="#3A2410"/><rect x="4" y="9" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="9" width="1" height="1" fill="#4A3A22"/><rect x="6" y="9" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="9" width="10" height="1" fill="#F0C098"/><rect x="17" y="9" width="1" height="1" fill="#2A1A0C"/><rect x="18" y="9" width="2" height="1" fill="#4A3A22"/><rect x="20" y="9" width="1" height="1" fill="#3A2410"/><rect x="3" y="10" width="1" height="1" fill="#3A2410"/><rect x="4" y="10" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="10" width="1" height="1" fill="#4A3A22"/><rect x="6" y="10" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="10" width="2" height="1" fill="#F0C098"/><rect x="9" y="10" width="2" height="1" fill="#3A2410"/><rect x="11" y="10" width="2" height="1" fill="#F0C098"/><rect x="13" y="10" width="2" height="1" fill="#3A2410"/><rect x="15" y="10" width="1" height="1" fill="#F0C098"/><rect x="16" y="10" width="1" height="1" fill="#2A1A0C"/><rect x="17" y="10" width="3" height="1" fill="#4A3A22"/><rect x="20" y="10" width="1" height="1" fill="#3A2410"/><rect x="3" y="11" width="1" height="1" fill="#3A2410"/><rect x="4" y="11" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="11" width="1" height="1" fill="#4A3A22"/><rect x="6" y="11" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="11" width="2" height="1" fill="#F0C098"/><rect x="9" y="11" width="2" height="1" fill="#3A2410"/><rect x="11" y="11" width="2" height="1" fill="#F0C098"/><rect x="13" y="11" width="2" height="1" fill="#3A2410"/><rect x="15" y="11" width="1" height="1" fill="#F0C098"/><rect x="16" y="11" width="1" height="1" fill="#2A1A0C"/><rect x="17" y="11" width="3" height="1" fill="#4A3A22"/><rect x="20" y="11" width="1" height="1" fill="#3A2410"/><rect x="3" y="12" width="1" height="1" fill="#3A2410"/><rect x="4" y="12" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="12" width="1" height="1" fill="#4A3A22"/><rect x="6" y="12" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="12" width="10" height="1" fill="#F0C098"/><rect x="17" y="12" width="1" height="1" fill="#2A1A0C"/><rect x="18" y="12" width="2" height="1" fill="#4A3A22"/><rect x="20" y="12" width="1" height="1" fill="#3A2410"/><rect x="3" y="13" width="1" height="1" fill="#3A2410"/><rect x="4" y="13" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="13" width="3" height="1" fill="#F0C098"/><rect x="8" y="13" width="1" height="1" fill="#E0A87A"/><rect x="9" y="13" width="6" height="1" fill="#F0C098"/><rect x="15" y="13" width="1" height="1" fill="#E0A87A"/><rect x="16" y="13" width="2" height="1" fill="#F0C098"/><rect x="18" y="13" width="1" height="1" fill="#4A3A22"/><rect x="19" y="13" width="1" height="1" fill="#3A2410"/><rect x="3" y="14" width="1" height="1" fill="#3A2410"/><rect x="4" y="14" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="14" width="3" height="1" fill="#F0C098"/><rect x="8" y="14" width="1" height="1" fill="#E0A87A"/><rect x="9" y="14" width="1" height="1" fill="#F0C098"/><rect x="10" y="14" width="3" height="1" fill="#B05A48"/><rect x="13" y="14" width="1" height="1" fill="#E0A87A"/><rect x="14" y="14" width="4" height="1" fill="#F0C098"/><rect x="18" y="14" width="1" height="1" fill="#2A1A0C"/><rect x="19" y="14" width="1" height="1" fill="#3A2410"/><rect x="3" y="15" width="1" height="1" fill="#3A2410"/><rect x="4" y="15" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="15" width="5" height="1" fill="#F0C098"/><rect x="10" y="15" width="3" height="1" fill="#E0A87A"/><rect x="13" y="15" width="5" height="1" fill="#F0C098"/><rect x="18" y="15" width="1" height="1" fill="#2A1A0C"/><rect x="19" y="15" width="1" height="1" fill="#3A2410"/><rect x="4" y="16" width="1" height="1" fill="#3A2410"/><rect x="5" y="16" width="1" height="1" fill="#2A1A0C"/><rect x="6" y="16" width="10" height="1" fill="#F0C098"/><rect x="16" y="16" width="1" height="1" fill="#2A1A0C"/><rect x="17" y="16" width="1" height="1" fill="#3A2410"/><rect x="5" y="17" width="1" height="1" fill="#3A2410"/><rect x="6" y="17" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="17" width="7" height="1" fill="#F0C098"/><rect x="14" y="17" width="1" height="1" fill="#2A1A0C"/><rect x="15" y="17" width="1" height="1" fill="#3A2410"/><rect x="6" y="18" width="2" height="1" fill="#3A2410"/><rect x="8" y="18" width="1" height="1" fill="#2A1A0C"/><rect x="9" y="18" width="4" height="1" fill="#F0C098"/><rect x="13" y="18" width="1" height="1" fill="#2A1A0C"/><rect x="14" y="18" width="2" height="1" fill="#3A2410"/><rect x="6" y="19" width="1" height="1" fill="#3A2410"/><rect x="7" y="19" width="3" height="1" fill="#D9B98A"/><rect x="10" y="19" width="1" height="1" fill="#F0C098"/><rect x="11" y="19" width="3" height="1" fill="#D9B98A"/><rect x="14" y="19" width="1" height="1" fill="#3A2410"/><rect x="5" y="20" width="1" height="1" fill="#3A2410"/><rect x="6" y="20" width="4" height="1" fill="#5E9C3A"/><rect x="10" y="20" width="2" height="1" fill="#F0C098"/><rect x="12" y="20" width="5" height="1" fill="#5E9C3A"/><rect x="17" y="20" width="1" height="1" fill="#3A2410"/><rect x="4" y="21" width="1" height="1" fill="#3A2410"/><rect x="5" y="21" width="6" height="1" fill="#5E9C3A"/><rect x="11" y="21" width="1" height="1" fill="#F0C098"/><rect x="12" y="21" width="6" height="1" fill="#5E9C3A"/><rect x="18" y="21" width="1" height="1" fill="#3A2410"/><rect x="3" y="22" width="1" height="1" fill="#3A2410"/><rect x="4" y="22" width="7" height="1" fill="#5E9C3A"/><rect x="11" y="22" width="1" height="1" fill="#F0C098"/><rect x="12" y="22" width="8" height="1" fill="#5E9C3A"/><rect x="20" y="22" width="1" height="1" fill="#3A2410"/><rect x="2" y="23" width="1" height="1" fill="#3A2410"/><rect x="3" y="23" width="7" height="1" fill="#5E9C3A"/><rect x="10" y="23" width="1" height="1" fill="#D9B98A"/><rect x="11" y="23" width="1" height="1" fill="#C97C0A"/><rect x="12" y="23" width="1" height="1" fill="#D9B98A"/><rect x="13" y="23" width="8" height="1" fill="#5E9C3A"/><rect x="21" y="23" width="1" height="1" fill="#3A2410"/><rect x="2" y="24" width="1" height="1" fill="#3A2410"/><rect x="3" y="24" width="7" height="1" fill="#4C7F2E"/><rect x="10" y="24" width="1" height="1" fill="#D9B98A"/><rect x="11" y="24" width="1" height="1" fill="#C97C0A"/><rect x="12" y="24" width="1" height="1" fill="#D9B98A"/><rect x="13" y="24" width="8" height="1" fill="#4C7F2E"/><rect x="21" y="24" width="1" height="1" fill="#3A2410"/><rect x="3" y="25" width="18" height="1" fill="#3A2410"/></svg>
+          <img id="av-img" class="av-img" src="" alt="" style="display:none">
+          </span>
+          <div style="min-width:0">
+            <div><b class="cy" id="who-name">柯西</b> <span class="cm" id="who-grade"></span></div>
+            <div class="cm" id="who-meta">卡号 <span class="cb">2023***21</span></div>
           </div>
         </div>
-      </div>
-      <p class="cm" id="pet-say" style="margin-top:6px">它在围栏里打量你。</p>
-      <div class="pager" id="pg-left"></div>
-      </div><!-- /pscroll 左栏滚动区 -->
-    </aside>
-
-    <section class="panel">
-      <h2><svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-straw"/></svg>任务 · <span class="cg">保持在线</span>
-        <span class="chipmini">进行中</span></h2>
-      <!-- 客户端壳：中栏滚动区。任务/加载牌/状态/按钮/进度条都在这里滚，
-           下面的服务农田钉在面板底部，始终可见。 -->
-      <div class="pscroll">
+        <hr class="rule">
+        <div class="barrow"><span class="cm">套餐剩余</span><span><b class="cg">18 天</b></span></div>
+        <div class="bar"><i style="width:60%;background:var(--ok)"></i></div>
+        <div class="barrow"><span class="cm">账户余额</span><span><b class="cy">¥ 23.50</b></span></div>
+        <div class="bar"><i style="width:14%;background:var(--gold)"></i></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>任务 · <span class="cg">保持在线</span></h3>
+          <div class="body">
       <hr class="rule">
       <!-- 原版 "Loading…" 木牌：只在"正在连内核"时露一下，连上就收起来 -->
       <div id="sys-loading" class="sys-loading">
@@ -1159,37 +1123,58 @@
       <div class="bar"><i style="width:40%;background:var(--ok)"></i></div>
       <div class="barrow"><span class="cm">本月流量</span><span><b class="cb">12.4 GB</b> <span class="cm">/ 40 GB（演示）</span></span></div>
       <div class="bar"><i style="width:31%;background:var(--blue)"></i></div>
-      <div class="pager" id="pg-mid"></div>
-      </div><!-- /pscroll 中栏滚动区 -->
+      
 
-      <hr class="rule">
-      <h2><svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-pump"/></svg>服务农田
-        <span class="chipmini"><b class="cg">1</b> 已开垦 / <b id="plot-todo" class="cm">0</b> 待开垦</span></h2>
-      <div class="farm" id="farm"></div>
-    </section>
-
-    <aside>
-      <div class="panel">
-        <div class="who" id="who-card" title="点这里改名字 / 头像 / 学院专业">
-          <span class="who-av">
-          <svg id="av-svg" width="52" height="52" viewBox="0 0 26 26" shape-rendering="crispEdges" role="img" aria-label="像素头像"><rect x="9" y="1" width="7" height="1" fill="#3A2410"/><rect x="7" y="2" width="3" height="1" fill="#3A2410"/><rect x="10" y="2" width="5" height="1" fill="#6B5233"/><rect x="15" y="2" width="2" height="1" fill="#3A2410"/><rect x="6" y="3" width="1" height="1" fill="#3A2410"/><rect x="7" y="3" width="10" height="1" fill="#6B5233"/><rect x="17" y="3" width="1" height="1" fill="#3A2410"/><rect x="5" y="4" width="1" height="1" fill="#3A2410"/><rect x="6" y="4" width="1" height="1" fill="#6B5233"/><rect x="7" y="4" width="10" height="1" fill="#4A3A22"/><rect x="17" y="4" width="1" height="1" fill="#6B5233"/><rect x="18" y="4" width="1" height="1" fill="#3A2410"/><rect x="4" y="5" width="1" height="1" fill="#3A2410"/><rect x="5" y="5" width="1" height="1" fill="#6B5233"/><rect x="6" y="5" width="12" height="1" fill="#4A3A22"/><rect x="18" y="5" width="1" height="1" fill="#6B5233"/><rect x="19" y="5" width="1" height="1" fill="#3A2410"/><rect x="4" y="6" width="1" height="1" fill="#3A2410"/><rect x="5" y="6" width="3" height="1" fill="#4A3A22"/><rect x="8" y="6" width="1" height="1" fill="#6B5233"/><rect x="9" y="6" width="10" height="1" fill="#4A3A22"/><rect x="19" y="6" width="1" height="1" fill="#3A2410"/><rect x="3" y="7" width="1" height="1" fill="#3A2410"/><rect x="4" y="7" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="7" width="2" height="1" fill="#4A3A22"/><rect x="7" y="7" width="2" height="1" fill="#6B5233"/><rect x="9" y="7" width="10" height="1" fill="#2A1A0C"/><rect x="19" y="7" width="1" height="1" fill="#4A3A22"/><rect x="20" y="7" width="1" height="1" fill="#3A2410"/><rect x="3" y="8" width="1" height="1" fill="#3A2410"/><rect x="4" y="8" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="8" width="1" height="1" fill="#4A3A22"/><rect x="6" y="8" width="2" height="1" fill="#2A1A0C"/><rect x="8" y="8" width="8" height="1" fill="#F0C098"/><rect x="16" y="8" width="2" height="1" fill="#2A1A0C"/><rect x="18" y="8" width="2" height="1" fill="#4A3A22"/><rect x="20" y="8" width="1" height="1" fill="#3A2410"/><rect x="3" y="9" width="1" height="1" fill="#3A2410"/><rect x="4" y="9" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="9" width="1" height="1" fill="#4A3A22"/><rect x="6" y="9" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="9" width="10" height="1" fill="#F0C098"/><rect x="17" y="9" width="1" height="1" fill="#2A1A0C"/><rect x="18" y="9" width="2" height="1" fill="#4A3A22"/><rect x="20" y="9" width="1" height="1" fill="#3A2410"/><rect x="3" y="10" width="1" height="1" fill="#3A2410"/><rect x="4" y="10" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="10" width="1" height="1" fill="#4A3A22"/><rect x="6" y="10" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="10" width="2" height="1" fill="#F0C098"/><rect x="9" y="10" width="2" height="1" fill="#3A2410"/><rect x="11" y="10" width="2" height="1" fill="#F0C098"/><rect x="13" y="10" width="2" height="1" fill="#3A2410"/><rect x="15" y="10" width="1" height="1" fill="#F0C098"/><rect x="16" y="10" width="1" height="1" fill="#2A1A0C"/><rect x="17" y="10" width="3" height="1" fill="#4A3A22"/><rect x="20" y="10" width="1" height="1" fill="#3A2410"/><rect x="3" y="11" width="1" height="1" fill="#3A2410"/><rect x="4" y="11" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="11" width="1" height="1" fill="#4A3A22"/><rect x="6" y="11" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="11" width="2" height="1" fill="#F0C098"/><rect x="9" y="11" width="2" height="1" fill="#3A2410"/><rect x="11" y="11" width="2" height="1" fill="#F0C098"/><rect x="13" y="11" width="2" height="1" fill="#3A2410"/><rect x="15" y="11" width="1" height="1" fill="#F0C098"/><rect x="16" y="11" width="1" height="1" fill="#2A1A0C"/><rect x="17" y="11" width="3" height="1" fill="#4A3A22"/><rect x="20" y="11" width="1" height="1" fill="#3A2410"/><rect x="3" y="12" width="1" height="1" fill="#3A2410"/><rect x="4" y="12" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="12" width="1" height="1" fill="#4A3A22"/><rect x="6" y="12" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="12" width="10" height="1" fill="#F0C098"/><rect x="17" y="12" width="1" height="1" fill="#2A1A0C"/><rect x="18" y="12" width="2" height="1" fill="#4A3A22"/><rect x="20" y="12" width="1" height="1" fill="#3A2410"/><rect x="3" y="13" width="1" height="1" fill="#3A2410"/><rect x="4" y="13" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="13" width="3" height="1" fill="#F0C098"/><rect x="8" y="13" width="1" height="1" fill="#E0A87A"/><rect x="9" y="13" width="6" height="1" fill="#F0C098"/><rect x="15" y="13" width="1" height="1" fill="#E0A87A"/><rect x="16" y="13" width="2" height="1" fill="#F0C098"/><rect x="18" y="13" width="1" height="1" fill="#4A3A22"/><rect x="19" y="13" width="1" height="1" fill="#3A2410"/><rect x="3" y="14" width="1" height="1" fill="#3A2410"/><rect x="4" y="14" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="14" width="3" height="1" fill="#F0C098"/><rect x="8" y="14" width="1" height="1" fill="#E0A87A"/><rect x="9" y="14" width="1" height="1" fill="#F0C098"/><rect x="10" y="14" width="3" height="1" fill="#B05A48"/><rect x="13" y="14" width="1" height="1" fill="#E0A87A"/><rect x="14" y="14" width="4" height="1" fill="#F0C098"/><rect x="18" y="14" width="1" height="1" fill="#2A1A0C"/><rect x="19" y="14" width="1" height="1" fill="#3A2410"/><rect x="3" y="15" width="1" height="1" fill="#3A2410"/><rect x="4" y="15" width="1" height="1" fill="#2A1A0C"/><rect x="5" y="15" width="5" height="1" fill="#F0C098"/><rect x="10" y="15" width="3" height="1" fill="#E0A87A"/><rect x="13" y="15" width="5" height="1" fill="#F0C098"/><rect x="18" y="15" width="1" height="1" fill="#2A1A0C"/><rect x="19" y="15" width="1" height="1" fill="#3A2410"/><rect x="4" y="16" width="1" height="1" fill="#3A2410"/><rect x="5" y="16" width="1" height="1" fill="#2A1A0C"/><rect x="6" y="16" width="10" height="1" fill="#F0C098"/><rect x="16" y="16" width="1" height="1" fill="#2A1A0C"/><rect x="17" y="16" width="1" height="1" fill="#3A2410"/><rect x="5" y="17" width="1" height="1" fill="#3A2410"/><rect x="6" y="17" width="1" height="1" fill="#2A1A0C"/><rect x="7" y="17" width="7" height="1" fill="#F0C098"/><rect x="14" y="17" width="1" height="1" fill="#2A1A0C"/><rect x="15" y="17" width="1" height="1" fill="#3A2410"/><rect x="6" y="18" width="2" height="1" fill="#3A2410"/><rect x="8" y="18" width="1" height="1" fill="#2A1A0C"/><rect x="9" y="18" width="4" height="1" fill="#F0C098"/><rect x="13" y="18" width="1" height="1" fill="#2A1A0C"/><rect x="14" y="18" width="2" height="1" fill="#3A2410"/><rect x="6" y="19" width="1" height="1" fill="#3A2410"/><rect x="7" y="19" width="3" height="1" fill="#D9B98A"/><rect x="10" y="19" width="1" height="1" fill="#F0C098"/><rect x="11" y="19" width="3" height="1" fill="#D9B98A"/><rect x="14" y="19" width="1" height="1" fill="#3A2410"/><rect x="5" y="20" width="1" height="1" fill="#3A2410"/><rect x="6" y="20" width="4" height="1" fill="#5E9C3A"/><rect x="10" y="20" width="2" height="1" fill="#F0C098"/><rect x="12" y="20" width="5" height="1" fill="#5E9C3A"/><rect x="17" y="20" width="1" height="1" fill="#3A2410"/><rect x="4" y="21" width="1" height="1" fill="#3A2410"/><rect x="5" y="21" width="6" height="1" fill="#5E9C3A"/><rect x="11" y="21" width="1" height="1" fill="#F0C098"/><rect x="12" y="21" width="6" height="1" fill="#5E9C3A"/><rect x="18" y="21" width="1" height="1" fill="#3A2410"/><rect x="3" y="22" width="1" height="1" fill="#3A2410"/><rect x="4" y="22" width="7" height="1" fill="#5E9C3A"/><rect x="11" y="22" width="1" height="1" fill="#F0C098"/><rect x="12" y="22" width="8" height="1" fill="#5E9C3A"/><rect x="20" y="22" width="1" height="1" fill="#3A2410"/><rect x="2" y="23" width="1" height="1" fill="#3A2410"/><rect x="3" y="23" width="7" height="1" fill="#5E9C3A"/><rect x="10" y="23" width="1" height="1" fill="#D9B98A"/><rect x="11" y="23" width="1" height="1" fill="#C97C0A"/><rect x="12" y="23" width="1" height="1" fill="#D9B98A"/><rect x="13" y="23" width="8" height="1" fill="#5E9C3A"/><rect x="21" y="23" width="1" height="1" fill="#3A2410"/><rect x="2" y="24" width="1" height="1" fill="#3A2410"/><rect x="3" y="24" width="7" height="1" fill="#4C7F2E"/><rect x="10" y="24" width="1" height="1" fill="#D9B98A"/><rect x="11" y="24" width="1" height="1" fill="#C97C0A"/><rect x="12" y="24" width="1" height="1" fill="#D9B98A"/><rect x="13" y="24" width="8" height="1" fill="#4C7F2E"/><rect x="21" y="24" width="1" height="1" fill="#3A2410"/><rect x="3" y="25" width="18" height="1" fill="#3A2410"/></svg>
-          <img id="av-img" class="av-img" src="" alt="" style="display:none">
-          </span>
-          <div style="min-width:0">
-            <div><b class="cy" id="who-name">柯西</b> <span class="cm" id="who-grade"></span></div>
-            <div class="cm" id="who-meta">卡号 <span class="cb">2023***21</span></div>
+      
           </div>
         </div>
-        <hr class="rule">
-        <div class="barrow"><span class="cm">套餐剩余</span><span><b class="cg">18 天</b></span></div>
-        <div class="bar"><i style="width:60%;background:var(--ok)"></i></div>
-        <div class="barrow"><span class="cm">账户余额</span><span><b class="cy">¥ 23.50</b></span></div>
-        <div class="bar"><i style="width:14%;background:var(--gold)"></i></div>
-      </div>
+    </div>
 
-      <div class="panel" style="margin-top:14px;">
-        <h2><svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-pump"/></svg>收成统计
-          <span class="chipmini">近 7 天 · 演示数据</span></h2>
+    <!-- ② 服务 -->
+    <div class="pane" id="ov-svc">
+        <div class="card">
+          <h3>服务清单 <span class="chipmini">共 <b id="svc-total" class="cb">0</b> 项</span></h3>
+          <div class="body">
+      <hr class="rule">
+      <input class="search" id="svc-search" type="text" placeholder="搜索服务…" aria-label="搜索服务">
+      <div id="svc-groups"></div>
+      <hr class="rule">
+      <button class="btn block" data-say="add">＋ 添加服务</button>
+      <button class="btn ghost block" style="margin-top:8px" data-say="sort">⇅ 调整顺序</button>
+          </div>
+        </div>
+    </div>
+
+    <!-- ③ 农田 -->
+    <div class="pane cols-2" id="ov-farm">
+        <div class="card">
+          <h3>服务农田 <span class="chipmini"><b class="cg">1</b> 已开垦 / <b id="plot-todo" class="cm">0</b> 待开垦</span></h3>
+          <div class="body">
+      <div class="farm" id="farm"></div>
+    
+          </div>
+        </div>
+        <div class="card">
+          <h3>荔宝小贴士</h3>
+          <div class="body">
+      <p style="margin-top:4px">连不上网别急着重启电脑，先跑
+        <span class="cb">szunet diag</span>，三步定位是哪张网的问题。</p>
+      <p style="margin-top:4px" class="cm">田里还空着 <b id="tip-todo" class="cy">0</b> 块地，想好种什么随时叫我。</p>
+      <div style="display:flex; gap:8px; margin-top:10px" aria-hidden="true">
+        <svg class="fruit" width="24" height="24" viewBox="0 0 16 16"><use href="#f-lychee"/></svg>
+        <svg class="fruit" width="24" height="24" viewBox="0 0 16 16"><use href="#f-pump"/></svg>
+        <svg class="fruit" width="24" height="24" viewBox="0 0 16 16"><use href="#f-cherry"/></svg>
+        <svg class="fruit" width="24" height="24" viewBox="0 0 16 16"><use href="#f-blue"/></svg>
+      </div>
+          </div>
+        </div>
+    </div>
+
+    <!-- ④ 统计 -->
+    <div class="pane" id="ov-stats">
+        <div class="card">
+          <h3>收成统计 <span class="chipmini">近 7 天 · 演示数据</span></h3>
+          <div class="body">
         <hr class="rule">
         <div class="chart" role="img" aria-label="近七天柱状图">
           <div class="col"><i style="height:34%"></i></div>
@@ -1228,30 +1213,37 @@
           </g>
           <rect x="108" y="4" width="8" height="3" fill="#C84B3A"/>
         </svg>
-      </div>
+          </div>
+        </div>
+    </div>
 
-      <div class="panel" style="margin-top:14px;">
-        <h2><svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-blue"/></svg>今日课表</h2>
+    <!-- ⑤ 动态 -->
+    <div class="pane cols-3" id="ov-feed">
+        <div class="card">
+          <h3>今日课表</h3>
+          <div class="body">
         <hr class="rule">
         <ul class="feed">
           <li><span class="dot" style="background:var(--blue)"></span><span class="tchip cb">08:00</span>高等数学 · <span class="cm">A302</span></li>
           <li><span class="dot" style="background:var(--teal)"></span><span class="tchip ct">10:00</span>数据结构 · <span class="cm">B105</span></li>
           <li><span class="dot" style="background:var(--purple)"></span><span class="tchip cp">14:30</span>体育课 · <span class="cm">田径场</span></li>
         </ul>
-      </div>
-
-      <div class="panel" style="margin-top:14px;">
-        <h2><svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-star"/></svg>告示板</h2>
+          </div>
+        </div>
+        <div class="card">
+          <h3>告示板</h3>
+          <div class="body">
         <hr class="rule">
         <ul class="feed">
           <li><span class="dot" style="background:var(--gold)"></span>9 月套餐续费已开放</li>
           <li><span class="dot" style="background:var(--bad)"></span>图书馆 <span class="cr">9.20</span> 闭馆检修</li>
           <li><span class="dot" style="background:var(--ok)"></span>校车时刻表已更新</li>
         </ul>
-      </div>
-
-      <div class="panel" style="margin-top:14px;">
-        <h2><svg class="fic" viewBox="0 0 16 16" aria-hidden="true"><use href="#f-cherry"/></svg>日志</h2>
+          </div>
+        </div>
+        <div class="card">
+          <h3>日志</h3>
+          <div class="body">
         <hr class="rule">
         <ul class="feed">
           <li><span class="dot" style="background:var(--ok)"></span>登录了 <span class="cb">SZU_WLAN</span> · 昨天</li>
@@ -1259,10 +1251,41 @@
           <li><span class="dot" style="background:var(--blue)"></span>更新到 <span class="cy">v0.1.2</span> · 周一</li>
           <li><span class="dot" style="background:var(--muted)"></span>自动重连生效 <span class="cg">2</span> 次</li>
         </ul>
+          </div>
+        </div>
+    </div>
+
+    <!-- ⑥ 荔宝 -->
+    <div class="pane" id="ov-pet">
+        <div class="card">
+          <h3><span id="pet-name">荔园猫</span> <span class="chipmini">Lv <b id="pet-lv" class="cy">1</b> · <span id="pet-mood">好奇</span></span></h3>
+          <div class="body">
+      <div class="pet-wrap" id="pet-wrap" style="margin-top:8px">
+        <span class="pet-pen">
+          <svg width="56" height="62" viewBox="0 0 20 22" role="img" aria-label="荔园猫">
+            <use id="pet-use" href="#cat-normal"/>
+          </svg>
+          <span class="pet-hearts" id="pet-hearts" aria-hidden="true"></span>
+        </span>
+        <div style="flex:1; min-width:0">
+          <div class="kv"><span class="cm">亲密度</span><span><b id="pet-love" class="cr">0</b><span class="cm"> / 100</span></span></div>
+          <div class="petbar"><i id="pet-bar" style="width:0%"></i></div>
+          <div class="kv" style="margin-top:4px"><span class="cm">已陪伴</span><span><b id="pet-time" class="cb">0 分钟</b></span></div>
+          <div class="kv"><span class="cm">小鱼干</span><span><b id="pet-fish" class="cy">3</b><span class="cm"> 条（今日）</span></span></div>
+          <div style="display:flex; gap:6px; margin-top:6px">
+            <button class="btn" id="pet-pat">摸摸</button>
+            <button class="btn ghost" id="pet-feed">喂小鱼干</button>
+          </div>
+        </div>
       </div>
-      <div class="pager" id="pg-right"></div>
-    </aside>
-  </section>
+      <p class="cm" id="pet-say" style="margin-top:6px">它在围栏里打量你。</p>
+      
+    
+          </div>
+        </div>
+    </div>
+  </div>
+</section>
 
   <!-- 占位页 -->
   <section id="view-placeholder" class="panel" style="display:none; margin:2px 0 14px;">
@@ -1358,14 +1381,24 @@
           </div>
         </div>
         <div class="card">
-          <h3>接入点编号（ac_id）</h3>
+          <h3>认证还是失败？</h3>
           <div class="body">
-            <label class="lf" for="lg-acid">手动指定，留空 = 自动发现</label>
-            <input class="inp" id="lg-acid" type="text" inputmode="numeric" placeholder="如 12">
-            <p class="cm" style="margin-top:6px; line-height:1.6">
-              编号跟墙上的网口走，不跟路由器走。接了自己的路由器还登录不上，
-              多半要在这里手动填（常见是 12）。
+            <p class="cm" style="line-height:1.6">
+              一般情况下什么都不用填——程序会自己认路。只有在诊断反复提示
+              「接入点」相关错误时，才需要在这里手动指定一次。
             </p>
+            <div style="margin:8px 0 6px;">
+              <button class="btn ghost" id="btn-acid-toggle" aria-expanded="false">高级：手动指定接入点 ▸</button>
+            </div>
+            <div id="acid-advanced" hidden>
+              <label class="lf" for="lg-acid">接入点编号（留空 = 自动发现）</label>
+              <input class="inp" id="lg-acid" type="text" inputmode="numeric" placeholder="如 12">
+              <p class="cm" style="margin-top:6px; line-height:1.6">
+                这个编号跟墙上的网口走，不跟路由器走。接了自己的路由器还登录不上，
+                多半要在这里手动填（常见是 12）。填对一次之后程序会记住，下次不用再填。
+              </p>
+            </div>
+            <div id="acid-used" class="cm" style="margin-top:8px; line-height:1.6" hidden></div>
           </div>
         </div>
       </div>
@@ -1836,7 +1869,8 @@ tabs.forEach(t => t.addEventListener("click", () => {
 function layoutPane(pane){
   if (!pane) return;
   const n = pane.children.length;
-  const cols = n <= 1 ? 1 : n <= 4 ? 2 : 3;
+  let cols = n <= 1 ? 1 : n <= 4 ? 2 : 3;
+  if (window.innerWidth <= 1080) cols = 1;   // 窄屏一律单列，别挤
   const rows = Math.ceil(n / cols);
   pane.style.gridTemplateColumns = "repeat(" + cols + ", minmax(0, 1fr))";
   pane.style.gridTemplateRows = "repeat(" + rows + ", minmax(0, 1fr))";
@@ -2208,6 +2242,34 @@ const bDiag = document.getElementById("btn-net-diag");
 if (bDiag) bDiag.onclick = () => { goSub("net-diag"); runDiagPane(); };
 const bDiagRun = document.getElementById("btn-net-diag-run");
 if (bDiagRun) bDiagRun.onclick = () => runDiagPane();
+
+/* 接入点编号：默认整个折叠藏起来，普通人一辈子不用见到它。
+   只有登录返回里出现 ac_id / ac-type 相关报错时才自动展开。 */
+const bAcidToggle = document.getElementById("btn-acid-toggle");
+const acidAdvanced = document.getElementById("acid-advanced");
+function openAcidAdvanced(){
+  if (!acidAdvanced || !acidAdvanced.hidden) return;
+  acidAdvanced.hidden = false;
+  if (bAcidToggle){ bAcidToggle.textContent = "高级：手动指定接入点 ▾"; bAcidToggle.setAttribute("aria-expanded", "true"); }
+}
+function acidValue(){
+  const el = document.getElementById("lg-acid");
+  return el ? el.value.trim() : "";
+}
+if (bAcidToggle) bAcidToggle.onclick = () => {
+  const open = acidAdvanced.hidden;
+  acidAdvanced.hidden = !open;
+  bAcidToggle.textContent = open ? "高级：手动指定接入点 ▾" : "高级：手动指定接入点 ▸";
+  bAcidToggle.setAttribute("aria-expanded", String(open));
+};
+/* 登录响应里带回了本次实际用的编号，顺手显示出来（成功失败都显示，不吹不黑） */
+function showAcidUsed(res){
+  const el = document.getElementById("acid-used");
+  if (!el || !res || !res.ac_id) return;
+  el.hidden = false;
+  el.textContent = "本次认证用的接入点编号：" + res.ac_id +
+    (res.ac_id_trusted ? "（已确认）" : "（自动猜的，没把握）");
+}
 
 /* ================= 我的名片：名字 / 头像 / 学院专业 =================
    只写 localStorage，不进任何网络请求。
@@ -2607,7 +2669,8 @@ async function doLoginPage(){
   try{
     // 先认证，成功后再决定是否保存。这样输错一次不会把错密码留在保险箱里。
     const zone = document.getElementById("lg-zone-pick").value;
-    const body = JSON.stringify({ username:user, password:pass, zone });
+    const acid = acidValue();
+    const body = JSON.stringify({ username:user, password:pass, zone, ac_id:acid });
     const res = await api("/api/login", { method:"POST", body });
 
     if (!res){
@@ -2629,6 +2692,7 @@ async function doLoginPage(){
         }
       }
       lgNote(message, "ok");
+      showAcidUsed(res);
       document.getElementById("lg-pass").value = "";   // 用完就清掉，别留在框里
       netOK = true;
       petReact("happy", 4000);
@@ -2637,7 +2701,15 @@ async function doLoginPage(){
       await refreshStatus();
     } else {
       lgNote(res.message || "登录失败。", "bad");
-      say("登录没成。看下面那行提示，或者点[[y|断线诊断]]。");
+      showAcidUsed(res);
+      // 接入点相关报错才把高级项亮出来，其余情况不让用户见到这种字眼
+      const msg = (res.message || "");
+      if (/ac[_-]?id|ac[_-]?type|接入点/i.test(msg)){
+        openAcidAdvanced();
+        say("报错和[[y|接入点]]有关。多数情况下在「断线诊断」里手动填一次编号（常见 12）就能好。");
+      } else {
+        say("登录没成。看下面那行提示，或者点[[y|断线诊断]]。");
+      }
     }
   } finally {
     btn.textContent = label;
@@ -2703,40 +2775,6 @@ function tick(){
 }
 tick(); setInterval(tick, 30000);
 
-/* ---------- 翻页器：滚动区不显示滚动条，超一页就在右下角给小木牌 ---------- */
-/* 原理：盒子本身还能滚（滚轮照用），翻页按钮一次翻一屏高；
-   页码跟着滚动位置走，内容或窗口一变就重算，只有一页时整块隐藏。 */
-function makePager(bar, box){
-  const prev = document.createElement("button");
-  prev.textContent = "◀"; prev.title = "上一页";
-  const lab = document.createElement("span"); lab.className = "pg-label";
-  const next = document.createElement("button");
-  next.textContent = "▶"; next.title = "下一页";
-  bar.append(prev, lab, next);
-  let raf = 0;
-  function tick(){
-    raf = 0;
-    const pageH = Math.max(1, box.clientHeight);
-    const pages = Math.max(1, Math.ceil((box.scrollHeight - 2) / pageH));
-    const cur = pages <= 1 ? 1 : Math.min(pages, Math.round(box.scrollTop / pageH) + 1);
-    bar.style.display = pages > 1 ? "flex" : "none";
-    lab.textContent = cur + "/" + pages;
-    prev.disabled = cur <= 1; next.disabled = cur >= pages;
-  }
-  prev.onclick = () => box.scrollBy({ top: -box.clientHeight, behavior: "smooth" });
-  next.onclick = () => box.scrollBy({ top:  box.clientHeight, behavior: "smooth" });
-  box.addEventListener("scroll", () => { if (!raf) raf = requestAnimationFrame(tick); });
-  addEventListener("resize", tick);
-  tick();
-  return tick;
-}
-const pagerTicks = [
-  makePager(document.getElementById("pg-left"),  document.querySelector("aside.panel > .pscroll")),
-  makePager(document.getElementById("pg-mid"),   document.getElementById("pg-mid").closest(".pscroll")),
-  makePager(document.getElementById("pg-right"), document.getElementById("pg-right").closest("aside")),
-];
-/* 列表是异步生成的，状态一刷新页码就可能变：低频兜底重算 */
-setInterval(() => pagerTicks.forEach(f => f()), 1200);
 
 /* 启动：问一次内核，能连上就切真实模式，之后每 20 秒刷新 */
 setLiveBadge(false, "正在找本地内核……");
