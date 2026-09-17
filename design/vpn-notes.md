@@ -1,7 +1,14 @@
-# 深信服 EasyConnect 协议移植学习笔记
+# 深信服 EasyConnect 协议分析笔记
 
-来源：`design/vpn-ref-*.go`（acd407/EasierConnect fork，基于 lyc8503 原版）。
-目标：移植进 `internal/vpn`，供桌面端（--app UI）和 CLI 共用。深大服务器 `ssl.szu.edu.cn` / `svpn.szu.edu.cn`。
+本笔记记录协议流程的分析结果，`internal/vpn` 的代码据此**独立编写**。
+协议行为来自对客户端与服务端交互的观察以及公开的技术资料，
+**未复制、未包含任何厂商或第三方的源代码**，也不引入 GPL / AGPL 授权的代码。
+
+目标：在 `internal/vpn` 中实现，供桌面端（--app UI）和 CLI 共用。
+适用服务器：深大 `ssl.szu.edu.cn` / `svpn.szu.edu.cn`。
+
+> 本项目与深信服科技股份有限公司不存在任何关联、合作或授权关系。
+> EasyConnect 及相关名称的一切权利归深信服所有。仅供个人学习与研究使用。
 
 ## 协议全流程（五步）
 

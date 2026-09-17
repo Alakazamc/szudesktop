@@ -1,10 +1,14 @@
 // Package vpn 实现深信服 EasyConnect SSL VPN 的第三方客户端。
 //
-// 协议依据开源项目 EasierConnect（lyc8503 原版，acd407 fork）逆向整理的流程移植，
-// 仅用于用本人账号连接本人所属学校（深圳大学 ssl.szu.edu.cn / svpn.szu.edu.cn）的 VPN。
-// 一切协议权利属深信服所有；学校服务端固件升级可能导致本包失效。
+// 本包为**依据公开协议行为分析独立编写**的实现：协议流程由观察公开的客户端
+// 与服务端交互行为整理而来，代码为自行编写，**未复制任何厂商或第三方的源代码**。
+// 仅用于以本人账号连接本人所属学校（深圳大学 ssl.szu.edu.cn / svpn.szu.edu.cn）
+// 的 VPN，供个人学习与研究使用，不得用于商业用途。
 //
-// 五步流程（详见 design/vpn-notes.md）：
+// 与厂商无关联：本项目与深信服科技股份有限公司**不存在任何关联、合作或授权关系**。
+// EasyConnect 及相关名称的一切权利归深信服所有；学校服务端固件升级可能导致本包失效。
+//
+// 五步流程（整理记录见 design/vpn-notes.md）：
 //  1. Web 登录（RSA+CSRF）拿 TWFID，可能触发短信/TOTP 二步验证
 //  2. 用 TWFID 明文 HTTP 探针换取 ECAgent token（藏在 TLS ServerHello SessionId 里）
 //  3. token = ECAgent(31 字节+NUL) + TWFID(16 字节) = 48 字节

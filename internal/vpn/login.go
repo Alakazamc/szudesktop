@@ -19,7 +19,7 @@ import (
 )
 
 // webLogin 走 Web 登录流程，返回 TWFID。
-// 深大同款深信服网关的响应是 XML 片段，字段名与 EasierConnect 逆向的一致。
+// 深大同款深信服网关的响应是 XML 片段，字段名来自对网关响应的直接观察。
 func webLogin(server, username, password string) (string, error) {
 	base := "https://" + server
 	c := httpClient()

@@ -38,3 +38,11 @@ Sleepstars/SZU-login 是 vidar-team/srun-login
 深澜协议的完整加密流程（challenge、HMAC-MD5、xEncode、自定义 Base64、
 SHA1 chksum）来自深澜门户页面自带的 JavaScript，本项目只是用 Go 重新实现，
 未直接引用任何 GPL / AGPL 授权的代码。
+
+深信服 EasyConnect 协议部分（internal/vpn/）为**依据公开协议行为分析独立实现**：
+协议流程由观察公开的客户端与服务端交互行为整理而来，代码自行编写，
+未复制任何厂商或第三方的源代码，也未引入任何 GPL / AGPL 授权的代码。
+
+  本项目与深信服科技股份有限公司不存在任何关联、合作或授权关系。
+  EasyConnect 及相关名称的一切权利归深信服科技股份有限公司所有。
+  该部分仅供个人学习与研究使用，不得用于商业用途。

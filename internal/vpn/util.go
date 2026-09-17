@@ -31,7 +31,7 @@ func LogToStdout() {
 }
 
 // dialer 是所有 HTTPS 请求共用的拨号器：学校 VPN 用自签证书，跳过校验。
-// （EasierConnect 同款做法；对自签网关没有更优雅的通用解。）
+// （自签网关的通行做法；没有更优雅的通用解。）
 
 // readAll 把连接读到关闭为止（fork 的 ECAgentToken 需要读满两个响应）。
 func readAll(c net.Conn, limit int) ([]byte, error) {

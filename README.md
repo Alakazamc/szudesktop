@@ -298,9 +298,13 @@ python desktop/build-windows.py && python desktop/smoke_windows.py
 ## 免责声明
 
 - 本项目是**第三方作品，与深圳大学无关**，学校不对它负责。
-- 请使用**自己的账号**，不要共享、转借账号。
+- **本项目与深信服科技股份有限公司无任何关联、合作或授权关系**，
+  也不包含该公司的任何源代码。EasyConnect 及相关名称的一切权利归深信服所有。
+- **仅供个人学习与研究使用**，不得用于商业用途。请勿转售、代充或据此牟利。
+- 请使用**自己的账号**，不要共享、转借账号。VPN 功能仅限连接**本人所属学校**的资源。
 - **不要和官方客户端同时使用**，两者互斥，会互相踢下线。
 - 请遵守学校的校园网管理规定。因使用本工具产生的任何后果由使用者自行承担。
+- 学校或厂商的系统升级都可能导致功能失效，本项目不作任何可用性保证。
 
 ---
 
@@ -317,9 +321,12 @@ python desktop/build-windows.py && python desktop/smoke_windows.py
 - [AatroxChen77/szu-net](https://github.com/AatroxChen77/szu-net) — 双区域策略引擎、断线保活思路
 - [Sleepstars/SZU_Utils](https://github.com/Sleepstars/SZU_Utils) — 双区识别脚本
 
-校外 VPN 的深信服协议部分移植自 [acd407/EasierConnect](https://github.com/acd407/EasierConnect)
-（lyc8503 原版的活跃 fork），协议细节与改造清单见 `design/vpn-notes.md`。
-EasyConnect 的一切权利属深信服所有。
+校外 VPN 的深信服协议部分为**依据公开协议行为分析独立实现**——协议流程由观察公开的
+客户端与服务端交互行为整理而来，代码自行编写，**未复制任何厂商或第三方的源代码**。
+协议流程整理与改造记录见 `design/vpn-notes.md`。
+
+本项目与深信服科技股份有限公司**不存在任何关联、合作或授权关系**；
+EasyConnect 及相关名称的一切权利归深信服所有。
 
 界面素材与字体版权归原作者所有，本地原型用途。
 
