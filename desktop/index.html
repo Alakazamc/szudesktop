@@ -78,8 +78,7 @@
 
   /* ---------- 文字色 ---------- */
   .cb{color:var(--blue);} .cg{color:var(--ok);} .cy{color:var(--coin);} .cr{color:var(--bad);}
-  .ct{color:var(--teal);} .cp{color:var(--purple);} .cw{color:#B57B14;} .cm{color:var(--muted);}
-  .hl{background:#FFE9A8; padding:0 3px; box-shadow:0 0 0 1px var(--accent);}
+  .ct{color:var(--teal);} .cp{color:var(--purple);} .cm{color:var(--muted);}
 
   .wrap{max-width:1180px; margin:0 auto; padding:0 16px; position:relative;}
 
@@ -210,7 +209,6 @@
   .tab .ic{width:10px; height:10px; border:1px solid var(--wood-dark);}
   .tab:hover{background:#8A5C34;}
   .tab.active{background:var(--cream); color:var(--ink); box-shadow:inset 0 -3px 0 var(--accent);}
-  .tab .badge{background:var(--bad); color:#fff; padding:0 4px; line-height:1.4;}
   /* 换成游戏原版木头告示牌（放大 2 倍，配合 image-rendering:pixelated 保持硬边） */
   .tabs.art{gap:6px; padding:5px 6px;}
   .tab.art{padding:0; background:none; border:0; position:relative; width:122px; height:96px;
@@ -222,8 +220,6 @@
     font-size:15px; line-height:1; color:#8A4A2C; letter-spacing:0;
     text-shadow:1px 1px 0 #FFF0C8, -1px -1px 0 #FFF0C8, 1px -1px 0 #FFF0C8, -1px 1px 0 #FFF0C8;
     white-space:nowrap; pointer-events:none;}
-  .tab.art .badge{position:absolute; top:14px; right:14px; font-size:11px;
-    background:var(--bad); color:#fff; padding:0 4px; line-height:1.5; border:2px solid var(--frame);}
   .tab.art:hover img{transform:translateY(-3px);}
   .tab.art.active img{filter:saturate(1.15) brightness(1.04);}
   .tab.art.active .lb{color:#5A2A12;}
@@ -232,8 +228,7 @@
     background:transparent;}
   .tab.art.active::after{background:var(--gold); box-shadow:0 0 0 2px var(--frame);}
   @media (max-width:1080px){ .tab.art{width:96px; height:76px;} .tab.art .lb{font-size:13px;} }
-  @media (max-width:760px){ .tab.art{width:76px; height:60px;} .tab.art .lb{font-size:12px;}
-    .tab.art .badge{top:8px; right:8px; font-size:10px;} }
+  @media (max-width:760px){ .tab.art{width:76px; height:60px;} .tab.art .lb{font-size:12px;} }
 
   /* ---------- 二级菜单：一级标签下面的小木牌 ----------
      每个一级页面下面再分几页，内容少了一屏就放得下，也就不用滚了。 */
@@ -247,7 +242,6 @@
   .subtab:active{transform:translateY(1px);}
   .subtab.active{background:var(--cream); color:var(--ink);
     box-shadow:inset 0 -3px 0 var(--accent);}
-  .subtab .sn{opacity:.75; font-size:11px;}
 
   /* ---------- 二级页内容：grid 铺满，不滚动 ----------
      .pane 默认藏起来，.active 的那一页才显示。
@@ -296,20 +290,12 @@
      用法：<img class="in-deco" style="right:8px; bottom:6px; width:24px" src="..."> */
   .in-deco{position:absolute; image-rendering:pixelated; pointer-events:none;
     opacity:.92; filter:drop-shadow(1px 1px 0 rgba(0,0,0,.16));}
-  .in-deco.sway{transform-origin:50% 100%;}
 
   /* 服务农田底下那条空地（格子铺不满剩下的）。
      高度按实测给，别给太大 —— 会把整张卡撑高、把右栏也拉长。
      横向用百分比、纵向用 bottom：它是卡片内部的固定高度区，两种单位都稳。 */
   /* farm-deco（农田下方的花草条）已删：客户端壳要求一屏放下，
      156px 的纯装饰条太奢侈。花草装饰集中在两侧留白和草地横条里。 */
-
-  /* 草叶随风摆：以图片底部为轴，左右各歪一点点 */
-  .sway{transform-origin:50% 100%; animation:sway 3.6s ease-in-out infinite;}
-  @keyframes sway{0%,100%{transform:rotate(-2.5deg)} 50%{transform:rotate(2.5deg)}}
-  .sway.s2{animation-duration:4.4s; animation-delay:-1.3s;}
-  .sway.s3{animation-duration:3.1s; animation-delay:-2.2s;}
-  .sway.s4{animation-duration:5s;   animation-delay:-.7s;}
 
   /* 鸡：一边点头啄食一边挪动 */
   .chick{animation:peck 2.2s steps(3) infinite;}
@@ -445,7 +431,6 @@
   /* 关于作者 */
   .about{display:flex; flex-direction:column; gap:8px; line-height:1.7;}
   .about a{color:var(--blue); text-decoration:underline;}
-  .avatar{width:52px; height:52px; flex:0 0 auto; display:block;}
   .kv{display:flex; justify-content:space-between; padding:2px 0;}
   /* 「正在连接内核」的原版木牌。连上内核后由 JS 加上 .hide 收起来 */
   .sys-loading{text-align:center; padding:2px 0 4px;}
@@ -498,7 +483,6 @@
     animation:fly 5s ease-in-out infinite; z-index:1;}
   @keyframes fly{0%,100%{transform:translate(0,0); opacity:.2}
     30%{transform:translate(14px,-16px); opacity:1} 60%{transform:translate(-10px,-26px); opacity:.5}}
-  .farmstrip .bale{animation:none;}
 
   /* ---------- 收成展示架（一排水果） ---------- */
   .harvest{display:flex; justify-content:center; align-items:flex-end; gap:14px; padding:8px 0 4px;
@@ -707,7 +691,6 @@
   .vpn-state .k{font-size:11px; color:var(--muted);}
   .vpn-state .v{font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .vpn-log{height:190px; overflow-y:auto; background:#2D2530; border:3px solid var(--frame); padding:8px; color:#F6E9C8; font-family:var(--mono); font-size:11px; line-height:1.65; white-space:pre-wrap;}
-  .vpn-log .error{color:#FF9A8C;} .vpn-log .warn{color:#FFD27A;} .vpn-log .ok{color:#B9F28F;}
   .campus-card{margin-top:12px; padding:8px 10px; background:var(--cream-dim); border:2px solid var(--cream-line); line-height:1.6;}
   .campus-card .v{color:var(--blue); word-break:break-all;}
   @media (max-width:760px){
@@ -1010,8 +993,6 @@
         <img src="assets/art/m4.png" alt=""><span class="lb">图书馆</span></span>
       <span class="tab art" data-view="card" title="一卡通">
         <img src="assets/art/m1.png" alt=""><span class="lb">一卡通</span></span>
-      <span class="tab art" data-view="sq" title="服务">
-        <img src="assets/art/m2.png" alt=""><span class="lb">服务</span><span class="badge" id="svc-count">0</span></span>
       <span class="tab art" data-view="set" title="设置">
         <img src="assets/art/m3.png" alt=""><span class="lb">设置</span></span>
     </nav>
@@ -1080,7 +1061,7 @@
           </span>
           <div style="min-width:0">
             <div><b class="cy" id="who-name">柯西</b> <span class="cm" id="who-grade"></span></div>
-            <div class="cm" id="who-meta">卡号 <span class="cb">2023***21</span></div>
+            <div class="cm" id="who-meta">还没填学院专业</div>
           </div>
         </div>
         <hr class="rule">
@@ -1711,7 +1692,6 @@ const SAY = {
     network:"校园网的操作台放这页：[[g|状态]]、[[b|时长]]、流量曲线。现在先在「概览」里用。",    jw:"教务页：[[p|课表]]、[[y|成绩]]、考试安排。想好布局告诉荔宝。",
     lib:"图书馆页：[[r|座位预约]]、借书记录、到期提醒。",
     card:"一卡通页：[[y|流水]]、充值、消费统计。",
-    sq:"服务广场：所有能装的服务都摆在这里挑。",
     set:"设置页：开机自启、代理直连规则、[[m|深色模式]]（农场夜景已经是了）。"
   }
 };
@@ -1788,7 +1768,6 @@ function renderList(filter){
 renderList("");
 document.getElementById("svc-search").addEventListener("input", e => renderList(e.target.value));
 document.getElementById("svc-total").textContent = SERVICE.length;
-document.getElementById("svc-count").textContent = SERVICE.length;
 document.getElementById("plot-todo").textContent = SERVICE.filter(s => s.status === "todo").length;
 document.getElementById("tip-todo").textContent = SERVICE.filter(s => s.status === "todo").length;
 
@@ -1810,9 +1789,9 @@ const dock = document.getElementById("dock");
 /* 工具槽换成游戏原版的物品图标，和星露谷的物品栏一个味道 */
 const dockIcons = [
   { art:"dwarf.png",    say:SAY.slotNet,  tip:"校园网认证" },
-  { art:"folder.png",   say:SAY.lib,      tip:"图书馆" },
-  { art:"diamond.png",  say:SAY.card,     tip:"一卡通" },
-  { art:"settings.png", say:SAY.ph.card,  tip:"设置" },
+  { art:"folder.png",   say:SAY.ph.lib,   tip:"图书馆" },
+  { art:"diamond.png",  say:SAY.ph.card,  tip:"一卡通" },
+  { art:"settings.png", say:SAY.ph.set,   tip:"设置" },
 ];
 for (let i = 0; i < 12; i++){
   const s = document.createElement("span");
