@@ -875,7 +875,7 @@
   <span class="dot r" aria-hidden="true"></span>
   <span class="dot y" aria-hidden="true"></span>
   <span class="dot g" aria-hidden="true"></span>
-  <span style="margin-left:6px">szuDesktop <span class="cy">beta0.1</span> · 与深圳大学官方无关</span>
+  <span style="margin-left:6px">szuDesktop <span class="cy" id="ver">beta0.4</span> · 与深圳大学官方无关</span>
   <span class="sp"></span>
   <span class="wbtn" data-say="min" title="最小化">—</span>
   <span class="wbtn" data-say="max" title="最大化"><img src="assets/art/maximize.png" alt=""></span>
@@ -1060,15 +1060,13 @@
           <img id="av-img" class="av-img" src="" alt="" style="display:none">
           </span>
           <div style="min-width:0">
-            <div><b class="cy" id="who-name">柯西</b> <span class="cm" id="who-grade"></span></div>
+            <div><b class="cy" id="who-name">新同学</b> <span class="cm" id="who-grade"></span></div>
             <div class="cm" id="who-meta">还没填学院专业</div>
           </div>
         </div>
         <hr class="rule">
-        <div class="barrow"><span class="cm">套餐剩余</span><span><b class="cg">18 天</b></span></div>
-        <div class="bar"><i style="width:60%;background:var(--ok)"></i></div>
-        <div class="barrow"><span class="cm">账户余额</span><span><b class="cy">¥ 23.50</b></span></div>
-        <div class="bar"><i style="width:14%;background:var(--gold)"></i></div>
+        <div class="barrow"><span class="cm">套餐剩余</span><span class="cm" id="who-plan">待接入</span></div>
+        <div class="barrow"><span class="cm">账户余额</span><span class="cm" id="who-balance">待接入</span></div>
           </div>
         </div>
         <div class="card">
@@ -1100,11 +1098,8 @@
         <button class="btn ghost" id="btn-save-cred">去登录页</button>
       </div>
 
-      <div class="barrow"><span class="cm">今日在线</span><span><b class="cg">3 小时 12 分</b> <span class="cm">/ 8 小时（演示）</span></span></div>
-      <div class="bar"><i style="width:40%;background:var(--ok)"></i></div>
-      <div class="barrow"><span class="cm">本月流量</span><span><b class="cb">12.4 GB</b> <span class="cm">/ 40 GB（演示）</span></span></div>
-      <div class="bar"><i style="width:31%;background:var(--blue)"></i></div>
-      
+      <div class="barrow"><span class="cm">今日在线</span><span class="cm" id="who-time">待接入</span></div>
+      <div class="barrow"><span class="cm">本月流量</span><span class="cm" id="who-flow">待接入</span></div>
 
       
           </div>
@@ -1679,20 +1674,19 @@ const SERVICE = [
 ];
 
 const SAY = {
-  add:   "想好要种什么了？改 index.html 里的 [[g|SERVICE]] 数组，或者直接告诉我，马上开垦。",
-  sort:  "拖动排序还没做。你先想好[[y|哪几个工具最常用]]，我来排。",
+  add:   "想加什么服务？去 GitHub 搜 Alakazamc/szudesktop 提个 [[b|issue]]，说清楚它该长什么样，我们种进来。",
+  sort:  "拖动排序在计划里。先凑合用搜索框找，挺快的。",
   login: "现在没连上本地内核，这是[[y|演示]]效果。用 szudesktop.exe 启动就有真结果。",
   diag:  "现在没连上本地内核，这是[[y|演示]]效果。正常启动 szudesktop.exe 后，这里会列出区域判定和协议指纹。",
-  close: "别关！这只是个[[y|网页原型]]，右上角的叉是装饰。",
-  min:   "最小化也先别按，假的。",
-  max:   "已经很大了。",
-  slotEmpty:"[[m|空的工具槽]]。等工具想好了就放这儿。",
-  slotNet:  "校园网快捷入口。工具栏想放什么，以后再定。",
+  slotEmpty:"[[m|空的工具槽]]。以后有新工具，会先摆在这里。",
+  winMin:  "窗口归你的浏览器管：用浏览器窗口自己的 — 按钮最小化，切走了认证也会照常跑。",
+  winMax:  "全屏或还原，用浏览器窗口自己的按钮。",
+  winClose:"我先试着自己关；关不掉的话，用浏览器窗口右上角的 ✕ 就行，后台不会留东西。",
   ph: {
     network:"校园网的操作台放这页：[[g|状态]]、[[b|时长]]、流量曲线。现在先在「概览」里用。",    jw:"教务页：[[p|课表]]、[[y|成绩]]、考试安排。想好布局告诉荔宝。",
     lib:"图书馆页：[[r|座位预约]]、借书记录、到期提醒。",
     card:"一卡通页：[[y|流水]]、充值、消费统计。",
-    set:"设置页：开机自启、代理直连规则、[[m|深色模式]]（农场夜景已经是了）。"
+    set:"设置页：改你的名片——[[y|名字]]、头像、学院专业。开机自启和深色模式在计划里。"
   }
 };
 
@@ -1788,7 +1782,7 @@ SERVICE.forEach((s, i) => {
 const dock = document.getElementById("dock");
 /* 工具槽换成游戏原版的物品图标，和星露谷的物品栏一个味道 */
 const dockIcons = [
-  { art:"dwarf.png",    say:SAY.slotNet,  tip:"校园网认证" },
+  { art:"dwarf.png",    go:"network",     tip:"校园网认证" },
   { art:"folder.png",   say:SAY.ph.lib,   tip:"图书馆" },
   { art:"diamond.png",  say:SAY.ph.card,  tip:"一卡通" },
   { art:"settings.png", say:SAY.ph.set,   tip:"设置" },
@@ -1801,7 +1795,13 @@ for (let i = 0; i < 12; i++){
     s.dataset.say = i;
     s.title = dockIcons[i].tip;
     s.classList.add("has");
-    s.onclick = () => modal(dockIcons[i].tip, dockIcons[i].say);
+    s.onclick = () => {
+      if (dockIcons[i].go){
+        const t = document.querySelector('#tabs .tab[data-view="' + dockIcons[i].go + '"]');
+        if (t){ t.click(); return; }
+      }
+      modal(dockIcons[i].tip, dockIcons[i].say);
+    };
   } else {
     s.onclick = () => modal("空工具槽", SAY.slotEmpty);
   }
@@ -1889,7 +1889,18 @@ overlay.addEventListener("click", e => { if (e.target === overlay) closeModal();
 /* ---------- 底部对话 ---------- */
 const talkText = document.getElementById("talk-text");
 function say(text){ type(talkText, text); }
-say("柯西，欢迎回到农场！[[b|SZU_WLAN]] 长势喜人，[[y|教学区]]信号满格，是个适合写代码的夜晚。想好把哪些工具种进[[g|农田]]，随时叫我。");
+/* 欢迎语：称呼跟名片走（没填就「同学」），问候跟时间走。
+   别把作者的名字和时段写死——这是给所有用户看的。 */
+function greet(){
+  const h = new Date().getHours();
+  const period =
+    h < 5  ? "夜深了" :
+    h < 11 ? "早上好" :
+    h < 14 ? "中午好" :
+    h < 18 ? "下午好" : "晚上好";
+  const who = (typeof me !== "undefined" && me && me.name) ? me.name : "同学";
+  say(who + "，" + period + "！[[b|SZU_WLAN]] 长势喜人，[[y|教学区]]信号满格。想好把哪些工具种进[[g|农田]]，随时叫我。");
+}
 
 /* ---------- 各处按钮 ---------- */
 /* 网络状态一动，猫跟着换表情；有内核时走真接口 */
@@ -1925,8 +1936,21 @@ function syncSwitches(st){
     : "还没存账号，去「校园网」标签页登录（勾上记住就不用每次输）。";
 }
 
-document.querySelectorAll("[data-say]").forEach(el =>
-  el.addEventListener("click", () => modal("荔宝", SAY[el.dataset.say] || "……")));
+/* 标题栏假窗口按钮：关闭先真试 window.close()（页面是内核开的标签，多数能直接关），
+   关不掉再让荔宝说明白；最小化/最大化做不了，就诚实指路，别让用户白点 */
+document.querySelectorAll("[data-say]").forEach(el => {
+  const key = el.dataset.say;
+  el.addEventListener("click", () => {
+    if (key === "close"){
+      window.close();
+      setTimeout(() => modal("关闭窗口", SAY.winClose), 260);
+      return;
+    }
+    if (key === "min"){ modal("最小化", SAY.winMin); return; }
+    if (key === "max"){ modal("窗口大小", SAY.winMax); return; }
+    modal("荔宝", SAY[key] || "……");
+  });
+});
 
 /* ================= 宠物系统：荔园猫 =================
    存档在 localStorage，刷新不掉档，关掉浏览器明天回来还在。
@@ -2265,13 +2289,14 @@ const AVATARS = [
   { id:"bird",         label:"小鸟" }
 ];
 const ME_KEY = "szudesktop.me.v1";
-const ME_DEF = { name:"柯西", avatar:"default", college:"", major:"", grade:"" };
+const ME_DEF = { name:"", avatar:"default", college:"", major:"", grade:"" };
 let me = Object.assign({}, ME_DEF);
 try{
   const raw = localStorage.getItem(ME_KEY);
   if (raw) me = Object.assign(me, JSON.parse(raw));
 }catch(e){ /* 存不了就用默认值，不影响别的 */ }
 function saveMe(){ try{ localStorage.setItem(ME_KEY, JSON.stringify(me)); }catch(e){} }
+greet();   /* 名片存档读完了再打招呼，称呼才对得上 */
 
 /* 把名片画到右上方那张卡上 */
 function paintMe(){
@@ -2281,7 +2306,7 @@ function paintMe(){
   const mt = document.getElementById("who-meta");
   const svg = document.getElementById("av-svg");
   const img = document.getElementById("av-img");
-  nm.textContent = me.name || "柯西";
+  nm.textContent = me.name || "新同学";
   if (gd) gd.textContent = me.grade ? "· " + me.grade : "";
   /* 学院专业读不到就留空，不编造 */
   const parts = [me.college, me.major].filter(Boolean);
@@ -2340,7 +2365,7 @@ function renderMe(){
   if (!el) return;
   el.addEventListener("input", () => {
     const v = el.value.trim();
-    me[pair[1]] = (pair[1] === "name" && !v) ? "柯西" : v;
+    me[pair[1]] = v;   /* 名字留空就显示「新同学」，不再回填作者名 */
     saveMe(); paintMe();
   });
 });
