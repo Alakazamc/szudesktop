@@ -23,7 +23,7 @@ import (
 	"github.com/Alakazamc/szudesktop/internal/portal"
 )
 
-const version = "0.1.0"
+const version = "beta0.3"
 
 // options 是所有子命令共用的参数。
 type options struct {
