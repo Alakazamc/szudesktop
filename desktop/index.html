@@ -235,6 +235,32 @@
   @media (max-width:760px){ .tab.art{width:76px; height:60px;} .tab.art .lb{font-size:12px;}
     .tab.art .badge{top:8px; right:8px; font-size:10px;} }
 
+  /* ---------- 二级菜单：一级标签下面的小木牌 ----------
+     每个一级页面下面再分几页，内容少了一屏就放得下，也就不用滚了。 */
+  .subtabs{display:flex; gap:6px; flex-wrap:wrap; padding:5px 6px;
+    background:var(--wood); border:2px solid var(--wood-dark);
+    box-shadow:inset 0 2px 0 rgba(255,255,255,.08); position:relative; z-index:2;}
+  .subtab{flex:1 1 auto; min-width:84px; text-align:center; padding:4px 12px;
+    background:var(--wood-mid); border:2px solid var(--frame); color:var(--cream);
+    user-select:none; line-height:1.5;}
+  .subtab:hover{background:#8A5C34;}
+  .subtab:active{transform:translateY(1px);}
+  .subtab.active{background:var(--cream); color:var(--ink);
+    box-shadow:inset 0 -3px 0 var(--accent);}
+  .subtab .sn{opacity:.75; font-size:11px;}
+
+  /* ---------- 二级页内容：grid 铺满，不滚动 ----------
+     .pane 默认藏起来，.active 的那一页才显示。
+     行列数由 JS 按卡片数量算好写进 style，保证铺满不留大片空白。 */
+  .pane{display:none; min-height:0;}
+  .pane.active{flex:1 1 auto; display:grid; gap:12px; padding:8px 0 4px; align-content:stretch;}
+  .pane > .card{background:var(--cream-hi); border:2px solid var(--frame);
+    box-shadow:inset 0 0 0 2px var(--cream-dim); padding:10px 12px; min-height:0;
+    display:flex; flex-direction:column; overflow:hidden;}
+  .pane > .card h3{font-size:13px; font-weight:500; color:var(--ink);
+    display:flex; align-items:center; gap:6px; margin-bottom:6px;}
+  .pane > .card .body{flex:1 1 auto; min-height:0; overflow:hidden;}
+
   /* ---------- 背景土地上的花草动物 ----------
      页面底子是犁过的土地（见 body 的 background），大片空着。
      这里铺一层"种"上去的东西：花、草丛、蘑菇、石头、小树，还有走动的鸡和猫。
@@ -623,7 +649,10 @@
   footer{flex:0 0 auto; padding:2px 0 4px; font-size:11px;}
   /* ---------- 登录页 ----------
      登录表单放在 stage 里，跨满三列但不撑宽：卡片最多 620px 居中。 */
-  .loginwrap{grid-column:1 / -1; max-width:620px; margin:0 auto; width:100%;}
+  /* 铺满整栏：二级菜单在上面，下面的内容页撑满剩下的高度。
+     这里单独关掉滚动——校园网这一页的内容已经拆进二级菜单，一屏放得下。 */
+  .loginwrap{grid-column:1 / -1; width:100%; min-height:0;
+    display:flex; flex-direction:column; overflow:hidden;}
   .loginbody{display:flex; gap:22px; align-items:flex-start;}
   .loginart{flex:0 0 auto; text-align:center; padding-top:6px;}
   .loginart svg{display:block; animation:signBob 3.4s steps(2) infinite;}
@@ -1229,46 +1258,115 @@
         <span class="chipmini" id="lg-zone">探测中…</span></h2>
       <hr class="rule">
 
-      <div class="loginbody">
-        <!-- 左边：荔宝举着手欢迎 -->
-        <div class="loginart" aria-hidden="true">
-          <svg width="92" height="99" viewBox="0 0 52 56"><use href="#libao"/></svg>
-          <p class="cm" id="lg-hint">卡号是校园卡上的 6 位数字，密码是统一身份认证密码。</p>
+      <!-- 二级菜单：一层只放一屏放得下的量，放不下就再拆一页，而不是加滚动条 -->
+      <nav class="subtabs" id="subtabs-network" aria-label="校园网二级菜单">
+        <span class="subtab active" data-pane="net-state">状态</span>
+        <span class="subtab" data-pane="net-account">账号</span>
+        <span class="subtab" data-pane="net-diag">诊断</span>
+        <span class="subtab" data-pane="net-usage">时长</span>
+      </nav>
+
+      <!-- ① 状态 -->
+      <div class="pane active" id="net-state">
+        <div class="card">
+          <h3>当前连接</h3>
+          <div class="body"><div class="loginstate" id="lg-state"></div></div>
         </div>
-
-        <!-- 右边：表单 -->
-        <div class="loginform">
-          <label class="lf" for="lg-user">校园卡号</label>
-          <input class="inp" id="lg-user" type="text" inputmode="numeric" autocomplete="username"
-                 placeholder="6 位卡号" maxlength="12">
-
-          <label class="lf" for="lg-pass">密码</label>
-          <input class="inp" id="lg-pass" type="password" autocomplete="current-password"
-                 placeholder="统一身份认证密码">
-
-          <label class="lf" for="lg-zone-pick">登录区域</label>
-          <select class="inp" id="lg-zone-pick">
-            <option value="auto">自动识别（推荐）</option>
-            <option value="teaching">教学区 / 图书馆（深澜）</option>
-            <option value="dorm">宿舍区（Dr.COM）</option>
-          </select>
-
-          <label class="switch"><input type="checkbox" id="lg-save" checked><span class="track"></span>
-            <span class="cm">记住账号密码</span></label>
-
-          <div class="loginrow">
-            <button class="btn" id="lg-login">登录</button>
-            <button class="btn ghost" id="lg-logout">注销下线</button>
-            <button class="btn ghost" id="lg-forget">忘掉已存的账号</button>
+        <div class="card">
+          <h3>操作</h3>
+          <div class="body">
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn" id="btn-net-goto-account">去登录</button>
+              <button class="btn ghost" id="btn-net-diag">断线诊断</button>
+            </div>
+            <p class="cm" style="margin-top:8px">连不上先跑诊断，三步定位是哪张网的问题。</p>
           </div>
-
-          <div id="lg-note" class="lgnote">填好就能登录。</div>
         </div>
       </div>
 
-      <hr class="rule">
-      <!-- 当前连网状态，登录后自动刷新 -->
-      <div class="loginstate" id="lg-state"></div>
+      <!-- ② 账号（原登录表单，id 全部保持不动，JS 照常工作） -->
+      <div class="pane" id="net-account">
+        <div class="loginbody">
+          <!-- 左边：荔宝举着手欢迎 -->
+          <div class="loginart" aria-hidden="true">
+            <svg width="92" height="99" viewBox="0 0 52 56"><use href="#libao"/></svg>
+            <p class="cm" id="lg-hint">卡号是校园卡上的 6 位数字，密码是统一身份认证密码。</p>
+          </div>
+
+          <!-- 右边：表单 -->
+          <div class="loginform">
+            <label class="lf" for="lg-user">校园卡号</label>
+            <input class="inp" id="lg-user" type="text" inputmode="numeric" autocomplete="username"
+                   placeholder="6 位卡号" maxlength="12">
+
+            <label class="lf" for="lg-pass">密码</label>
+            <input class="inp" id="lg-pass" type="password" autocomplete="current-password"
+                   placeholder="统一身份认证密码">
+
+            <label class="lf" for="lg-zone-pick">登录区域</label>
+            <select class="inp" id="lg-zone-pick">
+              <option value="auto">自动识别（推荐）</option>
+              <option value="teaching">教学区 / 图书馆（深澜）</option>
+              <option value="dorm">宿舍区（Dr.COM）</option>
+            </select>
+
+            <label class="switch"><input type="checkbox" id="lg-save" checked><span class="track"></span>
+              <span class="cm">记住账号密码</span></label>
+
+            <div class="loginrow">
+              <button class="btn" id="lg-login">登录</button>
+              <button class="btn ghost" id="lg-logout">注销下线</button>
+              <button class="btn ghost" id="lg-forget">忘掉已存的账号</button>
+            </div>
+
+            <div id="lg-note" class="lgnote">填好就能登录。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ③ 诊断 -->
+      <div class="pane" id="net-diag">
+        <div class="card">
+          <h3>断线诊断</h3>
+          <div class="body">
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+              <button class="btn" id="btn-net-diag-run">开始诊断</button>
+            </div>
+            <div id="net-diag-out" class="cm" style="line-height:1.7">还没跑过诊断。</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>接入点编号（ac_id）</h3>
+          <div class="body">
+            <label class="lf" for="lg-acid">手动指定，留空 = 自动发现</label>
+            <input class="inp" id="lg-acid" type="text" inputmode="numeric" placeholder="如 12">
+            <p class="cm" style="margin-top:6px; line-height:1.6">
+              编号跟墙上的网口走，不跟路由器走。接了自己的路由器还登录不上，
+              多半要在这里手动填（常见是 12）。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ④ 时长 -->
+      <div class="pane" id="net-usage">
+        <div class="card">
+          <h3>今日在线</h3>
+          <div class="body">
+            <div class="barrow"><span class="cm">已用</span><span><b class="cg" id="use-today">—</b></span></div>
+            <div class="bar"><i id="use-today-bar" style="width:0%;background:var(--ok)"></i></div>
+            <p class="cm" style="margin-top:6px">统计从本机第一次连上开始记，不上传。</p>
+          </div>
+        </div>
+        <div class="card">
+          <h3>本月流量</h3>
+          <div class="body">
+            <div class="barrow"><span class="cm">已用</span><span><b class="cb" id="use-flow">—</b></span></div>
+            <div class="bar"><i id="use-flow-bar" style="width:0%;background:var(--blue)"></i></div>
+            <p class="cm" style="margin-top:6px">流量要学校接口才准，现在先留空。</p>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -1646,6 +1744,36 @@ tabs.forEach(t => t.addEventListener("click", () => {
   }
 }));
 
+/* ---------- 二级菜单：切内容页，并按卡片数铺满 ----------
+   一页只放一屏放得下的量。内容多了就再拆一个二级项，绝不加滚动条。 */
+function layoutPane(pane){
+  if (!pane) return;
+  const n = pane.children.length;
+  const cols = n <= 1 ? 1 : n <= 4 ? 2 : 3;
+  const rows = Math.ceil(n / cols);
+  pane.style.gridTemplateColumns = "repeat(" + cols + ", minmax(0, 1fr))";
+  pane.style.gridTemplateRows = "repeat(" + rows + ", minmax(0, 1fr))";
+}
+document.querySelectorAll(".subtabs").forEach(nav => {
+  const host = nav.parentElement;
+  const panes = Array.prototype.slice.call(host.querySelectorAll(".pane"));
+  const btns = Array.prototype.slice.call(nav.querySelectorAll(".subtab"));
+  btns.forEach(b => b.addEventListener("click", () => {
+    btns.forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    panes.forEach(p => {
+      const on = p.id === b.dataset.pane;
+      p.classList.toggle("active", on);
+      if (on) layoutPane(p);
+    });
+  }));
+  const first = btns.filter(b => b.classList.contains("active"))[0] || btns[0];
+  if (first) layoutPane(document.getElementById(first.dataset.pane));
+});
+window.addEventListener("resize", () => {
+  document.querySelectorAll(".pane.active").forEach(layoutPane);
+});
+
 /* ---------- 弹窗 ---------- */
 const overlay = document.getElementById("overlay");
 const modalText = document.getElementById("modal-text");
@@ -1960,6 +2088,39 @@ async function doDiag(){
   (d.advices || []).forEach((a, i) => { t += (i === 0 ? "\n\n建议：" : "\n") + "· " + a; });
   type(modalText, t);
 }
+
+/* ---------- 校园网二级页：诊断结果渲染到页面上（不再只弹窗） ---------- */
+async function runDiagPane(){
+  const out = document.getElementById("net-diag-out");
+  if (!out) return;
+  out.textContent = "正在探测网络区域……";
+  const d = LIVE ? await api("/api/diag") : null;
+  if (!d){
+    out.textContent = "现在没连上本地内核，这是演示效果。启动 szudesktop.exe 后，"
+      + "这里会列出区域判定和协议指纹。";
+    return;
+  }
+  const rows = [
+    "区域：" + (d.zone_label || "—"),
+    "外网：" + (d.internet_ok ? "通" : "不通"),
+    "宿舍门户：" + (d.dorm_portal_ok ? "通" : "不通"),
+    "教学门户：" + (d.teaching_portal_ok ? "通" : "不通")
+  ];
+  if (d.ac_id) rows.push("接入点编号：" + d.ac_id + (d.ac_id_trusted ? "" : "（猜的，不可信）"));
+  (d.advices || []).forEach(a => rows.push(a));
+  out.innerHTML = rows.map(s => "· " + s).join("<br>");
+}
+/* 状态页的按钮：跳到对应二级页（诊断那个顺手把诊断跑起来） */
+function goSub(pane){
+  const b = document.querySelector('#subtabs-network .subtab[data-pane="' + pane + '"]');
+  if (b) b.click();
+}
+const bGoto = document.getElementById("btn-net-goto-account");
+if (bGoto) bGoto.onclick = () => goSub("net-account");
+const bDiag = document.getElementById("btn-net-diag");
+if (bDiag) bDiag.onclick = () => { goSub("net-diag"); runDiagPane(); };
+const bDiagRun = document.getElementById("btn-net-diag-run");
+if (bDiagRun) bDiagRun.onclick = () => runDiagPane();
 
 /* ================= 校外 VPN =================
    VPN 页面只负责调用本地接口，不把 VPN 密码写入状态、日志或 localStorage。
