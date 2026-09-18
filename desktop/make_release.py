@@ -72,6 +72,7 @@ def main():
         # 包里的文件名用 ascii，避免某些解压工具处理中文名出问题
         z.writestr("szudesktop.exe", exe_bytes)
         z.writestr("README-快速开始.txt", README)
+        z.writestr("FONT-LICENSE-OFL.txt", Path(DESKTOP, "assets", "fonts", "LICENSE-OFL.txt").read_bytes())
         lic = os.path.join(ROOT, "LICENSE")
         if os.path.exists(lic):
             z.writestr("LICENSE", open(lic, "rb").read())

@@ -1,5 +1,5 @@
 """Run the actual GUI executable with an isolated config and no real authentication."""
-import json, os, socket, struct, subprocess, sys, tempfile, time, urllib.request, urllib.error
+import http.client, json, os, re, socket, struct, subprocess, sys, tempfile, time
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
 EXE=Path(sys.argv[1]) if len(sys.argv)>1 else ROOT/'dist/szudesktop-windows-amd64.exe'
@@ -9,13 +9,20 @@ if len(sys.argv)>2: port=int(sys.argv[2])
 else:
     with socket.socket() as sock: sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
 BASE=f'http://127.0.0.1:{port}'
+# Use a direct local HTTP connection: no system proxy and no premature
+# Connection: close while the server is rejecting an unread request body.
 def request(path,data=None,method=None,headers=None):
     h={'Content-Type':'application/json'} if data is not None else {}
     h.update(headers or {})
-    req=urllib.request.Request(BASE+path,data=json.dumps(data).encode() if data is not None else None,method=method,headers=h)
+    body=json.dumps(data).encode() if data is not None else None
+    conn=http.client.HTTPConnection('127.0.0.1',port,timeout=45)
     try:
-        with urllib.request.urlopen(req,timeout=45) as r: return r.status,r.read(),r.headers
-    except urllib.error.HTTPError as e: return e.code,e.read(),e.headers
+        conn.request(method or ('POST' if data is not None else 'GET'),path,body,headers=h)
+        response=conn.getresponse()
+        return response.status,response.read(),response.headers
+    finally:
+        conn.close()
+
 def get(path):
     code,body,_=request(path);assert code==200,(path,code,body);return json.loads(body)
 def check(name,ok):
@@ -40,7 +47,14 @@ with tempfile.TemporaryDirectory(prefix='szudesktop-smoke-') as cfg:
         check('no account exposed in status',get('/api/status')['username']=='')
         for path,file in [('/',ROOT/'desktop/index.html'),('/assets/garden/app.mjs',ROOT/'desktop/assets/garden/app.mjs'),('/assets/garden/style.css',ROOT/'desktop/assets/garden/style.css'),('/assets/garden/engine.mjs',ROOT/'desktop/assets/garden/engine.mjs'),('/assets/garden/campus.png',ROOT/'desktop/assets/garden/campus.png'),('/assets/szudesktop.ico',ROOT/'desktop/assets/szudesktop.ico')]:
             code,body,_=request(path);check('embedded '+path,code==200 and body==file.read_bytes())
+        code,css,_=request('/assets/fonts/fusion-pixel.css')
+        check('pixel font stylesheet packaged',code==200)
+        font_paths=re.findall(r'url\(([^)]+\.woff2)\)',css.decode('utf-8'))
+        check('pixel font subsets complete',len(font_paths)>0 and all(request('/assets/fonts/'+name)[0]==200 for name in font_paths))
+        check('OFL license packaged',b'SIL OPEN FONT LICENSE' in request('/assets/fonts/LICENSE-OFL.txt')[1])
+        check('original flora available',request('/assets/garden/flora/tree.png')[0]==200)
         check('legacy borrowed art not packaged',request('/assets/art/m1.png')[0]==404)
+        check('old game font not packaged',request('/assets/fonts/svbold.ttf')[0]==404)
         credential={'username':'000000','password':'smoke-test-only-not-real'}
         check('save isolated test credential',request('/api/credential',credential)[0]==200)
         check('saved username remains hidden',get('/api/credential')['username']=='')
