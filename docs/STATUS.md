@@ -434,5 +434,6 @@ C 类须验证各系统会话；D1/D2 不是“一次完成全部解锁”。预
 - CI 依赖升级（F19）后由 PR CI 全量验证：test、build-desktop-windows 与 6 个平台 CLI 全部通过；action 版本为 checkout v7.0.1 / setup-go v7.0.0 / setup-python v7.0.0 / upload-artifact v7.0.1 / download-artifact v8.0.1 / action-gh-release v3.0.3。
 - 电话簿（A3）新增回归规则：每条号码必须带官方来源链接、深圳号码带区号；不含号码的部门只能给入口且不得带 tel/mail。7 组校园检查与 10 组界面检查通过，Go vet 干净，exe 冒烟全过。号码取自图书馆官网公开页脚，未核实的一律不写。
 - 最终构建验收（2026-09-19）：实际 Windows exe 冒烟全部通过，包含新增公告来源 / 方法 / 跨来源限制及两份新增内嵌模块；最终版手工新增研究生课程能正确保存培养层次，重启保留此前课程、计入选择和提醒。桌面及 390px 窄窗检查无横向溢出，浏览器 error 日志为空。
-- **最新本地交付**：`dist/szudesktop-windows-amd64.exe`（11,608,064 字节）；`dist/szudesktop-beta0.5-windows-amd64.zip`（6,881,474 字节）。ZIP 内 exe 与构建结果逐字节一致，仅含程序、快速开始和许可证。SHA256：`00d54a0586876c25899e8d143d57790829c0ec24501f2eec91a8176ed1d4904d`。
+- **最新本地交付（含电话簿 A3 后重新打包）**：`dist/szudesktop-windows-amd64.exe`（11,610,112 字节，SHA256 `2dd2d0967e978436a194fe6d684775e2f50684f603b341f09ac77774a439c797`）；`dist/szudesktop-beta0.5-windows-amd64.zip`（6,882,860 字节，SHA256 `5a55f2bb1c7007ca2edfd65c8d07623d3bd6bf3778eae4c80b382bbf00690a10`）。ZIP 内 exe 与构建结果逐字节一致，仅含程序、快速开始和许可证。
+- **已发布**：tag `beta0.5`，GitHub Release「szuDesktop beta0.5」为预发布版，7 个附件。发版前已完成：PR #2 合并入 main（`cc5f274`）、CI action 升到 Node 24 兼容版本、电话簿补录与来源校验。
 - 临时认证诊断进程与研究文件的清理被自动审批以“策略阻止”拒绝，未重试绕过；临时目录未加入版本控制，发布包也不含这些文件。
