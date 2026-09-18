@@ -1,4 +1,4 @@
-import {parseGrades,mergeGrades,makeStudyReminder,reminderICS,BOOKING_URL,GRADE_RULE_URL} from './campus.mjs';
+import {parseGrades,mergeGrades,makeStudyReminder,reminderICS,BOOKING_URL,GRADE_RULE_URL,PHONE_BOOK,PHONE_FALLBACK,PHONE_NOTE} from './campus.mjs';
 import {gpa} from './engine.mjs';
 
 export function createCampusUI({getState,commit,toast,confirm,api,render}) {
@@ -23,7 +23,13 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
  <details><summary>添加自习提醒</summary><p class="muted">在官方系统确认预约后，可手动登记时间并导出日历。此处保存的是提醒，不会向学校提交预约。</p>
  <form id="campus-reminder-form" class="grid three"><div><label for="reminder-place">自习地点</label><input id="reminder-place" name="place" maxlength="80" placeholder="填写已预约的场地 / 房间" required></div><div><label for="reminder-start">开始时间</label><input id="reminder-start" name="start" type="datetime-local" required></div><div><label for="reminder-end">结束时间</label><input id="reminder-end" name="end" type="datetime-local" required></div><button>保存本机提醒</button></form></details>
  ${reminders.length?`<h3>自习提醒 · 手动登记</h3><ul class="campus-reminders">${[...reminders].sort((a,b)=>a.start-b.start).map(x=>`<li><div><strong>${esc(x.place)}</strong><p>${formatTime(x.start)} — ${formatTime(x.end)}${x.end<Date.now()?' · 已结束':''}</p></div><div class="actions">${button('导出日历','reminder-ics',`data-id="${esc(x.id)}"`)}${button('移除提醒','reminder-delete',`data-id="${esc(x.id)}"`)}</div></li>`).join('')}</ul><small>导入系统日历后可在开始前 15 分钟提醒；是否提醒由日历软件设置决定。</small>`:''}</section>
- <section class="card campus-feed"><div class="card-head"><h2>学校公告</h2><span class="badge">官方公开内容</span></div><div class="actions"><label for="feed-source">来源</label><select id="feed-source"><option value="undergrad" ${feedSource==='undergrad'?'selected':''}>本科 · 教务部</option><option value="graduate" ${feedSource==='graduate'?'selected':''}>研究生院</option></select>${button('读取公告','feed')}${link(feedSource==='undergrad'?'https://jwb.szu.edu.cn/index/jwtz.htm':'https://gra.szu.edu.cn/','查看原页')}</div><div id="campus-feed-content" aria-live="polite">${feedHTML()}</div><small>10 分钟内复用已读取内容；公告按学校页面日期展示，原文以学校发布为准。</small></section>`}
+ <section class="card campus-feed"><div class="card-head"><h2>学校公告</h2><span class="badge">官方公开内容</span></div><div class="actions"><label for="feed-source">来源</label><select id="feed-source"><option value="undergrad" ${feedSource==='undergrad'?'selected':''}>本科 · 教务部</option><option value="graduate" ${feedSource==='graduate'?'selected':''}>研究生院</option></select>${button('读取公告','feed')}${link(feedSource==='undergrad'?'https://jwb.szu.edu.cn/index/jwtz.htm':'https://gra.szu.edu.cn/','查看原页')}</div><div id="campus-feed-content" aria-live="polite">${feedHTML()}</div><small>10 分钟内复用已读取内容；公告按学校页面日期展示，原文以学校发布为准。</small></section>
+ <section class="card campus-phone"><div class="card-head"><h2>常用联系与入口</h2><span class="badge">公开信息</span></div>
+ <p>${esc(PHONE_NOTE)}</p>
+ <ul class="campus-phones">${PHONE_BOOK.map(x=>`<li><span>${esc(x.name)}</span>${x.tel?`<a href="tel:${esc(x.tel)}">${esc(x.tel)}</a>`:`<a href="mailto:${esc(x.mail)}">${esc(x.mail)}</a>`}${link(x.source,'来源','')}</li>`).join('')}</ul>
+ <h3>其他部门 · 官方入口</h3>
+ <div class="actions">${PHONE_FALLBACK.map(x=>link(x.url,x.name)).join('')}</div>
+ <small>这些部门没有查到官方公开号码，因此只给入口：请在官方页面核对最新联系方式。</small></section>`}
  function grades(){
   const courses=getState().courses,terms=[...new Set(courses.map(x=>x.term||'').filter(Boolean))].sort();
   const selected=courses.filter(x=>(!filterLevel||x.level===filterLevel)&&(!filterTerm||x.term===filterTerm)),result=gpa(selected);

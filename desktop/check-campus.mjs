@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {parseGrades,mergeGrades,makeStudyReminder,reminderICS} from './assets/garden/campus.mjs';
+import {parseGrades,mergeGrades,makeStudyReminder,reminderICS,PHONE_BOOK,PHONE_FALLBACK} from './assets/garden/campus.mjs';
 import {gpa,createState,normalize} from './assets/garden/engine.mjs';
 let count=0;const test=(name,f)=>{f();count++;console.log('PASS',name)};
 test('official undergraduate grades and zero GPA',()=>{
@@ -32,5 +32,18 @@ test('reminders validate duration, persist, and export escaped UTC calendar',()=
  for(const line of calendar.split('\r\n'))assert.ok(Buffer.byteLength(line)<=75);
  assert.throws(()=>makeStudyReminder({place:'自习室',start:now-1,end:now+60000},now));
  assert.throws(()=>makeStudyReminder({place:'自习室',start:now+1000,end:now+100000000},now));
+});
+test('phone book never lists a number without an official source',()=>{
+ assert.ok(PHONE_BOOK.length>=3,'至少要有核实过的号码');
+ for(const p of PHONE_BOOK){
+  assert.ok(p.name&&p.source&&/^https:\/\//.test(p.source),'每条都要有官方来源链接');
+  if(p.tel){assert.match(p.tel,/^(0755-)?\d{8}$/);assert.ok(p.tel.startsWith('0755-'),'深圳号码要带区号')}
+  else if(p.mail){assert.match(p.mail,/^[^@\s]+@[^@\s]+\.[^@\s]+$/)}
+  else assert.fail('条目既没有电话也没有邮箱');
+ }
+ for(const p of PHONE_FALLBACK){
+  assert.ok(p.name&&/^https:\/\//.test(p.url),'没核实到的部门只给入口');
+  assert.equal(p.tel,undefined);assert.equal(p.mail,undefined);
+ }
 });
 console.log(`${count} campus checks passed`);

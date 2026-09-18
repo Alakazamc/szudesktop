@@ -3,6 +3,24 @@ export const UNDERGRAD_POINTS=Object.freeze({'A+':4.5,A:4,'B+':3.5,B:3,'C+':2.5,
 export const BOOKING_URL='https://swzx.webvpn.szu.edu.cn/#/pages/booth/szu-booth-list';
 export const GRADE_RULE_URL='https://jwb.szu.edu.cn/info/1357/2003.htm';
 
+// 常用电话：只列能从学校官方页面核实到的号码，每条都带来源。
+// 查不到官方号码的部门只给入口，不写数字 —— 宁可少一条，也不放编造的号。
+export const LIBRARY_URL='https://www.lib.szu.edu.cn/';
+export const PHONE_BOOK=Object.freeze([
+ {name:'图书馆咨询 · 北馆',tel:'0755-26532182',source:LIBRARY_URL},
+ {name:'图书馆咨询 · 南馆',tel:'0755-26534902',source:LIBRARY_URL},
+ {name:'图书馆咨询 · 丽湖馆',tel:'0755-86932729',source:LIBRARY_URL},
+ {name:'图书馆邮箱',mail:'szulib@szu.edu.cn',source:LIBRARY_URL}
+]);
+// 暂无官方公开号码的部门：给官方入口，让用户自己在页面上核对最新号码。
+export const PHONE_FALLBACK=Object.freeze([
+ {name:'教务部（本科教务）',url:'https://jwb.szu.edu.cn/'},
+ {name:'研究生院',url:'https://gra.szu.edu.cn/'},
+ {name:'学校办事大厅',url:'https://ehall.szu.edu.cn/'},
+ {name:'校外访问入口 WebVPN',url:'https://webvpn.szu.edu.cn/'}
+]);
+export const PHONE_NOTE='号码来自学校图书馆官网公开页脚；其他部门只提供官方入口，不列未经核实的号码。号码以学校官网为准。';
+
 function tableRows(text){
  const input=String(text).replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n');
  if(input.length>300000)throw Error('成绩表过大，请限制在 300 KB 以内');
