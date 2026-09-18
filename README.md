@@ -13,6 +13,8 @@
   <img alt="runtime" src="https://img.shields.io/badge/runtime-%E6%97%A0%E4%BE%9D%E8%B5%96-6b7280?style=flat-square">
 </p>
 
+**简体中文** · [English](docs/README_en.md)
+
 学生自制 · 与深圳大学官方无关
 
 [下载](#下载) · [功能](#功能) · [命令行](#命令行-szunet) · [常见问题](#常见问题) · [安全与隐私](#安全与隐私) · [开发状态](docs/STATUS.md)
