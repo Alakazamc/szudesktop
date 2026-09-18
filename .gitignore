@@ -39,8 +39,11 @@ desktop/design/_*.png
 design/vpn-ref-*.go.txt
 
 # 排查协议的临时脚本/抓下来的页面（探完了就可以删，不需要进库）
+# ⚠️ 这类目录里会有从官网抓下来的页面和校方前端脚本（login.js / encrypt.js 等），
+#    既涉第三方版权，也可能被当成"逆向依据"，进公开仓库是事故。新目录一律先登记再干活。
 .scratch_probe/
 .portal_js.txt
+.tmp-campus/
 
 # 临时打包产物
 /outputs/
