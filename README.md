@@ -1,54 +1,241 @@
+<div align="center">
+
 # szuDesktop · 荔枝庭院
 
-给深大日常留一小块绿地：校园网络、学校入口、学习工具和一座离线也会生长的小庭院。
-学生自制，与深圳大学官方无关。
+给深大日常留一小块绿地：校园网络、学校入口、学习工具，
+和一座离线也会生长的小庭院。
 
-![beta0.5 桌面界面](docs/screenshot-desktop.png)
+<p>
+  <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-4a6fa5?style=flat-square">
+  <img alt="go" src="https://img.shields.io/badge/Go-1.26%2B-00ADD8?style=flat-square&logo=go&logoColor=white">
+  <img alt="license" src="https://img.shields.io/badge/license-MIT-2f7d32?style=flat-square">
+  <img alt="release" src="https://img.shields.io/github/v/release/Alakazamc/szudesktop?include_prereleases&style=flat-square&label=release&color=c9a227">
+  <img alt="runtime" src="https://img.shields.io/badge/runtime-%E6%97%A0%E4%BE%9D%E8%B5%96-6b7280?style=flat-square">
+</p>
 
-当前本地候选版 **beta0.5（Windows x64）**。所有问题、历史任务、优先级、后端方案和验证记录统一维护在 [docs/STATUS.md](docs/STATUS.md)。GitHub Release 是否已更新，以实际发布页为准。
+学生自制 · 与深圳大学官方无关
 
-## 这个版本能做什么
+[下载](#下载) · [功能](#功能) · [命令行](#命令行-szunet) · [常见问题](#常见问题) · [安全与隐私](#安全与隐私) · [开发状态](docs/STATUS.md)
 
-- 校园网：教学区深澜 / 宿舍 Dr.COM 认证、注销、诊断、手动区域与接入点设置。卡号默认隐藏，凭据只在认证成功且用户勾选记住后保存。
-- 校园服务：应用内读取教务部、研究生院公开公告，保留日期和原文；社区静音舱与图书馆官方预约入口、本机自习提醒及日历导出；其他学校入口可搜索。
-- 庭院：伙伴照料与成长、4 种作物、6 块农田、浇水、收获、买卖、装饰、每日目标、成就与图鉴。无充值与现金交易。
-- 学习：待办、5 / 25 / 45 分钟专注、自设学期起始日；本科与研究生成绩表支持粘贴 / CSV / TSV 导入、预览去重、按学期和层次统计、选择是否计入。已有官方绩点优先，本科等级按学校规则换算，研究生不套用本科规则。
-- 存档：固定本机文件保存，跨端口重启恢复，支持导出导入和多窗口版本冲突保护。
-- 界面：保留原来的星露谷式像素校园风，木牌导航、暖纸面板、像素字、荔宝对话框；打磨中文阅读、内容间距和小屋农田场景，支持整页滚动与窄窗。沿用系统标题栏，Windows 启动不出现命令行窗口。
+</div>
 
-## 打开与退出
+---
 
-解压发布包，双击 `szudesktop.exe`。程序使用 Edge / Chrome 的应用窗口；没有可用浏览器时尝试默认浏览器。
-进入「校园网」填写账号密码，是否记住由你决定。校外通过「官方 WebVPN」进入学校页面。
+## 预览
 
-同一份存档重复启动会复用本机服务。关闭所有应用窗口约 10 秒后自动退出；需要立即退出可在「设置 → 退出应用」操作。刷新页面不会立即结束服务。
+| 桌面主界面 | 荔枝庭院 | 校园网登录 |
+| :--------: | :------: | :--------: |
+| ![桌面主界面](docs/screenshot-desktop.png) | ![荔枝庭院](docs/screenshot-garden.png) | ![校园网登录](docs/screenshot-login.png) |
 
-本机数据默认在用户目录 `.szunet` 下。Windows 凭据由 DPAPI 保护；庭院文件为 `workspace-v1.json`，属于可自行备份的普通 JSON。导出不含校园账号密码。
-换电脑前请在设置中导出存档，再在新电脑导入。
+---
+
+## 它解决什么问题
+
+深大校园网分成两个**互不通用**的区域，认证方式完全是两套东西：
+
+| 区域 | 系统 | 协议特点 |
+| :--- | :--- | :------- |
+| 教学区 / 办公区 / 图书馆 | 深澜（SRun） | 2025 年寒假上线，密码经 HMAC-MD5，用户信息经 XXTEA 加密与自定义 Base64，另需 SHA1 校验和 |
+| 宿舍区 / 教工区 | Dr.COM（ePortal） | 一次 GET 请求即可完成 |
+
+由此带来两个麻烦：
+
+1. **2024 年以前的教程和脚本在教学区全部失效** —— 它们都是为老的 Dr.COM 写的。
+2. **报错信息五花八门没人解释** —— `ldap auth error`、`Rad:userid error1`、`登陆失败[05]`、
+   `Unknow ac-type`…… 用户只能瞎试。
+
+szuDesktop 同时对付这两件事：**一个按钮完成认证，一个按钮说出卡在哪一步。**
+
+判区不看「门户能不能连上」，而看**协议指纹**（就是那套协议特有的握手行为：教学区看
+`get_challenge` 能否握手、宿舍区看 ePortal 登录接口是否存在）。原因是实测发现宿舍门户
+在教学区机器上首页同样返回 200，只测连通性会在掉线时误判成宿舍区，然后拿 Dr.COM 协议
+去打一个不存在的接口。
+
+---
+
+## 下载
+
+到 [Releases](../../releases) 页面下载 `szudesktop-<版本>-windows-amd64.zip`，
+解压到任意位置，双击 `szudesktop.exe`。**解压就能用，不用安装。**
+
+| 项 | 说明 |
+| :-- | :---- |
+| 桌面端 | Windows x64（`szudesktop.exe`） |
+| 命令行 | Windows / macOS / Linux，单文件 `szunet` |
+| 当前版本 | `beta0.5` · 公开测试版（预发布） |
+| 运行环境 | 无需安装依赖；窗口由本机浏览器提供（Edge / Chrome 应用窗口） |
+
+### 首次使用
+
+1. 打开程序，进入「**校园网**」
+2. 填校园卡号和统一身份认证密码；想免输就勾「记住账号密码」
+3. 点「**登录**」—— 程序会自动识别教学区还是宿舍区，走对应的认证
+4. 连不上就点「**断线诊断**」，它会列出区域判定、门户可达性、协议指纹和结论
+
+### 打开与退出
+
+- 同一份存档重复启动会复用本机服务，不会开出第二个程序
+- 关闭所有应用窗口约 10 秒后自动退出；想立即退出走「设置 → 退出应用」
+- 刷新页面不会结束服务
+
+### 我的数据存在哪
+
+- 默认在用户目录 `.szunet` 下
+- 校园网密码由 Windows DPAPI 加密（只有这台机器的当前账户能解开），不明文保存
+- 庭院存档是 `workspace-v1.json`，普通 JSON，可自行备份；导出的存档不含校园账号密码
+- 换电脑前请在设置中导出存档，再在新电脑导入
+
+---
+
+## 功能
+
+| 能力 | 状态 | 说明 |
+| :--- | :--- | :---- |
+| 校园网认证 | ✅ | 教学区深澜 / 宿舍区 Dr.COM，自动判区；支持注销与手动指定区域 |
+| 接入点编号（`ac_id`）自动发现 | ✅ | 按「手动指定 → 本机在这个网口的记录 → 网关跳转 → 猜测」依次取，猜的会标注 |
+| 断线诊断 | ✅ | 列出区域判定、门户可达性、协议指纹与结论 |
+| 凭据保管 | ✅ | Windows DPAPI 加密；**认证成功且你勾选记住后**才保存 |
+| 校园服务 · 公告 | ✅ | 应用内读取教务部、研究生院公开公告，保留日期与原文链接，10 分钟缓存 |
+| 校园服务 · 预约入口 | 部分 | 提供社区静音舱、图书馆研讨间等**官方入口**；应用内暂不能查询空闲时段，也不代替你提交预约 |
+| 校园服务 · 自习提醒 | ✅ | 手动登记后导出标准 ICS 日历（开始前 15 分钟）；**提醒不等于预约成功** |
+| 校园服务 · 常用电话 | 部分 | 只列能从学校官网核实的号码（图书馆咨询），其他部门只给官方入口 |
+| 学习 · 成绩与绩点 | 部分 | 支持粘贴 / CSV / TSV 导入本科与研究生成绩表，按学校规则换算；**不解析 PDF / 图片 / XLSX，不能在线自动同步** |
+| 学习 · 待办与专注 | ✅ | 待办清单与 5 / 25 / 45 分钟专注 |
+| 荔枝庭院 | ✅ | 伙伴照料与成长、作物、农田、浇水收获、装饰、每日目标、成就与图鉴；无充值与现金交易 |
+| 存档 | ✅ | 固定本机文件，跨端口重启恢复，支持导出导入与多窗口冲突保护 |
+
+**还没做到的（不在发布说明里含糊其辞）**：成绩、余额、课表和预约状态都不能自动同步；
+应用内实时空闲查询与提交预约未接入 —— 这些需要本机持有可复用的登录会话才能做，
+现状与推进顺序记在 [docs/STATUS.md](docs/STATUS.md)。
+
+---
+
+## 命令行 szunet
+
+不想开窗口、或者想把认证写进脚本时用。源码在 `cmd/szunet`，
+`go build -o dist/szunet.exe ./cmd/szunet` 即可编译。
+
+| 子命令 | 作用 |
+| :----- | :--- |
+| `login` | 登录（可临时指定 `-u` 卡号 `-p` 密码，不保存） |
+| `logout` | 注销下线 |
+| `status` | 查看当前状态 |
+| `detect` | 探测当前网络区域与接入点编号 |
+| `diag` | 断线诊断，输出区域判定与协议指纹 |
+| `config` | 查看 / 修改本机配置 |
+| `autostart` | 开机自启设置 |
+| `version` | 查看版本号 |
+
+```text
+szunet detect                       # 看当前识别出的是哪个区域、接入点编号是多少
+szunet login --zone teaching        # 指定走教学区协议（auto / teaching / dorm）
+szunet login --ac-id 12             # 手动指定接入点编号
+szunet diag                         # 连不上时先跑它，再按结论排查
+```
+
+`--help` 看全部参数。**不要把真实账号密码写进共享脚本或日志。**
+
+---
+
+## 常见问题
+
+<details>
+<summary><b>接了自己的路由器后登录不上</b></summary>
+
+校园网每个接入点有独立编号（`ac_id`），你插哪个网口就得报哪个号。旧版本固定用 `1`，
+而路由器那条线路要求 `12`，编号不对会被服务端直接拒绝。
+
+现在程序按下面的顺序找编号，从上往下、哪个先成用哪个：
+
+| 优先级 | 来源 | 可信度 |
+| :-- | :-- | :-- |
+| 1 | 你自己指定的（`--ac-id 12`） | 最高 |
+| 2 | 这台机器在**这个网口**上认证成功用过的 | 高 |
+| 3 | 未认证时被网络拦下，从它给的跳转地址里读出来的 | 权威 |
+| 4 | 挨个试常见编号 | 低（界面上标「猜的」） |
+
+**编号跟墙上那个网口走，不跟路由器走**：同一台路由器插回原来的口 → 编号不变；
+换个口 → 变了；换一台路由器插原口 → 还是原来的编号。
+
+出现「认证失败：ac_id 用错了」时用 `szunet detect` 看当前识别出的接入点。原理解析见
+[docs/blog/ac_id-接入点编号.md](docs/blog/ac_id-接入点编号.md)。
+</details>
+
+<details>
+<summary><b>杀毒软件报警</b></summary>
+
+这是个没有数字签名的单文件程序，属于常见误报。但**不要把安全软件的所有提示都笼统当成误报**：
+代码是开源的，可以自己看、自己编译（`go build`）后比对行为。
+</details>
+
+<details>
+<summary><b>关掉浏览器窗口，程序还在跑吗</b></summary>
+
+关掉**所有**应用窗口约 10 秒后自动退出；期间刷新页面不会结束服务。想立即退出用
+「设置 → 退出应用」。想只起服务、不弹窗口，启动 `szudesktop.exe` 时加 `--no-open`。
+</details>
+
+<details>
+<summary><b>会不会在后台自动重连</b></summary>
+
+不会。要不要登录由你在登录页决定，程序不会在背后周期性发认证请求。
+</details>
+
+<details>
+<summary><b>账号密码存在哪</b></summary>
+
+Windows 下由 DPAPI 加密，只有这台机器的当前账户能解开，不明文落盘。
+**认证成功且勾选「记住账号密码」后才会保存**，密码错误时不会覆盖原来存好的凭据。
+随时可以「忘掉账号」。
+</details>
+
+---
+
+## 安全与隐私
+
+- **不收集任何数据**：没有 telemetry，没有埋点，所有内容只留在本机
+- **凭据本地加密**：Windows DPAPI，换机器或换用户都解不开
+- **不代替你提交写操作**：预约、选课、付款这类动作，只做入口与提醒，最终由你在官方系统点确认
+- **不做绕过计费或共享上网的功能**，请遵守学校网络使用规定
+- **官方业务只走预设来源**：公告只读取学校公开页面，不提供任意网址代理
+
+---
 
 ## 构建与验证
 
-需要 Go（版本见 go.mod）、Python 3 和 Node.js。
+需要 Go（版本见 `go.mod`）、Python 3 和 Node.js。
 
 ```text
-python desktop/sync-assets.py
-node desktop/check-ui.mjs
-node desktop/check-campus.mjs
-go test ./...
-go vet ./...
-python desktop/build-windows.py
-python desktop/smoke_windows.py
-python desktop/make_release.py
+python desktop/sync-assets.py      # 同步界面资源
+node   desktop/check-ui.mjs        # 界面规则回归
+node   desktop/check-campus.mjs    # 校园服务与成绩导入回归
+go vet ./... && go test ./...      # 静态检查与单元测试
+python desktop/build-windows.py    # 构建 Windows 桌面版
+python desktop/smoke_windows.py    # 整机冒烟
+python desktop/make_release.py     # 生成发布包
 ```
 
-默认桌面构建排除实验 VPN 协议与旧版第三方游戏原型美术，仅提供官方 WebVPN 链接。界面恢复原有风格，沿用项目花草和 SVG；Fusion Pixel 字体与 OFL 声明随包提供。实验源码仍保留供来源核验和协议研究，不能按已验收功能宣传。
+界面唯一源文件是 `desktop/index.html` 与 `desktop/assets/garden/`，
+构建产物不要手改。默认桌面构建**排除实验 VPN 协议**与未核实的第三方游戏原型美术，
+只提供官方 WebVPN 入口；实验源码保留供来源核验与协议研究，不能按已验收功能宣传。
 
-命令行入口是 `cmd/szunet`，使用 `go build -o dist/szunet.exe ./cmd/szunet` 编译。可使用 `--help` 查看命令；不要将真实账号密码写入共享脚本或日志。
+---
 
-## 当前边界
+## 致谢
 
-校内服务器适合后续公告、服务目录、共享校历、通知订阅和自愿开启的存档同步，本版尚未部署远程后端，公开公告由本机按需读取并缓存。真实校园网认证仍需在相应网络环境实测；自动化测试使用模拟网关和隔离存档。
+- [Fusion Pixel Font（缝合像素字体）](https://github.com/TakWolf/fusion-pixel-font) ——
+  TakWolf，SIL Open Font License 1.1，声明随包附在 `FONT-LICENSE-OFL.txt`
+- [Sleepstars/SZU-login](https://github.com/Sleepstars/SZU-login) ——
+  深澜 xEncode 实现的来源归属保留在 [LICENSE](LICENSE) 中
+- [Clash Verge Rev](https://github.com/clash-verge-rev/clash-verge-rev) 与
+  [福大助手](https://github.com/west2-online/fzuhelper-app) —— 界面层级与校园服务组织的参考
 
-成绩、余额、课表和预约状态尚未自动同步；成绩导入不解析 PDF / 图片 / XLSX。已在官方网页登录验证社区静音舱场地与时段，但应用内实时空闲查询和提交预约仍未接入，本机提醒不代表预约成功。本版没有数字签名；不要把所有安全软件提示笼统当成误报。
+---
 
-许可与第三方声明见 [LICENSE](LICENSE)。深澜 xEncode 的来源归属保留在声明中；未核实的实验 VPN 来源问题记录在唯一维护文档中。
+## 许可
+
+MIT，见 [LICENSE](LICENSE)。
+
+其中第三方组件的原有许可不受本项目 MIT 替代：Fusion Pixel 字体遵循 OFL 1.1；
+实验 VPN 模块的第三方来源与授权范围仍在核对中，默认桌面构建不包含该模块。
+EasyConnect 等第三方名称的权利归各自权利人所有。
