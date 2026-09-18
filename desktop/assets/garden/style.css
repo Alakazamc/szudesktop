@@ -199,3 +199,18 @@ body[data-motion=off] * { animation: none !important; transition: none !importan
 #activity-bar[hidden] { display:none; }
 .profile-line { color:var(--muted); font-size:13px; }
 #saved-account:not([hidden]) { display:block; overflow-wrap:anywhere; }
+.campus-booking,.campus-feed { margin-bottom:24px; }
+.campus-booking { border-top:6px solid var(--wood-dark); }
+.campus-booking details,.card details { margin:18px 0; padding:12px 0; border-top:1px dashed var(--wood-dark); }
+.card summary { cursor:pointer; font-weight:700; }
+.card details[open] summary { margin-bottom:14px; }
+.card textarea { box-sizing:border-box; width:100%; max-width:100%; resize:vertical; min-height:130px; padding:12px; font:inherit; color:inherit; border:2px solid var(--wood-dark); background:var(--paper); line-height:1.6; }
+.campus-notices,.campus-reminders { list-style:none; padding:0; }
+.campus-notices li { display:grid; grid-template-columns:95px minmax(0,1fr); gap:16px; padding:12px 0; border-bottom:1px dashed var(--wood-dark); }
+.campus-notices time { font-size:13px; color:var(--muted); }
+.campus-notices a { line-height:1.6; overflow-wrap:anywhere; }
+.campus-reminders li { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 0; border-bottom:1px dashed var(--wood-dark); }
+.campus-reminders p { font-size:13px; color:var(--muted); }
+.course-source { display:block; margin-top:5px; color:var(--muted); font-size:12px; max-width:280px; overflow-wrap:anywhere; }
+.service-directory-title { margin-top:32px; }
+@media(max-width:620px) { .campus-notices li { grid-template-columns:1fr; gap:4px; }.campus-reminders li { align-items:flex-start; flex-direction:column; }.campus-feed select { max-width:100%; } }
