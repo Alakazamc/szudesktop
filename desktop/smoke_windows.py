@@ -41,6 +41,17 @@ with tempfile.TemporaryDirectory(prefix='szudesktop-smoke-') as cfg:
             time.sleep(.25)
         else: raise RuntimeError('server did not start')
         check('test process is alive',proc.poll() is None)
+        duplicate=subprocess.Popen([str(EXE),'--no-open','--no-auto-login'],env=dict(os.environ,SZUNET_CONFIG_DIR=cfg),stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        try:
+            duplicate.wait(timeout=10)
+            check('duplicate launch reuses instance',duplicate.returncode==0 and proc.poll() is None)
+        finally:
+            if duplicate.poll() is None: duplicate.kill();duplicate.wait()
+        check('instance rejects wrong token',request('/api/instance',{'token':'wrong','open':False})[0]==403)
+        check('window API rejects cross origin',request('/api/window',{'id':'smoke-window-primary'},headers={'Origin':'https://example.com'})[0]==403)
+        check('window heartbeat accepted',request('/api/window',{'id':'smoke-window-primary'})[0]==200)
+        check('second window heartbeat accepted',request('/api/window',{'id':'smoke-window-second'})[0]==200)
+        check('second window close accepted',request('/api/window',{'id':'smoke-window-second','closing':True})[0]==200)
         for name in ['/api/status','/api/diag','/api/credential','/api/vpn/status','/api/campus/status']:
             check(name,isinstance(get(name),dict))
         check('default VPN unavailable',get('/api/vpn/status')['state']=='unavailable')
@@ -80,6 +91,13 @@ with tempfile.TemporaryDirectory(prefix='szudesktop-smoke-') as cfg:
             except OSError: time.sleep(.25)
         else: raise RuntimeError('restart failed')
         check('save survives process and port change',w['revision']==1 and w['data']=={'test':'restart'})
+        stream_conn=http.client.HTTPConnection('127.0.0.1',port,timeout=5)
+        stream_conn.request('GET','/api/window-stream?id=smoke-window-stream')
+        stream=stream_conn.getresponse()
+        check('window stream connected',stream.status==200 and stream.readline()==b': alive\n')
+        stream.close();stream_conn.close()
+        proc.wait(timeout=16)
+        check('closing last window exits the process',proc.returncode==0)
     finally:
         if proc.poll() is None:
             proc.terminate()

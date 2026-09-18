@@ -194,3 +194,8 @@ body[data-motion=off] * { animation: none !important; transition: none !importan
   .companion-dialog { padding: 13px 13px 10px; gap: 12px; }.companion-copy p { font-size: 14px; }.companion-portrait { width: 52px; height: 62px; }.companion-portrait svg { width: 44px; height: 48px; }.dialog-arrow { display: none; }footer { flex-direction: column; gap: 3px; }
 }
 @media(max-width:370px) { .mast,.shell { margin-left: 9px; margin-right: 9px; }.hero-garden { display: none; }nav .sprite { display: none; }.links { grid-template-columns: 1fr; }.market-item { gap: 8px; }.market-item > .sprite { width: 28px; height: 28px; } }
+
+#activity-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; border:3px solid var(--wood-dark); background:var(--paper); padding:8px 16px; font-family:var(--pixel); }
+#activity-bar[hidden] { display:none; }
+.profile-line { color:var(--muted); font-size:13px; }
+#saved-account:not([hidden]) { display:block; overflow-wrap:anywhere; }
