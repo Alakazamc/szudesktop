@@ -23,7 +23,7 @@ import (
 	"github.com/Alakazamc/szudesktop/internal/portal"
 )
 
-const version = "beta0.4"
+const version = "beta0.5"
 
 // options 是所有子命令共用的参数。
 type options struct {
@@ -170,6 +170,18 @@ func pickZone(o *options) (portal.Zone, *portal.DetectResult) {
 	}
 }
 
+// authenticationZone keeps explicit user choices ahead of automatic probing.
+func authenticationZone(o *options, det *portal.DetectResult) portal.Zone {
+	switch o.zone {
+	case "teaching", "srun":
+		return portal.ZoneTeaching
+	case "dorm", "dormitory", "drcom":
+		return portal.ZoneDorm
+	default:
+		return det.AuthenticationZone()
+	}
+}
+
 func cmdLogin(args []string) {
 	fs := flag.NewFlagSet("login", flag.ExitOnError)
 	var o options
@@ -181,25 +193,10 @@ func cmdLogin(args []string) {
 		fail(err)
 	}
 
-	zone, det := pickZone(&o)
+	det := portal.Probe()
+	zone := authenticationZone(&o, det)
 
 	switch zone {
-	case portal.ZoneOnline:
-		// 能上外网不代表账号已经认证过：有线、手机热点、别人留下的会话
-		// 都会让外网通。所以这里不能直接说"不用认证"，要按指纹认出到底
-		// 该走哪套协议，真发一次认证请求，让服务端自己回答。
-		if target := portal.FingerprintZone(); target != "" {
-			res, err := loginByZone(target, &o, user, pass)
-			reportResult(res, err, target, o.asJSON, o.verbose)
-			return
-		}
-		if o.asJSON {
-			printJSON(map[string]any{"ok": true, "zone": zone,
-				"message": "已经能上外网，且探不到校内认证门户，不需要认证"})
-			return
-		}
-		fmt.Println("当前已经能上外网，探不到校内认证门户，不需要认证")
-
 	case portal.ZoneTeaching, portal.ZoneDorm:
 		res, err := loginByZone(zone, &o, user, pass)
 		reportResult(res, err, zone, o.asJSON, o.verbose)
@@ -267,7 +264,7 @@ func cmdLogout(args []string) {
 		fail(err)
 	}
 
-	zone, _ := pickZone(&o)
+	zone := authenticationZone(&o, portal.Probe())
 
 	switch zone {
 	case portal.ZoneTeaching:

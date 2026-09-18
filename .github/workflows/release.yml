@@ -21,6 +21,8 @@ jobs:
           go-version-file: go.mod
       - name: 同步桌面资源
         run: python desktop/sync-assets.py
+      - name: 庭院规则回归
+        run: node desktop/check-ui.mjs
       - name: 静态检查
         run: go vet ./...
       - name: 单元测试

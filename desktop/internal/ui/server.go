@@ -6,6 +6,7 @@
 package ui
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -50,10 +51,13 @@ type Options struct {
 
 // Server 是本地服务。
 type Server struct {
-	opts   Options
-	store  credential.Store
-	vpn    *vpnManager
-	campus *campusGateway
+	opts      Options
+	store     credential.Store
+	vpn       *vpnManager
+	campus    *campusGateway
+	probe     func() *portal.DetectResult
+	workspace *workspaceStore
+	shutdown  func()
 
 	mu       sync.Mutex
 	lastErr  string
@@ -75,7 +79,7 @@ func New(opts Options) *Server {
 	if err != nil {
 		campus = &campusGateway{}
 	}
-	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager(), campus: campus}
+	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager(), campus: campus, probe: portal.Probe, workspace: newWorkspaceStore()}
 }
 
 func parseZone(raw string) (portal.Zone, bool) {
@@ -110,7 +114,7 @@ func (s *Server) loginZone(requested string) portal.Zone {
 	if zone, ok := parseZone(s.opts.Zone); ok {
 		return zone
 	}
-	return portal.Probe().Zone
+	return s.probe().AuthenticationZone()
 }
 
 // creds 按「命令行参数 > 已保存的凭据」的顺序取账号密码。
@@ -134,7 +138,16 @@ func (s *Server) creds() (string, string, error) {
 
 // Run 起服务，顺便按需自动登录，然后在浏览器里打开页面。
 func (s *Server) Run() error {
-	ln, err := net.Listen("tcp", s.opts.Addr)
+	addr := s.opts.Addr
+	if addr == "" {
+		addr = "127.0.0.1:0"
+	}
+	host, _, parseErr := net.SplitHostPort(addr)
+	ip := net.ParseIP(host)
+	if parseErr != nil || ip == nil || !ip.IsLoopback() {
+		return fmt.Errorf("桌面服务只允许监听本机回环 IP，例如 127.0.0.1:0")
+	}
+	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("端口被占用或没有权限: %w", err)
 	}
@@ -172,7 +185,17 @@ func (s *Server) Run() error {
 	}
 
 	srv := &http.Server{Handler: mux, ReadHeaderTimeout: 5 * time.Second}
-	return srv.Serve(ln)
+	s.shutdown = func() {
+		time.Sleep(150 * time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(ctx)
+	}
+	err = srv.Serve(ln)
+	if err == http.ErrServerClosed {
+		return nil
+	}
+	return err
 }
 
 // routes 注册路由。
@@ -223,17 +246,19 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 		fileServer.ServeHTTP(w, r)
 	})
 
-	mux.HandleFunc("/api/status", s.handleStatus)
-	mux.HandleFunc("/api/login", s.handleLogin)
-	mux.HandleFunc("/api/logout", s.handleLogout)
-	mux.HandleFunc("/api/diag", s.handleDiag)
-	mux.HandleFunc("/api/credential", s.handleCredential)
-	mux.HandleFunc("/api/vpn/status", s.handleVPNStatus)
-	mux.HandleFunc("/api/vpn/connect", s.handleVPNConnect)
-	mux.HandleFunc("/api/vpn/auth", s.handleVPNAuth)
-	mux.HandleFunc("/api/vpn/disconnect", s.handleVPNDisconnect)
-	mux.HandleFunc("/api/vpn/proxy", s.handleVPNProxy)
-	mux.HandleFunc("/api/campus/status", s.handleCampusStatus)
+	mux.HandleFunc("/api/workspace", protectAPI(s.handleWorkspace, http.MethodGet, http.MethodPost))
+	mux.HandleFunc("/api/shutdown", protectAPI(s.handleShutdown, http.MethodPost))
+	mux.HandleFunc("/api/status", protectAPI(s.handleStatus, http.MethodGet))
+	mux.HandleFunc("/api/login", protectAPI(s.handleLogin, http.MethodPost))
+	mux.HandleFunc("/api/logout", protectAPI(s.handleLogout, http.MethodPost))
+	mux.HandleFunc("/api/diag", protectAPI(s.handleDiag, http.MethodGet))
+	mux.HandleFunc("/api/credential", protectAPI(s.handleCredential, http.MethodGet, http.MethodPost, http.MethodDelete))
+	mux.HandleFunc("/api/vpn/status", protectAPI(s.handleVPNStatus, http.MethodGet))
+	mux.HandleFunc("/api/vpn/connect", protectAPI(s.handleVPNConnect, http.MethodPost))
+	mux.HandleFunc("/api/vpn/auth", protectAPI(s.handleVPNAuth, http.MethodPost))
+	mux.HandleFunc("/api/vpn/disconnect", protectAPI(s.handleVPNDisconnect, http.MethodPost))
+	mux.HandleFunc("/api/vpn/proxy", protectAPI(s.handleVPNProxy, http.MethodPost))
+	mux.HandleFunc("/api/campus/status", protectAPI(s.handleCampusStatus, http.MethodGet))
 }
 
 /* ---------- 接口 ---------- */
@@ -264,7 +289,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	if credErr == nil {
 		out.Saved = true
-		out.Username = user
+		// Account identifiers are private by default; reveal only via an explicit user action.
 		if zone != portal.ZoneOnline && zone != portal.ZoneOutside {
 			var st *portal.OnlineStatus
 			var err error
@@ -342,6 +367,9 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 // acID 留空时按"这次填的 > 上次这张网成功的 > 现场探测"的顺序自动定，
 // 确认对了还会记下来，所以正常情况下用户根本不需要知道有这个东西。
 func (s *Server) doLogin(user, pass, requestedZone, acID string) portal.Result {
+	if (user == "") != (pass == "") {
+		return s.remember("请同时填写本次账号和密码，或将两项都留空使用已保存凭据")
+	}
 	if user == "" || pass == "" {
 		savedUser, savedPass, err := s.creds()
 		if err != nil {
@@ -361,39 +389,12 @@ func (s *Server) doLogin(user, pass, requestedZone, acID string) portal.Result {
 	s.mu.Unlock()
 
 	switch zone {
-	case portal.ZoneOnline:
-		s.clearErr()
-		// 老的写法到这里就 return「已经能上外网，不用再认证」，
-		// 结果是：明明点的是登录，程序却什么都没做就报成功。
-		// 用户看到的是"点了没反应/像是登录了但没生效"。
-		//
-		// 关键点：**能上外网 ≠ 你的账号在这个区已经认证过**。
-		// 比如本来就连着外网（有线、热点、别人的会话残留），
-		// 这时点登录是希望把自己的会话建立起来。
-		//
-		// 所以这里再判一层：如果指纹明确指向某个区，就按那套协议真的登录一次；
-		// 只有指纹也判不出区（真校外 / 校园网故障）才按"不用认证"处理。
-		if target := s.zoneFromFingerprint(); target != "" {
-			return s.loginWithProtocol(target, user, pass, acID)
-		}
-		return portal.Result{OK: true, Message: "已经能上外网，不用再认证"}
-
 	case portal.ZoneTeaching, portal.ZoneDorm:
 		return s.loginWithProtocol(zone, user, pass, acID)
 
 	default:
-		return s.remember("判断不出你在哪个区。确认一下是不是连着校园网（SZU_WLAN）")
+		return s.remember("未能确认校园网认证区域，尚未验证账号密码。请确认已连接校园网，或手动选择教学区 / 宿舍区。外网可用不代表账号认证成功")
 	}
-}
-
-// zoneFromFingerprint 用协议指纹判断该走哪套协议；判不出来返回空。
-//
-// 和 loginZone 的区别：这里不看"外网通不通"，只看"谁真的提供了认证接口"。
-// 已经联网、但想知道"我这个账号该用哪套协议登录"时用这个。
-//
-// 判区规则统一放在 portal.FingerprintZone()，免得命令行和界面两处走偏。
-func (s *Server) zoneFromFingerprint() portal.Zone {
-	return portal.FingerprintZone()
 }
 
 // loginWithProtocol 按指定区域真打一次认证请求。教学区和宿舍区各一套协议。
@@ -432,7 +433,7 @@ func (s *Server) loginWithProtocol(zone portal.Zone, user, pass, acID string) po
 		s.clearErr()
 		return *res
 	}
-	return s.remember("判断不出你在哪个区。确认一下是不是连着校园网（SZU_WLAN）")
+	return s.remember("未能确认校园网认证区域，尚未验证账号密码。请确认已连接校园网，或手动选择教学区 / 宿舍区。外网可用不代表账号认证成功")
 }
 
 // attachAcIDCache 让客户端复用上次这张网成功的 ac_id，成功后写回缓存。
@@ -462,6 +463,10 @@ func attachAcIDCache(c *portal.SrunClient, useCache bool) {
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	req := readCredRequest(r)
 	user, pass := req.Username, req.Password
+	if (user == "") != (pass == "") {
+		writeJSON(w, loginResp{OK: false, Message: "请同时填写本次账号和密码，或将两项都留空使用已保存凭据"})
+		return
+	}
 	if user == "" || pass == "" {
 		savedUser, savedPass, err := s.creds()
 		if err != nil {
@@ -567,7 +572,7 @@ func (s *Server) handleCredential(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, map[string]any{
 			"saved":      true,
-			"username":   c.Username,
+			"username":   revealedUsername(r, c.Username),
 			"store_desc": s.store.Describe(),
 		})
 
@@ -685,3 +690,10 @@ func openBrowser(url string) error {
 }
 
 var _ = log.Println
+
+func revealedUsername(r *http.Request, username string) string {
+	if r.URL.Query().Get("reveal") == "1" {
+		return username
+	}
+	return ""
+}

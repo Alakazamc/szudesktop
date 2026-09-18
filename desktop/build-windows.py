@@ -63,9 +63,13 @@ print("   index.html  %d 字节  %s" % (size(MASTER), md5(MASTER)[:10]))
 
 # 2. assets/ → internal/ui/assets/（go:embed 不能往上一级跳，必须复制一份）
 step("同步 assets/ 到 internal/ui/assets/")
+assert os.path.realpath(UI_ASSETS) == os.path.join(os.path.realpath(DESKTOP), "internal", "ui", "assets")
 if os.path.isdir(UI_ASSETS):
     shutil.rmtree(UI_ASSETS)
-shutil.copytree(ASSETS, UI_ASSETS)
+os.makedirs(UI_ASSETS)
+for name in ("index.html", "szudesktop.ico"):
+    shutil.copy2(os.path.join(ASSETS,name), os.path.join(UI_ASSETS,name))
+shutil.copytree(os.path.join(ASSETS,"garden"),os.path.join(UI_ASSETS,"garden"))
 files = sum(len(f) for _, _, f in os.walk(UI_ASSETS))
 total = sum(os.path.getsize(os.path.join(r, f)) for r, _, fs in os.walk(UI_ASSETS) for f in fs)
 print("   %d 个文件，%.1f KB" % (files, total / 1024))
@@ -93,7 +97,7 @@ VER = read_version()
 # 4. 编译
 step("编译 Windows 版")
 env = dict(os.environ, CGO_ENABLED="0", GOOS="windows", GOARCH="amd64")
-r = subprocess.run(["go", "build", "-trimpath", "-ldflags", "-s -w",
+r = subprocess.run(["go", "build", "-trimpath", "-ldflags", "-s -w -H=windowsgui",
                     "-o", OUT, "./desktop/cmd/szudesktop"],
                    cwd=ROOT, env=env)
 if r.returncode != 0:

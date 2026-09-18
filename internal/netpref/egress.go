@@ -65,6 +65,7 @@ func firstField(out string) string {
 
 func runOutput(name string, args ...string) string {
 	cmd := exec.Command(name, args...)
+	hideProcess(cmd)
 	out, err := cmd.Output()
 	if err != nil {
 		return ""
