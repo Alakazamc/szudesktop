@@ -299,7 +299,7 @@ C 类须验证各系统会话；D1/D2 不是“一次完成全部解锁”。预
 - **未验收**：实际教学区/宿舍账号登录与注销、旧进度迁移、校内后端部署、实验 VPN、数字签名、长期经济平衡。不能将候选版宣传成所有学校业务均已接入。
 - 发布候选产物：`dist/szudesktop-windows-amd64.exe`、`dist/szudesktop-beta0.5-windows-amd64.zip` 与旁边 SHA256。发布包不含开发测试存档。
 - 可用宣传表述：“szuDesktop beta0.5：校园网工具、官方服务导航与一座可离线养成的荔枝庭院。支持伙伴照料、种植经营、学习专注和本机备份。Windows 单文件，无需安装。”加注非官方测试版与个人学校业务仍以官方入口为准。
-- **GitHub 交付方式**：PR #1 已合并；本次风格恢复使用 `fix/restore-pixel-campus` 创建后续 PR。源码审核与正式发布分开，本轮不打 tag、不发布 Release。
+- **GitHub 交付方式**：PR #1 已合并；本次风格恢复已推送 [PR #2](https://github.com/Alakazamc/szudesktop/pull/2)（`fix/restore-pixel-campus`）。源码审核与正式发布分开，本轮不打 tag、不发布 Release。
 
 
 ## 11. 恢复原有星露谷式界面并精修（2026-09-18）
@@ -310,7 +310,7 @@ C 类须验证各系统会话；D1/D2 不是“一次完成全部解锁”。预
 - **精修**：缩减招牌区和庭院说明占位，资源与每日补给合并；统一像素边框和按钮按压反馈；长说明与输入保持清晰。小屋恢复木墙、地板、窗框和地毯，农田加入草地与土垄，图鉴和市场沿用同一套木纸样式。
 - **保留修复**：自然滚动、窄窗布局、卡号默认隐藏、GUI 启动、稳定存档、伙伴农田经营与学习工具均保留；荔宝对话框位于文档正常流，不遮挡操作。
 - **字体与素材**：复用本地 Fusion Pixel 字体，并附上[官方 OFL 声明](https://github.com/TakWolf/fusion-pixel-font/blob/master/LICENSE-OFL)。原版 SVBold/SVThin 和来源未核实的游戏贴图继续排除，不妨碍恢复风格。花草来自仓库自身 `gen_flora.py` 和已有 `art/flora` 绘制结果。
-- **交付方式**：核查时发现 PR #1 已合并，因此从最新 main 建立 `fix/restore-pixel-campus` 后续修正 PR。仍只维护本文，不建立第二份视觉任务清单。
+- **交付方式**：核查时发现 PR #1 已合并，因此从最新 main 建立 `fix/restore-pixel-campus`，已提交 [后续修正 PR #2](https://github.com/Alakazamc/szudesktop/pull/2)。仍只维护本文，不建立第二份视觉任务清单。
 - **本轮验收通过**：Node 10 组规则检查、Windows GUI 重新构建、实际 exe 冒烟全通过；字体样式表与全部分片、许可、原创花草均可从成品读取。卡号默认隐藏、跨来源拒绝、正常退出和换进程/端口恢复存档均通过。
 - **实际画面与交互**：1366×768 和 1440×900 检查首页/伙伴/农田；390×844 检查网络与农田滚到底、服务搜索，无横向溢出，卡号输入为空。每日补给与摸摸头能正确更新资源、亲密度和日志。浏览器 error 日志为空。截图已更新为 `docs/screenshot-desktop.png` 和 `docs/screenshot-garden.png`。
 - **测试脚本修正**：Windows 下 urllib 关闭连接的方式偶发导致来源拒绝/退出检查收到连接重置；改用直接回环 HTTP 连接，避开系统代理并完整读取响应。应用来源保护未放宽。
