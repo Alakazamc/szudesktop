@@ -44,7 +44,7 @@ func webLogin(server, username, password string) (string, error) {
 	if twfId == "" {
 		return "", errors.New("登录页没有返回 TwfID，可能不是深信服网关：" + firstLine(body))
 	}
-	logf("info", "会话 TWFID=%s", twfId)
+	logf("info", "已获取登录会话")
 
 	rsaKey := sub(reRSAKey)
 	rsaExp := sub(reRSAExp)

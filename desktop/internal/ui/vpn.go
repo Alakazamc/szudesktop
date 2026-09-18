@@ -1,3 +1,5 @@
+//go:build campusvpn
+
 package ui
 
 import (

@@ -186,16 +186,31 @@ func zoneFingerprintNote(r *DetectResult) string {
 // "探不到校内认证门户"。
 func FingerprintZone() Zone {
 	r := Probe()
-	switch {
-	case r.SrunUsable:
-		// 两套都有指纹时优先深澜：教学区是主场景，而宿舍区未认证时
-		// 宿舍门户在教学区也能连上，容易造成两边都通。
-		return ZoneTeaching
-	case r.DormUsable:
-		return ZoneDorm
-	default:
+	if !r.SrunUsable && !r.DormUsable {
 		return ""
 	}
+	return r.AuthenticationZone()
+}
+
+// AuthenticationZone selects an authentication protocol from an existing probe.
+// Internet connectivity alone never identifies an authenticated campus session.
+func (r *DetectResult) AuthenticationZone() Zone {
+	if r == nil {
+		return ZoneUnknown
+	}
+	if r.Probed {
+		// Match classify: when both fingerprints exist, use the dorm protocol.
+		if r.DormUsable {
+			return ZoneDorm
+		}
+		if r.SrunUsable {
+			return ZoneTeaching
+		}
+	}
+	if !r.InternetOK && (r.Zone == ZoneTeaching || r.Zone == ZoneDorm) {
+		return r.Zone
+	}
+	return ZoneUnknown
 }
 
 const dnsWarning = "注意：net.szu.edu.cn 这个域名解析不出来。如果开着代理或 DoH，" +

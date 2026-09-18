@@ -18,7 +18,7 @@ import (
 	"github.com/Alakazamc/szudesktop/internal/portal"
 )
 
-const version = "beta0.4"
+const version = "beta0.5"
 
 func main() {
 	fs := flag.NewFlagSet("szudesktop", flag.ExitOnError)
@@ -55,6 +55,9 @@ func main() {
 
 	if err := srv.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "启动失败: %v\n", err)
+		if !*noOpen {
+			startupError("启动失败：" + err.Error())
+		}
 		os.Exit(1)
 	}
 }

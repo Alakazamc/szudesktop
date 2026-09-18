@@ -20,9 +20,13 @@ DST = os.path.join(ROOT, "internal", "ui", "assets")
 # index.html 的唯一源文件在 desktop/；assets/ 下那份是生成物。
 shutil.copy2(MASTER, os.path.join(SRC, "index.html"))
 
+assert os.path.realpath(DST) == os.path.join(os.path.realpath(ROOT), "internal", "ui", "assets")
 if os.path.isdir(DST):
     shutil.rmtree(DST)
-shutil.copytree(SRC, DST)
+os.makedirs(DST)
+for name in ("index.html", "szudesktop.ico"):
+    shutil.copy2(os.path.join(SRC,name), os.path.join(DST,name))
+shutil.copytree(os.path.join(SRC,"garden"), os.path.join(DST,"garden"))
 
 files = sum(len(f) for _, _, f in os.walk(DST))
 size = sum(os.path.getsize(os.path.join(r, f))
