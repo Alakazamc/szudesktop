@@ -44,5 +44,12 @@ SHA1 chksum）来自深澜门户页面自带的 JavaScript，本项目只是用 
 beta0.5 默认桌面构建不包含该模块；不要将其作为已完成授权核验的发行功能。
 EasyConnect 等第三方名称的权利归各自权利人所有。
 
-beta0.5 默认界面使用项目 SVG、系统字体和本轮生成的校园背景，不打包旧版
-assets/art、assets/fonts 中的第三方原型素材。游戏机制参考不构成代码或素材复制。
+beta0.5 默认界面使用项目 SVG、项目自行绘制的 flora 花草、系统字体、
+Fusion Pixel 开源字体和本轮生成的校园背景，不打包旧版游戏原型美术及 SVBold/SVThin 字体。
+木质边框、纸张、像素按钮和木屋场景由 CSS 实现。游戏机制参考不构成代码或素材复制。
+
+Fusion Pixel Font / 缝合像素字体
+Copyright (c) 2022, TakWolf (https://takwolf.com).
+来源：https://github.com/TakWolf/fusion-pixel-font
+采用 SIL Open Font License 1.1；完整声明随包附在 FONT-LICENSE-OFL.txt，
+源码副本为 desktop/assets/fonts/LICENSE-OFL.txt。字体本身不受本项目 MIT 许可替代。

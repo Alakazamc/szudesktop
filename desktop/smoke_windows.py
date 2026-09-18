@@ -1,5 +1,5 @@
 """Run the actual GUI executable with an isolated config and no real authentication."""
-import json, os, socket, struct, subprocess, sys, tempfile, time, urllib.request, urllib.error
+import http.client, json, os, re, socket, struct, subprocess, sys, tempfile, time
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
 EXE=Path(sys.argv[1]) if len(sys.argv)>1 else ROOT/'dist/szudesktop-windows-amd64.exe'
@@ -9,13 +9,20 @@ if len(sys.argv)>2: port=int(sys.argv[2])
 else:
     with socket.socket() as sock: sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
 BASE=f'http://127.0.0.1:{port}'
+# Use a direct local HTTP connection: no system proxy and no premature
+# Connection: close while the server is rejecting an unread request body.
 def request(path,data=None,method=None,headers=None):
     h={'Content-Type':'application/json'} if data is not None else {}
     h.update(headers or {})
-    req=urllib.request.Request(BASE+path,data=json.dumps(data).encode() if data is not None else None,method=method,headers=h)
+    body=json.dumps(data).encode() if data is not None else None
+    conn=http.client.HTTPConnection('127.0.0.1',port,timeout=45)
     try:
-        with urllib.request.urlopen(req,timeout=45) as r: return r.status,r.read(),r.headers
-    except urllib.error.HTTPError as e: return e.code,e.read(),e.headers
+        conn.request(method or ('POST' if data is not None else 'GET'),path,body,headers=h)
+        response=conn.getresponse()
+        return response.status,response.read(),response.headers
+    finally:
+        conn.close()
+
 def get(path):
     code,body,_=request(path);assert code==200,(path,code,body);return json.loads(body)
 def check(name,ok):
@@ -34,13 +41,34 @@ with tempfile.TemporaryDirectory(prefix='szudesktop-smoke-') as cfg:
             time.sleep(.25)
         else: raise RuntimeError('server did not start')
         check('test process is alive',proc.poll() is None)
+        duplicate=subprocess.Popen([str(EXE),'--no-open','--no-auto-login'],env=dict(os.environ,SZUNET_CONFIG_DIR=cfg),stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        try:
+            duplicate.wait(timeout=10)
+            check('duplicate launch reuses instance',duplicate.returncode==0 and proc.poll() is None)
+        finally:
+            if duplicate.poll() is None: duplicate.kill();duplicate.wait()
+        check('instance rejects wrong token',request('/api/instance',{'token':'wrong','open':False})[0]==403)
+        check('window API rejects cross origin',request('/api/window',{'id':'smoke-window-primary'},headers={'Origin':'https://example.com'})[0]==403)
+        check('window heartbeat accepted',request('/api/window',{'id':'smoke-window-primary'})[0]==200)
+        check('second window heartbeat accepted',request('/api/window',{'id':'smoke-window-second'})[0]==200)
+        check('second window close accepted',request('/api/window',{'id':'smoke-window-second','closing':True})[0]==200)
         for name in ['/api/status','/api/diag','/api/credential','/api/vpn/status','/api/campus/status']:
             check(name,isinstance(get(name),dict))
+        check('notice source is allowlisted',request('/api/campus/notices?source=https://example.com')[0]==400)
+        check('notices reject cross origin',request('/api/campus/notices?source=undergrad',headers={'Origin':'https://example.com'})[0]==403)
+        check('notices reject POST',request('/api/campus/notices?source=undergrad',{})[0]==405)
         check('default VPN unavailable',get('/api/vpn/status')['state']=='unavailable')
         check('no account exposed in status',get('/api/status')['username']=='')
-        for path,file in [('/',ROOT/'desktop/index.html'),('/assets/garden/app.mjs',ROOT/'desktop/assets/garden/app.mjs'),('/assets/garden/style.css',ROOT/'desktop/assets/garden/style.css'),('/assets/garden/engine.mjs',ROOT/'desktop/assets/garden/engine.mjs'),('/assets/garden/campus.png',ROOT/'desktop/assets/garden/campus.png'),('/assets/szudesktop.ico',ROOT/'desktop/assets/szudesktop.ico')]:
+        for path,file in [('/',ROOT/'desktop/index.html'),('/assets/garden/app.mjs',ROOT/'desktop/assets/garden/app.mjs'),('/assets/garden/style.css',ROOT/'desktop/assets/garden/style.css'),('/assets/garden/engine.mjs',ROOT/'desktop/assets/garden/engine.mjs'),('/assets/garden/campus.mjs',ROOT/'desktop/assets/garden/campus.mjs'),('/assets/garden/campus-ui.mjs',ROOT/'desktop/assets/garden/campus-ui.mjs'),('/assets/garden/campus.png',ROOT/'desktop/assets/garden/campus.png'),('/assets/szudesktop.ico',ROOT/'desktop/assets/szudesktop.ico')]:
             code,body,_=request(path);check('embedded '+path,code==200 and body==file.read_bytes())
+        code,css,_=request('/assets/fonts/fusion-pixel.css')
+        check('pixel font stylesheet packaged',code==200)
+        font_paths=re.findall(r'url\(([^)]+\.woff2)\)',css.decode('utf-8'))
+        check('pixel font subsets complete',len(font_paths)>0 and all(request('/assets/fonts/'+name)[0]==200 for name in font_paths))
+        check('OFL license packaged',b'SIL OPEN FONT LICENSE' in request('/assets/fonts/LICENSE-OFL.txt')[1])
+        check('original flora available',request('/assets/garden/flora/tree.png')[0]==200)
         check('legacy borrowed art not packaged',request('/assets/art/m1.png')[0]==404)
+        check('old game font not packaged',request('/assets/fonts/svbold.ttf')[0]==404)
         credential={'username':'000000','password':'smoke-test-only-not-real'}
         check('save isolated test credential',request('/api/credential',credential)[0]==200)
         check('saved username remains hidden',get('/api/credential')['username']=='')
@@ -66,6 +94,13 @@ with tempfile.TemporaryDirectory(prefix='szudesktop-smoke-') as cfg:
             except OSError: time.sleep(.25)
         else: raise RuntimeError('restart failed')
         check('save survives process and port change',w['revision']==1 and w['data']=={'test':'restart'})
+        stream_conn=http.client.HTTPConnection('127.0.0.1',port,timeout=5)
+        stream_conn.request('GET','/api/window-stream?id=smoke-window-stream')
+        stream=stream_conn.getresponse()
+        check('window stream connected',stream.status==200 and stream.readline()==b': alive\n')
+        stream.close();stream_conn.close()
+        proc.wait(timeout=16)
+        check('closing last window exits the process',proc.returncode==0)
     finally:
         if proc.poll() is None:
             proc.terminate()

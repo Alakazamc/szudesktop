@@ -58,6 +58,8 @@ type Server struct {
 	probe     func() *portal.DetectResult
 	workspace *workspaceStore
 	shutdown  func()
+	instance  *desktopInstance
+	windows   *windowSessions
 
 	mu       sync.Mutex
 	lastErr  string
@@ -79,7 +81,7 @@ func New(opts Options) *Server {
 	if err != nil {
 		campus = &campusGateway{}
 	}
-	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager(), campus: campus, probe: portal.Probe, workspace: newWorkspaceStore()}
+	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager(), campus: campus, probe: portal.Probe, workspace: newWorkspaceStore(), windows: newWindowSessions()}
 }
 
 func parseZone(raw string) (portal.Zone, bool) {
@@ -138,6 +140,16 @@ func (s *Server) creds() (string, string, error) {
 
 // Run 起服务，顺便按需自动登录，然后在浏览器里打开页面。
 func (s *Server) Run() error {
+	instance, existing, err := acquireInstance(filepath.Dir(s.workspace.path), !s.opts.NoOpen)
+	if err != nil {
+		return err
+	}
+	if existing {
+		return nil
+	}
+	s.instance = instance
+	defer instance.close()
+
 	addr := s.opts.Addr
 	if addr == "" {
 		addr = "127.0.0.1:0"
@@ -152,6 +164,7 @@ func (s *Server) Run() error {
 		return fmt.Errorf("端口被占用或没有权限: %w", err)
 	}
 
+	defer ln.Close()
 	sub, err := fs.Sub(assetsFS, "assets")
 	if err != nil {
 		return err
@@ -161,6 +174,9 @@ func (s *Server) Run() error {
 	s.routes(mux, sub)
 
 	url := "http://" + ln.Addr().String()
+	if err := instance.publish(url); err != nil {
+		return err
+	}
 	fmt.Printf("szuDesktop 已启动: %s\n", url)
 
 	if s.opts.AutoLogin {
@@ -191,6 +207,9 @@ func (s *Server) Run() error {
 		defer cancel()
 		_ = srv.Shutdown(ctx)
 	}
+	done := make(chan struct{})
+	defer close(done)
+	go s.watchWindows(done)
 	err = srv.Serve(ln)
 	if err == http.ErrServerClosed {
 		return nil
@@ -248,6 +267,9 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 
 	mux.HandleFunc("/api/workspace", protectAPI(s.handleWorkspace, http.MethodGet, http.MethodPost))
 	mux.HandleFunc("/api/shutdown", protectAPI(s.handleShutdown, http.MethodPost))
+	mux.HandleFunc("/api/window", protectAPI(s.handleWindow, http.MethodPost))
+	mux.HandleFunc("/api/window-stream", protectAPI(s.handleWindowStream, http.MethodGet))
+	mux.HandleFunc("/api/instance", protectAPI(s.handleInstance, http.MethodPost))
 	mux.HandleFunc("/api/status", protectAPI(s.handleStatus, http.MethodGet))
 	mux.HandleFunc("/api/login", protectAPI(s.handleLogin, http.MethodPost))
 	mux.HandleFunc("/api/logout", protectAPI(s.handleLogout, http.MethodPost))
@@ -259,6 +281,7 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 	mux.HandleFunc("/api/vpn/disconnect", protectAPI(s.handleVPNDisconnect, http.MethodPost))
 	mux.HandleFunc("/api/vpn/proxy", protectAPI(s.handleVPNProxy, http.MethodPost))
 	mux.HandleFunc("/api/campus/status", protectAPI(s.handleCampusStatus, http.MethodGet))
+	mux.HandleFunc("/api/campus/notices", protectAPI(s.handleCampusNotices, http.MethodGet))
 }
 
 /* ---------- 接口 ---------- */

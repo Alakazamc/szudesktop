@@ -28,6 +28,15 @@ for name in ("index.html", "szudesktop.ico"):
     shutil.copy2(os.path.join(SRC,name), os.path.join(DST,name))
 shutil.copytree(os.path.join(SRC,"garden"), os.path.join(DST,"garden"))
 
+# Only the OFL Fusion font is included; the old game fonts remain excluded.
+font_source = os.path.join(SRC, "fonts")
+font_target = os.path.join(DST, "fonts")
+os.makedirs(font_target, exist_ok=True)
+font_css = open(os.path.join(font_source, "fusion-pixel.css"), encoding="utf-8").read()
+import re
+font_files = re.findall(r"url\(([^)]+\.woff2)\)", font_css)
+for font_name in ["fusion-pixel.css", "LICENSE-OFL.txt", *font_files]:
+    shutil.copy2(os.path.join(font_source, font_name), os.path.join(font_target, font_name))
 files = sum(len(f) for _, _, f in os.walk(DST))
 size = sum(os.path.getsize(os.path.join(r, f))
            for r, _, fs in os.walk(DST) for f in fs)

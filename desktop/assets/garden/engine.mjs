@@ -10,9 +10,9 @@ export const QUESTS={care:{name:'陪伴伙伴 3 次',target:3,reward:15},plant:{
 export const dayKey=t=>{const d=new Date(t);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 export const level=g=>Math.min(20,1+Math.floor(g.pet.xp/50));
 export function createState(now=Date.now()){
- return {schema:2,profile:{name:'',college:''},preferences:{theme:'day',motion:true},todos:[],courses:[],semester:'',
+ return {schema:2,profile:{name:'',college:''},preferences:{theme:'day',motion:true},todos:[],courses:[],reminders:[],semester:'',
  game:{created:now,last:now,coins:40,food:3,seeds:{radish:4,strawberry:2,blueberry:0,lychee:0},stock:{radish:0,strawberry:0,blueberry:0,lychee:0},
- plots:[{crop:'radish',planted:now,ready:now+60000,watered:false},null,null,'locked','locked','locked'],pet:{name:'荔宝',xp:0,bond:10,hunger:80,energy:85,mood:85,sleeping:false,lastPat:0,lastPlay:0},
+ plots:[{crop:'radish',planted:now,ready:now+60000,watered:false},null,null,'locked','locked','locked'],pet:{name:'栗栗',xp:0,bond:10,hunger:80,energy:85,mood:85,sleeping:false,lastPat:0,lastPlay:0},
  daily:{day:dayKey(now),gift:false,care:0,plant:0,harvest:0,focus:0,claimed:[]},stats:{harvest:0,focus:0,minutes:0,planted:1,tasks:0},discovered:[],decor:[],equipped:[],achievements:[],focus:null,log:[{time:now,text:'欢迎来到荔枝庭院。第一块萝卜地已经种好，记得来收获。'}]}};
 }
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
@@ -35,14 +35,15 @@ export function normalize(input,now=Date.now()){
  g.decor=g.decor.filter(k=>DECOR[k]);g.equipped=g.equipped.filter(k=>g.decor.includes(k));g.discovered=g.discovered.filter(k=>CROPS[k]);
  g.log=g.log.slice(0,30).filter(x=>x&&typeof x.text==='string'&&Number.isFinite(x.time)).map(x=>({time:x.time,text:x.text.slice(0,180)}));
  check(!g.focus||(Number.isFinite(g.focus.end)&&Number.isFinite(g.focus.duration)&&g.focus.duration>=1&&g.focus.duration<=120),'专注存档格式错误');
- g.pet.name=String(g.pet.name||'荔宝').slice(0,12);
+ g.pet.name=String(g.pet.name||'栗栗').slice(0,12);
  for(const k of ['lastPat','lastPlay'])check(Number.isFinite(g.pet[k])&&g.pet[k]>=0,'互动时间格式错误');g.pet.sleeping=!!g.pet.sleeping;
  s.profile={name:String(s.profile?.name||'').slice(0,20),college:String(s.profile?.college||'').slice(0,40)};
  s.preferences={theme:s.preferences?.theme==='night'?'night':'day',motion:s.preferences?.motion!==false};
  s.todos=(Array.isArray(s.todos)?s.todos:[]).slice(0,100).filter(x=>x&&typeof x.id==='string'&&typeof x.text==='string').map(x=>({id:x.id.slice(0,60),text:x.text.slice(0,120),done:!!x.done,rewarded:!!x.rewarded}));
- s.courses=(Array.isArray(s.courses)?s.courses:[]).slice(0,80).filter(x=>Number.isFinite(x.credit)&&Number.isFinite(x.point)&&x.credit>0&&x.point>=0&&x.point<=5).map(x=>({name:String(x.name||'课程').slice(0,40),credit:x.credit,point:x.point}));
+ s.courses=(Array.isArray(s.courses)?s.courses:[]).slice(0,300).filter(x=>x&&Number.isFinite(x.credit)&&Number.isFinite(x.point)&&x.credit>0&&x.credit<=100&&x.point>=0&&x.point<=5).map(x=>({name:String(x.name||'课程').slice(0,100),credit:x.credit,point:x.point,term:String(x.term||'').slice(0,40),code:String(x.code||'').slice(0,40),level:['undergrad','graduate'].includes(x.level)?x.level:'',grade:String(x.grade||'').slice(0,20),source:String(x.source||'手动录入').slice(0,30),included:x.included!==false}));
+ s.reminders=(Array.isArray(s.reminders)?s.reminders:[]).filter(x=>x&&typeof x.id==='string'&&typeof x.place==='string'&&Number.isFinite(x.start)&&Number.isFinite(x.end)&&x.end>x.start&&x.end-x.start<=86400000).slice(0,50).map(x=>({id:x.id.slice(0,80),place:x.place.slice(0,80),start:x.start,end:x.end}));
  s.semester=/^\d{4}-\d{2}-\d{2}$/.test(s.semester||'')?s.semester:'';
- const clean={schema:2,profile:s.profile,preferences:s.preferences,todos:s.todos,courses:s.courses,semester:s.semester,game:{}};
+ const clean={schema:2,profile:s.profile,preferences:s.preferences,todos:s.todos,courses:s.courses,reminders:s.reminders,semester:s.semester,game:{}};
  for(const k of Object.keys(createState(now).game))clean.game[k]=g[k];
  clean.game.pet=Object.fromEntries(Object.keys(createState(now).game.pet).map(k=>[k,g.pet[k]]));
  return settle(clean,now);
@@ -70,12 +71,12 @@ export function act(state,a,now=Date.now()){
  const care=()=>{g.daily.care++;p.bond=clamp(p.bond+3,0,100)};
  switch(a.type){
  case 'gift':check(!g.daily.gift,'今天的补给已经领过啦');g.daily.gift=true;g.coins+=20;g.food++;g.seeds.radish+=2;note(g,'领取每日补给：20 荔枝币、1 份食物、2 颗萝卜种子。',now);break;
- case 'pat':check(now-p.lastPat>=10000,'让它享受一下，稍等 10 秒再摸摸');p.lastPat=now;p.xp+=2;p.mood=clamp(p.mood+5,0,100);care();note(g,'摸摸头，荔宝舒服地眯起了眼。',now);break;
+ case 'pat':check(now-p.lastPat>=10000,'让它享受一下，稍等 10 秒再摸摸');p.lastPat=now;p.xp+=2;p.mood=clamp(p.mood+5,0,100);care();note(g,'摸摸头，'+p.name+'舒服地眯起了眼。',now);break;
  case 'feed':check(!p.sleeping,'先唤醒伙伴再喂食');check(p.hunger<98,'它已经吃饱了，留着下次吧');
   if(a.crop){check(CROPS[a.crop]&&g.stock[a.crop]>0,'背包里没有这种作物');g.stock[a.crop]--;}else{check(g.food>0,'食物用完了，可以去集市购买');g.food--;}
   p.hunger=clamp(p.hunger+30,0,100);p.energy=clamp(p.energy+5,0,100);p.xp+=8;care();note(g,'吃饱啦，伙伴的亲密度和成长增加了。',now);break;
- case 'play':check(!p.sleeping,'先唤醒伙伴');check(p.energy>=25,'它有点累了，让它休息一会儿');check(now-p.lastPlay>=30000,'再等一会儿，30 秒后可以继续玩');p.lastPlay=now;p.energy-=10;p.mood=clamp(p.mood+20,0,100);p.xp+=5;care();note(g,'陪荔宝玩了一会儿，心情变好了。',now);break;
- case 'sleep':p.sleeping=!p.sleeping;note(g,p.sleeping?'荔宝睡下了，休息时会恢复精力。':'荔宝醒来，伸了一个大懒腰。',now);break;
+ case 'play':check(!p.sleeping,'先唤醒伙伴');check(p.energy>=25,'它有点累了，让它休息一会儿');check(now-p.lastPlay>=30000,'再等一会儿，30 秒后可以继续玩');p.lastPlay=now;p.energy-=10;p.mood=clamp(p.mood+20,0,100);p.xp+=5;care();note(g,'陪'+p.name+'玩了一会儿，心情变好了。',now);break;
+ case 'sleep':p.sleeping=!p.sleeping;note(g,p.sleeping?p.name+'睡下了，休息时会恢复精力。':p.name+'醒来，伸了一个大懒腰。',now);break;
  case 'rename':check(String(a.name||'').trim().length>0,'给伙伴取个名字吧');p.name=String(a.name).trim().slice(0,12);break;
  case 'plant':{
   const c=CROPS[a.crop];check(Number.isInteger(a.index)&&a.index>=0&&a.index<6&&g.plots[a.index]===null,'请选择空地');check(c&&level(g)>=c.level,'伙伴等级还不够');check(g.seeds[a.crop]>0,'这种种子用完了，去集市补充吧');g.seeds[a.crop]--;g.plots[a.index]={crop:a.crop,planted:now,ready:now+c.time,watered:false};g.stats.planted++;g.daily.plant++;note(g,'种下了'+c.name+'，离线时也会继续生长。',now);break;}
@@ -98,4 +99,4 @@ export function act(state,a,now=Date.now()){
  }
  return s;
 }
-export function gpa(courses){const total=courses.reduce((n,c)=>n+c.credit,0);return {credits:total,value:total?courses.reduce((n,c)=>n+c.credit*c.point,0)/total:0}}
+export function gpa(courses){courses=courses.filter(c=>c.included!==false);const total=courses.reduce((n,c)=>n+c.credit,0);return {credits:total,value:total?courses.reduce((n,c)=>n+c.credit*c.point,0)/total:0}}
