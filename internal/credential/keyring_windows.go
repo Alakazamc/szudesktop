@@ -27,6 +27,70 @@ func platformStore() Store {
 	return &windowsStore{path: path}
 }
 
+// platformSessionStore 的会话同样走 DPAPI。
+// 会话（Cookie）能直接登进学校系统，泄露的危害不比密码小，
+// 所以按一样的规格对待：加密落盘、换机器解不开。
+func platformSessionStore() SessionStore {
+	path, err := sessionPath()
+	if err != nil {
+		return &fileSessionStore{path: "session.json", desc: "文件（无法确定用户目录）"}
+	}
+	return &windowsSessionStore{path: path}
+}
+
+type windowsSessionStore struct {
+	path string
+}
+
+func (s *windowsSessionStore) Save(v Session) error {
+	plain, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	encrypted, err := dpapiProtect(plain)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(s.path), 0o700); err != nil {
+		return fmt.Errorf("创建配置目录失败: %w", err)
+	}
+	if err := os.WriteFile(s.path, encrypted, 0o600); err != nil {
+		return fmt.Errorf("写入登录状态失败: %w", err)
+	}
+	return nil
+}
+
+func (s *windowsSessionStore) Load() (Session, error) {
+	encrypted, err := os.ReadFile(s.path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return Session{}, ErrSessionNotFound
+		}
+		return Session{}, err
+	}
+	plain, err := dpapiUnprotect(encrypted)
+	if err != nil {
+		return Session{}, err
+	}
+	var v Session
+	if err := json.Unmarshal(plain, &v); err != nil {
+		return Session{}, fmt.Errorf("登录状态内容格式不对: %w", err)
+	}
+	return v, nil
+}
+
+func (s *windowsSessionStore) Delete() error {
+	err := os.Remove(s.path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
+}
+
+func (s *windowsSessionStore) Describe() string {
+	return "Windows DPAPI（用当前用户账户加密，换机器或换用户都解不开）"
+}
+
 // dataBlob 对应 Windows 的 DATA_BLOB 结构。
 type dataBlob struct {
 	cbData uint32

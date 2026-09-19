@@ -1,0 +1,191 @@
+package ui
+
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+)
+
+// ehall 是学校一站式服务大厅（ehall.szu.edu.cn）。
+//
+// 教务（jwapp）、研究生（gsapp）、场馆预约（qljfwapp）这些应用都在同一个域下，
+// 共用同一份登录会话。所以只要拿到一次会话，就能一起打通，
+// 不需要每个系统各对接一套登录流程。
+//
+// 会话由用户自己从浏览器里取出来交给我们（见 credential.Session）。
+// 这里只做「带着这份会话去请求」，不实现登录、不保存统一身份认证密码。
+const (
+	ehallHost      = "ehall.szu.edu.cn"
+	ehallBaseURL   = "https://" + ehallHost
+	ehallUserAgent = "szuDesktop/0.5 (+https://github.com/Alakazamc/szudesktop)"
+
+	// 单次请求超时。学校服务器偶尔很慢，但也不能无限挂着。
+	ehallTimeout = 20 * time.Second
+	// 响应体上限，防止异常页面把内存吃光。
+	ehallMaxBody = 4 << 20
+)
+
+// errSessionInvalid 表示会话不能用（过期、退出登录、或粘错了）。
+//
+// 单独分出来是因为它需要给用户一句明确的话——
+// 不能说成「网络错误」，否则用户会一直重试而不知道要重新登录。
+var errSessionInvalid = errors.New("学校系统登录状态已失效，请重新在浏览器登录后再复制一次")
+
+// ehallClient 用一份会话请求 ehall。
+type ehallClient struct {
+	cookie string
+	// base 是站点根地址。生产环境永远是 https://ehall.szu.edu.cn，
+	// 留成字段只为让测试能指向本地假服务，不必联网。
+	base string
+	http *http.Client
+}
+
+// newEhallClient 造一个客户端。
+//
+// ⚠️ Proxy 显式设为 nil，和 portal 那边同一个原因：
+// 系统上开着代理或加速器时，请求会被抓走，导致读不到校园系统。
+// 访问 ehall 必须直连。
+func newEhallClient(cookie string, timeout time.Duration) *ehallClient {
+	if timeout <= 0 {
+		timeout = ehallTimeout
+	}
+	return &ehallClient{
+		cookie: cookie,
+		base:   ehallBaseURL,
+		http: &http.Client{
+			Timeout:   timeout,
+			Transport: &http.Transport{Proxy: nil},
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				// 会话失效时 ehall 会 302 到统一身份认证登录页。
+				// 这里直接拦下来转成明确错误，比跟着跳到最后拿到一个登录页 HTML 更好判断。
+				if len(via) >= 3 {
+					return errors.New("跳转次数过多")
+				}
+				// 被跳到别的域名（统一身份认证在另一个域）就是会话没了。
+				if !strings.EqualFold(req.URL.Host, via[0].URL.Host) {
+					return errSessionInvalid
+				}
+				if req.URL.Query().Get("login") != "" || strings.Contains(req.URL.Path, "/login") {
+					return errSessionInvalid
+				}
+				return nil
+			},
+		},
+	}
+}
+
+// postForm 向 ehall 发一个表单 POST，返回响应体。
+func (c *ehallClient) postForm(path string, form url.Values) ([]byte, error) {
+	if strings.TrimSpace(c.cookie) == "" {
+		return nil, errors.New("还没有学校系统的登录状态")
+	}
+	body := form.Encode()
+	req, err := http.NewRequest(http.MethodPost, c.base+path, strings.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+	req.Header.Set("X-Requested-With", "XMLHttpRequest")
+	req.Header.Set("User-Agent", ehallUserAgent)
+	req.Header.Set("Accept", "application/json, text/javascript, */*; q=0.01")
+	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9")
+	// Cookie 只放请求头里，不进日志、不进错误信息。
+	req.Header.Set("Cookie", c.cookie)
+	req.Header.Set("Origin", c.base)
+	req.Header.Set("Referer", c.base+"/")
+
+	res, err := c.http.Do(req)
+	if err != nil {
+		if errors.Is(err, errSessionInvalid) {
+			return nil, errSessionInvalid
+		}
+		return nil, fmt.Errorf("连不上学校系统：%w", err)
+	}
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(io.LimitReader(res.Body, ehallMaxBody+1))
+	if err != nil {
+		return nil, fmt.Errorf("读取学校系统响应失败：%w", err)
+	}
+	if len(data) > ehallMaxBody {
+		return nil, errors.New("学校系统返回的内容异常大，已中止")
+	}
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("学校系统返回 HTTP %d", res.StatusCode)
+	}
+	return data, nil
+}
+
+// ehallRows 从 ehall 的响应里取出数据行。
+//
+// ehall 这套框架的返回格式很固定：
+//
+//	{"code":"0","datas":{"<数据集名>":{"rows":[...]}},"msg":"成功"}
+//
+// 但失败时可能把话写在 code/msg 里，或者干脆给个 HTML（会话失效）。
+// 三种情况都要分开报，不能一律当「没有数据」——
+// 那正是「读不到却报空」的坑。
+func ehallRows(data []byte, dataset string) ([]map[string]any, error) {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) == 0 {
+		return nil, errors.New("学校系统返回了空内容")
+	}
+	// 会话失效时可能直接返回登录页 HTML，此时 JSON 解析会失败。
+	if trimmed[0] != '{' && trimmed[0] != '[' {
+		if bytes.Contains(trimmed, []byte("统一身份认证")) || bytes.Contains(trimmed, []byte("<html")) {
+			return nil, errSessionInvalid
+		}
+		return nil, errors.New("学校系统返回的不是预期格式，可能是登录状态失效或页面已改版")
+	}
+
+	var envelope struct {
+		Code  json.RawMessage            `json:"code"`
+		Msg   string                     `json:"msg"`
+		Datas map[string]json.RawMessage `json:"datas"`
+	}
+	if err := json.Unmarshal(trimmed, &envelope); err != nil {
+		return nil, errors.New("学校系统返回的内容无法解析，可能登录状态已失效或系统已改版")
+	}
+	if code := string(bytes.Trim(envelope.Code, `"`)); code != "" && code != "0" {
+		if maybeSessionExpired(envelope.Msg) {
+			return nil, errSessionInvalid
+		}
+		return nil, fmt.Errorf("学校系统拒绝了这次请求：%s", firstNonEmpty(envelope.Msg, "未知原因"))
+	}
+	raw, ok := envelope.Datas[dataset]
+	if !ok {
+		return nil, fmt.Errorf("学校系统返回的数据里没有 %s，页面结构可能已改版", dataset)
+	}
+	var payload struct {
+		Rows []map[string]any `json:"rows"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return nil, fmt.Errorf("解析 %s 数据失败，页面结构可能已改版", dataset)
+	}
+	return payload.Rows, nil
+}
+
+// maybeSessionExpired 判断服务端这句话是不是在说「你没登录」。
+func maybeSessionExpired(msg string) bool {
+	for _, hint := range []string{"登录", "未认证", "认证失败", "会话", "超时", "无权限", "权限不足"} {
+		if strings.Contains(msg, hint) {
+			return true
+		}
+	}
+	return false
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
+}

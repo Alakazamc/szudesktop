@@ -53,6 +53,7 @@ type Options struct {
 type Server struct {
 	opts      Options
 	store     credential.Store
+	session   credential.SessionStore // 学校系统（ehall）登录状态；与校园网凭据分开存
 	vpn       *vpnManager
 	campus    *campusGateway
 	probe     func() *portal.DetectResult
@@ -282,6 +283,11 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 	mux.HandleFunc("/api/vpn/proxy", protectAPI(s.handleVPNProxy, http.MethodPost))
 	mux.HandleFunc("/api/campus/status", protectAPI(s.handleCampusStatus, http.MethodGet))
 	mux.HandleFunc("/api/campus/notices", protectAPI(s.handleCampusNotices, http.MethodGet))
+	// 学校系统（ehall）会话与个人业务。
+	// 会话本身是敏感凭据，读写都走 POST/DELETE，状态查询只回报长度不回报内容。
+	mux.HandleFunc("/api/session", protectAPI(s.handleSession, http.MethodGet, http.MethodPost, http.MethodDelete))
+	mux.HandleFunc("/api/session/check", protectAPI(s.handleSessionCheck, http.MethodPost))
+	mux.HandleFunc("/api/scores", protectAPI(s.handleScores, http.MethodGet))
 }
 
 /* ---------- 接口 ---------- */

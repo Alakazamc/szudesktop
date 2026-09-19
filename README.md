@@ -231,6 +231,10 @@ python desktop/make_release.py     # 生成发布包
   深澜 xEncode 实现的来源归属保留在 [LICENSE](LICENSE) 中
 - [Clash Verge Rev](https://github.com/clash-verge-rev/clash-verge-rev) 与
   [福大助手](https://github.com/west2-online/fzuhelper-app) —— 界面层级与校园服务组织的参考
+- [MattDong123/tools4szu](https://github.com/MattDong123/tools4szu) —— 作者 Matt，
+  经其授权用于学校系统接口调研。本项目没有复制它的代码，而是按它记录的接口地址、
+  数据表名与字段名，用 Go 重新实现了一套带会话失效判定的读取逻辑。
+  该仓库未声明开源许可，因此这里只作事实性致谢，不构成对其代码的再分发
 
 ---
 

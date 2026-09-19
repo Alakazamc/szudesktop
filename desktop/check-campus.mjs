@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url);
 import {parseGrades,mergeGrades,makeStudyReminder,reminderICS,PHONE_BOOK,PHONE_FALLBACK} from './assets/garden/campus.mjs';
 import {gpa,createState,normalize} from './assets/garden/engine.mjs';
 let count=0;const test=(name,f)=>{f();count++;console.log('PASS',name)};
@@ -46,4 +48,35 @@ test('phone book never lists a number without an official source',()=>{
   assert.equal(p.tel,undefined);assert.equal(p.mail,undefined);
  }
 });
+test('school session stays out of the page and source code',()=>{
+ // 用户交给本机的学校系统会话是一条真实登录凭证。
+ // 它只能在设置区里输入，不能被页面脚本读回来，更不能出现在源码里。
+ const fs=require('node:fs');
+ const ui=fs.readFileSync('desktop/assets/garden/campus-ui.mjs','utf8');
+ const html=fs.readFileSync('desktop/index.html','utf8');
+ // 界面上只允许存在一个会话输入框，且必须是密码式的一次性输入。
+ assert.equal((ui.match(/id="session-cookie"/g)||[]).length,1,'只应有一个会话输入框');
+ // 渲染函数不得把已保存的 cookie 回显进 DOM。
+ assert.ok(!/\$\{[^}]*sessionCookie[^}]*\}/.test(ui),'不得把会话内容渲染进页面');
+ assert.ok(!html.includes('JSESSIONID='),'页面源码里不得出现真实会话样例');
+ // 状态查询接口只回报长度，不回报内容。
+ assert.ok(!/sessionStatusResp[\s\S]{0,400}?Cookie\s+string/.test(html),'状态结构不应包含会话原文');
+ // 保存后必须清空输入框。
+ assert.ok(/box\.value=''/.test(ui),'保存会话后应清空输入框');
+});
+
+test('online score reading never promises a write or hides an expired session',()=>{
+ const fs=require('node:fs');
+ const ui=fs.readFileSync('desktop/assets/garden/campus-ui.mjs','utf8');
+ const go=fs.readFileSync('desktop/internal/ui/session.go','utf8')+fs.readFileSync('desktop/internal/ui/scores.go','utf8');
+ // 只读：不得出现提交预约/评教这类写操作调用。
+ assert.ok(!/insert|submit|postBook/i.test(go),'在线成绩模块不应当包含写操作');
+ // 会话过期必须与「没有数据」区分开：401 才是过期，且要明确提示重新登录。
+ assert.ok(/errSessionInvalid/.test(go),'必须有专门的会话失效错误');
+ assert.ok(go.includes('不要以本结果为准'),'字段认不出时必须让用户去官方系统核对');
+ // 不得静默把「读不到」显示成「暂无成绩」。
+ const scores=fs.readFileSync('desktop/internal/ui/scores.go','utf8');
+ assert.ok(/checkSuspiciouslyEmpty/.test(scores),'必须有「读到了行但认不出字段」的防线');
+});
+
 console.log(`${count} campus checks passed`);

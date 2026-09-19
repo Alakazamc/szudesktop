@@ -212,5 +212,12 @@ body[data-motion=off] * { animation: none !important; transition: none !importan
 .campus-reminders li { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 0; border-bottom:1px dashed var(--wood-dark); }
 .campus-reminders p { font-size:13px; color:var(--muted); }
 .course-source { display:block; margin-top:5px; color:var(--muted); font-size:12px; max-width:280px; overflow-wrap:anywhere; }
+/* 学校系统登录状态：会话步骤要一眼能跟着做完，别让用户卡在 F12 上。 */
+.session-steps { margin:10px 0; padding-left:22px; }
+.session-steps li { margin-bottom:6px; line-height:1.7; }
+.session-steps code,.session-steps kbd { padding:1px 6px; border:1px solid var(--wood-dark); background:var(--paper); font-size:12px; overflow-wrap:anywhere; }
+.notice.ok { border-left-color:var(--ok, #3f7d3f); }
+#session-cookie { min-height:76px; font-family:ui-monospace,Consolas,monospace; font-size:12px; }
+#online-score table small { display:block; margin-top:4px; color:var(--muted); font-size:12px; }
 .service-directory-title { margin-top:32px; }
 @media(max-width:620px) { .campus-notices li { grid-template-columns:1fr; gap:4px; }.campus-reminders li { align-items:flex-start; flex-direction:column; }.campus-feed select { max-width:100%; } }

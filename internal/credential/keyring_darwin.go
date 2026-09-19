@@ -14,6 +14,9 @@ import (
 const (
 	keychainService = "szunet"
 	keychainAccount = "szunet"
+	// 会话存成独立条目，和账号密码分开，用户可以只清会话不清密码。
+	sessionService = "szunet-session"
+	sessionAccount = "szunet-session"
 )
 
 // darwinStore 用 macOS 钥匙串保存凭据。
@@ -21,6 +24,57 @@ const (
 type darwinStore struct{}
 
 func platformStore() Store { return &darwinStore{} }
+
+// platformSessionStore 的会话同样进钥匙串，单独一个条目。
+func platformSessionStore() SessionStore { return &darwinSessionStore{} }
+
+type darwinSessionStore struct{}
+
+func (s *darwinSessionStore) Save(v Session) error {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command("security", "add-generic-password",
+		"-a", sessionAccount,
+		"-s", sessionService,
+		"-w", string(data),
+		"-U",
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("写入钥匙串失败: %v（%s）", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+func (s *darwinSessionStore) Load() (Session, error) {
+	cmd := exec.Command("security", "find-generic-password",
+		"-a", sessionAccount,
+		"-s", sessionService,
+		"-w",
+	)
+	out, err := cmd.Output()
+	if err != nil {
+		return Session{}, ErrSessionNotFound
+	}
+	var v Session
+	if err := json.Unmarshal([]byte(strings.TrimSpace(string(out))), &v); err != nil {
+		return Session{}, fmt.Errorf("钥匙串里的登录状态格式不对: %w", err)
+	}
+	return v, nil
+}
+
+func (s *darwinSessionStore) Delete() error {
+	_ = exec.Command("security", "delete-generic-password",
+		"-a", sessionAccount,
+		"-s", sessionService,
+	).Run()
+	return nil
+}
+
+func (s *darwinSessionStore) Describe() string {
+	return "macOS 钥匙串（Keychain）"
+}
 
 func (s *darwinStore) Save(c Credentials) error {
 	data, err := json.Marshal(c)

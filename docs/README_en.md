@@ -255,6 +255,11 @@ presented as a finished, verified feature.
 - [Clash Verge Rev](https://github.com/clash-verge-rev/clash-verge-rev) and
   [FZU Helper](https://github.com/west2-online/fzuhelper-app) — references for interface
   hierarchy and how campus services are organised
+- [MattDong123/tools4szu](https://github.com/MattDong123/tools4szu) — by Matt, used with the
+  author's permission as research into the university's own system endpoints. No code was
+  copied: the endpoint paths, dataset names and field names it documents were re-implemented
+  in Go with explicit session-expiry detection. That repository declares no open-source
+  licence, so this is an attribution of facts only and not a redistribution of its code
 
 ---
 
