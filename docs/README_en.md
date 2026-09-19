@@ -69,7 +69,7 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | :--- | :----- |
 | Desktop app | Windows x64 (`szudesktop.exe`) |
 | Command line | Windows / macOS / Linux, single binary `szunet` |
-| Current version | `beta0.5` · public beta (pre-release) |
+| Current version | `beta0.5.1` · public beta (pre-release) |
 | Runtime | No dependencies to install; the window is provided by your browser (Edge / Chrome app window) |
 
 ### First run
@@ -273,8 +273,8 @@ in default desktop builds. Names such as EasyConnect remain the property of thei
 respective owners.
 
 
-### Experimental score reading in the current source
+### Experimental score reading
 
-The current source adds undergraduate and graduate score readers, pending validation with real school records. Existing Release attachments have not been replaced. Enter the Cookie only in the local application. Session storage fails closed if secure storage is unavailable; no plaintext fallback is used. Verification targets the selected academic application and distinguishes missing permission from an expired session. Only the first page is read; unknown totals and partial results are explicitly labelled. Community quiet pods and sports venues require separate integration and verification.
+beta0.5.1 includes undergraduate and graduate score readers, pending validation with real school records. Enter the Cookie only in the local application. Session storage fails closed if secure storage is unavailable; no plaintext fallback is used. Verification targets the selected academic application and distinguishes missing permission from an expired session. Only the first page is read; unknown totals and partial results are explicitly labelled. Community quiet pods and sports venues require separate integration and verification.
 
 Additional frontend regression check: `node desktop/check-session-ui.mjs`.
