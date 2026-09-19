@@ -271,3 +271,10 @@ Third-party components keep their own licences: Fusion Pixel Font is under OFL 1
 experimental VPN module's third-party provenance is still being verified and is not included
 in default desktop builds. Names such as EasyConnect remain the property of their
 respective owners.
+
+
+### Experimental score reading in the current source
+
+The current source adds undergraduate and graduate score readers, pending validation with real school records. Existing Release attachments have not been replaced. Enter the Cookie only in the local application. Session storage fails closed if secure storage is unavailable; no plaintext fallback is used. Verification targets the selected academic application and distinguishes missing permission from an expired session. Only the first page is read; unknown totals and partial results are explicitly labelled. Community quiet pods and sports venues require separate integration and verification.
+
+Additional frontend regression check: `node desktop/check-session-ui.mjs`.

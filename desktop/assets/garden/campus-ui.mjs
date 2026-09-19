@@ -7,7 +7,7 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
  const button=(label,action,extra='')=>`<button data-action="campus-${action}" ${extra}>${label}</button>`;
  let gradeText='',gradeLevel='undergrad',preview=null,feedSource='undergrad',feed=null,feedError='',loading=false,filterLevel='',filterTerm='';
  // 学校系统（ehall）在线读取相关状态。会话本身不放在这里，只由后端保管。
- let sessionSaved=false,sessionDesc='',sessionErr='',sessionBusy=false,onlineScore=null,onlineErr='',onlineBusy=false;
+ let sessionSaved=false,sessionDesc='',sessionErr='',sessionBusy=false,onlineScore=null,onlineErr='',onlineBusy=false,onlineLevel='undergrad';
  const formatTime=n=>new Date(n).toLocaleString('zh-CN',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
  function download(text,name,type){const url=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
  function feedHTML(){
@@ -35,8 +35,8 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
  function sessionHTML(){
   if(sessionBusy)return '<p role="status">正在验证登录状态…</p>';
   if(sessionErr)return `<p role="status" class="notice error">${esc(sessionErr)}</p>`;
-  if(!sessionSaved)return '<p class="muted">还没有保存学校系统登录状态。按下面的步骤把浏览器里的 Cookie 交过来，就能读取成绩。</p>';
-  return `<p class="notice ok">已保存登录状态${sessionDesc?' · '+esc(sessionDesc):''}。内容加密存在本机，不会上传到任何服务器，也不会写进日志。</p>`;
+  if(!sessionSaved)return '<p class="muted">还没有保存学校系统登录状态。可按下面步骤保存，再验证所选成绩业务是否可访问。</p>';
+  return `<p class="notice ok">已保存登录状态${sessionDesc?' · '+esc(sessionDesc):''}。内容加密保存在本机；查询时仅发送至学校办事大厅，不写入日志。已保存不代表业务验证通过。</p>`;
  }
  function howtoHTML(){
   // 步骤写细一点：这一步对不熟开发者工具的同学是唯一的门槛。
@@ -44,19 +44,20 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
   <ol class="session-steps">
    <li>用浏览器打开 <a href="https://ehall.szu.edu.cn/" target="_blank" rel="noopener noreferrer">学校办事大厅 ↗</a> 并完成登录（该验证就验证，正常登录即可）。</li>
    <li>按 <kbd>F12</kbd> 打开开发者工具，切到「网络 / Network」标签页。</li>
-   <li>刷新页面，在请求列表里随便点一条发往 <code>ehall.szu.edu.cn</code> 的请求。</li>
+   <li>先进入所需的本科或研究生成绩页面，再刷新；选取该成绩业务发往 <code>ehall.szu.edu.cn</code> 的请求。不同业务可能需要不同的登录状态。</li>
    <li>在右侧「标头 / Headers」里找到「请求标头 / Request Headers」中的 <code>Cookie</code>，把冒号后面的整串值复制下来。</li>
-   <li>粘贴到下面输入框并点保存，然后点「验证登录状态」。</li>
+   <li>粘贴到下面输入框并点保存，选择本科或研究生，然后点「验证登录状态」。</li>
   </ol>
-  <p class="muted">这段内容等同于你在这台电脑上的登录凭证。它只保存在本机（${sessionSaved?'已加密':'保存后加密'}），可以随时点「清除登录状态」让它失效。请不要把它发给任何人，也不要粘到聊天窗口里。</p></details>`;
+  <p class="muted">这段内容等同于你在这台电脑上的登录凭证。它只保存在本机（${sessionSaved?'已加密':'保存后加密'}），点「清除登录状态」只删除本机副本，不会注销浏览器或撤销学校会话；退出学校登录请在官方页面操作。安全存储不可用时会拒绝保存。请不要把它发给任何人，也不要粘到聊天窗口里。</p></details>`;
  }
  function onlineScoreHTML(){
   if(onlineBusy)return '<p role="status">正在读取学校系统…</p>';
   if(onlineErr)return `<p role="status" class="notice error">${esc(onlineErr)}</p>`;
   if(!onlineScore)return '<p class="muted">登录状态可用后，可以直接读取学校系统里的成绩，不用手工粘贴表格。</p>';
   const r=onlineScore;
-  return `<p class="notice">${esc(r.label)}成绩 · 读取 ${r.fetched} 门${r.full?'':'（系统共 '+r.total+' 门）'}${r.note?' · '+esc(r.note):''}</p>
-  ${r.items.length?`<div class="table-wrap"><table><thead><tr><th>课程</th><th>学期</th><th>学分</th><th>成绩</th></tr></thead><tbody>${r.items.map(x=>`<tr><td>${esc(x.name)}${x.category?'<small class="course-source">'+esc(x.category)+'</small>':''}</td><td>${esc(x.term||'—')}</td><td>${x.credit||'—'}</td><td>${esc(x.score||'—')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">学校系统里暂时没有可显示的成绩记录。</p>'}
+  if(!Array.isArray(r.items))return '<p role="status" class="notice error">学校成绩响应格式异常，请到官方系统核对。</p>';
+  return `<p class="notice">${esc(r.label)}成绩 · 读取 ${r.fetched} 门${Number.isInteger(r.total)?'（学校返回总计 '+r.total+' 条记录）':'（总数未确认）'}${r.note?' · '+esc(r.note):''}</p>
+  ${r.items.length?`<div class="table-wrap"><table><thead><tr><th>课程</th><th>学期</th><th>学分</th><th>成绩</th><th>官方绩点</th></tr></thead><tbody>${r.items.map(x=>`<tr><td>${esc(x.name)}${x.category?'<small class="course-source">'+esc(x.category)+'</small>':''}</td><td>${esc(x.term||'—')}</td><td>${esc(x.credit??'—')}</td><td>${esc(x.score??'—')}</td><td>${esc(x.gpa??'未提供')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">本次查询返回空列表；是否存在其他成绩，请结合总数提示并到官方系统核对。</p>'}
   <p class="notice">这是从学校系统读到的原始记录，没有替你换算或补全。要并入上面的绩点统计，请用「批量导入成绩表」。</p>`;
  }
  function grades(){
@@ -66,15 +67,15 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
   <p>本科和研究生分开记录，批量导入课程后按学分加权。这里的结果用于个人核对，官方平均绩点以学校系统为准。</p>
   <div class="actions">${link('https://ehall.szu.edu.cn/','学校办事大厅')}${link('https://cjzm.szu.edu.cn/gztcyUI/','本科成绩证明')}${link('https://gra.szu.edu.cn/info/1092/3484.htm','研究生成绩单指南')}</div>
   <details open><summary>从学校系统直接读取（可选）</summary>
-  <p class="muted">不用手工整理表格。把浏览器里的登录状态交给本机，就能直接读到你自己的成绩列表。</p>
+  <p class="muted">在线读取为实验功能，尚未完成真实成绩验收。保存学校登录状态后，可尝试读取所选业务；账号权限和会话需分别验证。</p>
   <div id="session-status" aria-live="polite">${sessionHTML()}</div>
   <label for="session-cookie">浏览器里的 Cookie</label>
   <textarea id="session-cookie" rows="3" maxlength="8000" placeholder="JSESSIONID=..."></textarea>
   <div class="actions">${button('保存登录状态','session-save','class="primary"')}${button('验证登录状态','session-check')}${button('清除登录状态','session-clear')}</div>
   ${howtoHTML()}
-  <div class="actions" style="margin-top:10px"><label for="online-score-level">读取哪一份成绩</label><select id="online-score-level"><option value="undergrad">本科</option><option value="graduate">研究生</option></select>${button('读取成绩','online-score')}</div>
+  <div class="actions" style="margin-top:10px"><label for="online-score-level">读取哪一份成绩</label><select id="online-score-level"><option value="undergrad" ${onlineLevel==='undergrad'?'selected':''}>本科</option><option value="graduate" ${onlineLevel==='graduate'?'selected':''}>研究生</option></select>${button('读取成绩','online-score')}</div>
   <div id="online-score" aria-live="polite">${onlineScoreHTML()}</div>
-  <p class="notice">读取是只读操作，不会向学校系统提交任何东西。登录状态过期时会明确报错，不会显示成「没有成绩」。</p></details>
+  <p class="notice">只查询成绩，不提交预约、选课或评教。登录状态过期时会明确报错，不会显示成「没有成绩」。</p></details>
   <details><summary>批量导入成绩表</summary><p class="muted">从学校成绩表或 Excel 复制包含表头的多行内容，或选择 CSV / TSV 文件。当前不直接解析 PDF、图片和 XLSX，也没有后台自动同步。</p>
   <label for="grade-level">这份成绩属于</label><select id="grade-level"><option value="undergrad" ${gradeLevel==='undergrad'?'selected':''}>本科</option><option value="graduate" ${gradeLevel==='graduate'?'selected':''}>研究生</option></select>
   <label for="grade-file">选择表格文件（可选）</label><input id="grade-file" type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain">
@@ -97,13 +98,13 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
    // 主动把输入框清掉：这段内容留在页面上没有任何好处。
    const box=document.querySelector('#session-cookie'),raw=box?box.value:'';
    sessionErr='';sessionBusy=true;refreshSessionBox();
-   try{await api('/api/session',{cookie:raw},'POST');if(box)box.value='';sessionSaved=true;await loadSession();toast('登录状态已保存到本机');}
+   try{await api('/api/session',{cookie:raw},'POST');if(box)box.value='';onlineScore=null;onlineErr='';refreshScoreBox();sessionSaved=true;await loadSession();toast('登录状态已保存到本机');}
    catch(e){sessionErr=e.message}
    finally{sessionBusy=false;refreshSessionBox()}
   }else if(a==='session-check'){
    sessionErr='';sessionBusy=true;refreshSessionBox();
-   try{const r=await api('/api/session/check',{});toast(r.message||'登录状态可用')}
-   catch(e){sessionErr=e.message;if(e.code===401)sessionSaved=false}
+   try{const r=await api('/api/session/check?level='+encodeURIComponent(onlineLevel),{});toast(r.message||'登录状态可用')}
+   catch(e){sessionErr=e.message}
    finally{sessionBusy=false;refreshSessionBox()}
   }else if(a==='session-clear'){
    if(await confirm('清除学校系统登录状态？','只清除本机保存的登录状态，不影响你的校园网账号密码，也不会退出浏览器里的登录。清除后需要重新复制一次 Cookie。')){
@@ -112,10 +113,10 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
     refreshSessionBox();refreshScoreBox();
    }
   }else if(a==='online-score'){
-   const sel=document.querySelector('#online-score-level'),level=sel?sel.value:'undergrad';
-   onlineErr='';onlineBusy=true;refreshScoreBox();
+   const level=onlineLevel;
+   onlineErr='';onlineScore=null;onlineBusy=true;refreshScoreBox();
    try{onlineScore=await api('/api/scores?level='+encodeURIComponent(level))}
-   catch(e){onlineErr=e.message;if(e.code===401)sessionSaved=false;refreshSessionBox()}
+   catch(e){onlineErr=e.message;if(e.code===401)sessionErr=e.message;refreshSessionBox()}
    finally{onlineBusy=false;refreshScoreBox()}
   }else if(a==='preview'){preview=parseGrades(gradeText,gradeLevel);document.querySelector('#grade-preview').innerHTML=previewHTML()}
   else if(a==='template')download('\uFEFF课程名称,学分,绩点,成绩,学期,课程代码\r\n','成绩表-空白表头.csv','text/csv;charset=utf-8');
@@ -132,13 +133,14 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
  function refreshScoreBox(){const el=document.querySelector('#online-score');if(el)el.innerHTML=onlineScoreHTML()}
  async function loadSession(){
   try{const v=await api('/api/session');sessionSaved=!!v.saved;sessionDesc=v.store_desc||'';sessionErr=''}
-  catch(e){sessionSaved=false;sessionDesc='';sessionErr=''}
+  catch(e){sessionSaved=false;sessionDesc='';sessionErr=e.message}
   refreshSessionBox();
  }
  async function submit(form,values){if(form.id!=='campus-reminder-form')return false;const next=structuredClone(getState());next.reminders=next.reminders||[];if(next.reminders.length>=50)throw Error('最多保留 50 条提醒，请先移除已结束的提醒');next.reminders.push(makeStudyReminder(values));await commit(next,{formId:form.id,values});toast('已保存本机提醒，学校预约状态不变');return true}
  function input(e){if(e.target.id==='grade-text'){gradeText=e.target.value;preview=null;const el=document.querySelector('#grade-preview');if(el)el.innerHTML=''}}
  async function change(e){const el=e.target;
-  if(el.id==='grade-level'){gradeLevel=el.value;preview=null;document.querySelector('#grade-preview').innerHTML=''}
+  if(el.id==='online-score-level'){onlineLevel=el.value;onlineScore=null;onlineErr='';sessionErr='';refreshScoreBox();refreshSessionBox()}
+  else if(el.id==='grade-level'){gradeLevel=el.value;preview=null;document.querySelector('#grade-preview').innerHTML=''}
   else if(el.id==='grade-file'&&el.files[0]){const file=el.files[0];if(file.size>300000)throw Error('文件不能超过 300 KB');if(!/\.(csv|tsv|txt)$/i.test(file.name))throw Error('请使用 CSV / TSV / TXT 文件');const bytes=await file.arrayBuffer();try{gradeText=new TextDecoder('utf-8',{fatal:true}).decode(bytes)}catch{gradeText=new TextDecoder('gb18030',{fatal:true}).decode(bytes)}preview=null;document.querySelector('#grade-text').value=gradeText;document.querySelector('#grade-preview').innerHTML='';toast('文件已读取，请点击预览导入')}
   else if(el.id==='feed-source'){feedSource=el.value;feed=null;feedError='';render()}
   else if(el.id==='grade-filter-level'){filterLevel=el.value;render()}

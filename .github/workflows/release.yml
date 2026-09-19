@@ -25,6 +25,8 @@ jobs:
         run: node desktop/check-ui.mjs
       - name: 校园服务与成绩导入回归
         run: node desktop/check-campus.mjs
+      - name: Session UI regression
+        run: node desktop/check-session-ui.mjs
       - name: 静态检查
         run: go vet ./...
       - name: 单元测试

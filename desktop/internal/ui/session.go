@@ -84,6 +84,10 @@ func (s *Server) handleSession(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		v, err := store.Load()
 		if err != nil {
+			if !errors.Is(err, credential.ErrSessionNotFound) {
+				writeAPIError(w, 503, err)
+				return
+			}
 			writeJSON(w, sessionStatusResp{Saved: false, StoreDesc: store.Describe()})
 			return
 		}
@@ -126,90 +130,74 @@ func (s *Server) handleSession(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleSessionCheck 用保存的会话真打一次学校系统，验证它还有效。
-//
-// 这一步就是「会话桥最小验证」：用户刚粘完就能知道对不对，
-// 而不是等到用成绩功能时才发现会话是坏的。
-//
-// ⚠️ 探活刻意选「本科成绩」这个接口，判断依据是响应能不能解析出 rows。
-// 不拿「请求返回 200」当有效——ehall 在会话失效时可能仍返回 200 加一段登录页，
-// 那正是「读不到却报成功」的坑。这里只看有没有真的拿到结构化数据。
+// Probe only the selected business. Lack of access is not an expired session.
 func (s *Server) handleSessionCheck(w http.ResponseWriter, r *http.Request) {
+	app, err := selectScoreApp(r.URL.Query().Get("level"))
+	if err != nil {
+		writeAPIError(w, 400, err)
+		return
+	}
 	v, err := s.sessionStore().Load()
 	if err != nil {
-		writeAPIError(w, 409, errors.New("还没有保存学校系统登录状态"))
+		writeSessionLoadError(w, err)
 		return
 	}
-	c := newEhallClient(v.Cookie, sessionSaveTimeout)
-	// 只取一页一条，够用来判断会话通不通，不拉走用户的整份成绩。
-	body, err := c.postForm(undergradScorePath, allRowsForm(1))
+	c := s.makeEhallClient(v.Cookie)
+	body, err := c.postForm(app.Path, allRowsForm(1))
+	if err == nil {
+		_, err = ehallRows(body, app.Dataset)
+	}
 	if err != nil {
-		status := 502
-		if errors.Is(err, errSessionInvalid) {
-			status = 401
-		}
-		writeAPIError(w, status, err)
+		writeSchoolError(w, err)
 		return
 	}
-	if _, err := ehallRows(body, "xscjcx"); err != nil {
-		status := 502
-		if errors.Is(err, errSessionInvalid) {
-			status = 401
-		}
-		writeAPIError(w, status, err)
-		return
-	}
-	writeJSON(w, map[string]any{"ok": true, "message": "登录状态可用"})
+	writeJSON(w, map[string]any{"ok": true, "message": app.Label + "成绩业务可访问；其他业务权限需分别验证"})
 }
-
-type scoreResp struct {
-	*scoreResult
-	Stale bool `json:"stale,omitempty"`
+func (s *Server) makeEhallClient(cookie string) *ehallClient {
+	if s.ehallFactory != nil {
+		return s.ehallFactory(cookie)
+	}
+	return newEhallClient(cookie, sessionSaveTimeout)
+}
+func writeSessionLoadError(w http.ResponseWriter, err error) {
+	if errors.Is(err, credential.ErrSessionNotFound) {
+		writeAPIError(w, 409, errors.New("还没有学校系统登录状态，请在学习工具中保存"))
+		return
+	}
+	writeAPIError(w, 503, err)
+}
+func writeSchoolError(w http.ResponseWriter, err error) {
+	status := 502
+	if errors.Is(err, errSessionInvalid) {
+		status = 401
+	}
+	if errors.Is(err, errSessionPermission) {
+		status = 403
+	}
+	writeAPIError(w, status, err)
 }
 
 // handleScores 读取成绩。level=undergrad|graduate。
 //
 // 只读。不缓存到磁盘：成绩属于个人信息，没必要在本机多留一份。
 func (s *Server) handleScores(w http.ResponseWriter, r *http.Request) {
-	level := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("level")))
-	if level == "" {
-		level = "undergrad"
-	}
-
-	var reader scoreReader
-	switch level {
-	case "undergrad", "undergraduate", "本科":
-		reader = scoreReaderFunc(readUndergradScore)
-	case "graduate", "grad", "研究生":
-		reader = scoreReaderFunc(readGradScore)
-	default:
-		writeAPIError(w, 400, errors.New("请选择本科或研究生"))
+	app, err := selectScoreApp(r.URL.Query().Get("level"))
+	if err != nil {
+		writeAPIError(w, 400, err)
 		return
 	}
-
 	v, err := s.sessionStore().Load()
 	if err != nil {
-		writeAPIError(w, 409, errors.New("还没有学校系统的登录状态。请先在浏览器登录 ehall，再把 Cookie 粘贴到设置里"))
+		writeSessionLoadError(w, err)
 		return
 	}
-
-	client := newEhallClient(v.Cookie, sessionSaveTimeout)
-	result, err := reader.Read(client)
+	result, err := readScore(s.makeEhallClient(v.Cookie), app)
 	if err != nil {
-		status := 502
-		if errors.Is(err, errSessionInvalid) {
-			status = 401
-		}
-		writeAPIError(w, status, err)
+		writeSchoolError(w, err)
 		return
 	}
 	writeJSON(w, result)
 }
-
-// scoreReaderFunc 让普通函数满足 scoreReader 接口，方便测试替身。
-type scoreReaderFunc func(*ehallClient) (*scoreResult, error)
-
-func (f scoreReaderFunc) Read(c *ehallClient) (*scoreResult, error) { return f(c) }
 
 // allRowsForm 是「不加过滤条件、取第一页」的通用查询参数。
 // ehall 这套框架用 querySetting 传过滤条件，空数组表示不过滤。

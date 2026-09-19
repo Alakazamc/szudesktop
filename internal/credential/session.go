@@ -1,9 +1,7 @@
 package credential
 
 import (
-	"encoding/json"
 	"errors"
-	"os"
 	"path/filepath"
 )
 
@@ -47,47 +45,16 @@ func sessionPath() (string, error) {
 	return filepath.Join(d, "session.json"), nil
 }
 
-// fileSessionStore 是会话的文件兜底方案，权限只有本人可读。
-type fileSessionStore struct {
-	path string
-	desc string
-}
+// No plaintext fallback: callers must surface a secure-storage failure.
+var ErrSessionStorageUnavailable = errors.New("系统安全存储不可用，未保存登录状态；请恢复安全存储后重试")
 
-func (s *fileSessionStore) Save(v Session) error {
-	if err := os.MkdirAll(filepath.Dir(s.path), 0o700); err != nil {
-		return errors.New("创建配置目录失败: " + err.Error())
-	}
-	data, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := os.WriteFile(s.path, data, 0o600); err != nil {
-		return errors.New("写入登录状态失败: " + err.Error())
-	}
-	return nil
-}
+type unavailableSessionStore struct{}
 
-func (s *fileSessionStore) Load() (Session, error) {
-	data, err := os.ReadFile(s.path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return Session{}, ErrSessionNotFound
-		}
-		return Session{}, err
-	}
-	var v Session
-	if err := json.Unmarshal(data, &v); err != nil {
-		return Session{}, errors.New("登录状态内容格式不对")
-	}
-	return v, nil
+func (*unavailableSessionStore) Save(Session) error { return ErrSessionStorageUnavailable }
+func (*unavailableSessionStore) Load() (Session, error) {
+	return Session{}, ErrSessionStorageUnavailable
 }
-
-func (s *fileSessionStore) Delete() error {
-	err := os.Remove(s.path)
-	if os.IsNotExist(err) {
-		return nil
-	}
-	return err
+func (*unavailableSessionStore) Delete() error { return ErrSessionStorageUnavailable }
+func (*unavailableSessionStore) Describe() string {
+	return "系统安全存储不可用（不使用明文文件）"
 }
-
-func (s *fileSessionStore) Describe() string { return s.desc }

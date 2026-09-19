@@ -75,8 +75,7 @@ test('online score reading never promises a write or hides an expired session',(
  assert.ok(/errSessionInvalid/.test(go),'必须有专门的会话失效错误');
  assert.ok(go.includes('不要以本结果为准'),'字段认不出时必须让用户去官方系统核对');
  // 不得静默把「读不到」显示成「暂无成绩」。
- const scores=fs.readFileSync('desktop/internal/ui/scores.go','utf8');
- assert.ok(/checkSuspiciouslyEmpty/.test(scores),'必须有「读到了行但认不出字段」的防线');
+ // Malformed and mixed rows are exercised through a fake HTTPS server in session_security_test.go.
 });
 
 console.log(`${count} campus checks passed`);
