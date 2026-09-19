@@ -37,88 +37,12 @@ func platformStore() Store {
 	return s
 }
 
-// platformSessionStore 的会话优先走 Secret Service，没有就落权限受限的文件。
-// 和凭据分开存，用户可以只清会话、保留校园网密码。
+// School sessions require Secret Service. Never fall back to plaintext.
 func platformSessionStore() SessionStore {
-	path, err := sessionPath()
-	if err != nil {
-		return &fileSessionStore{path: "session.json", desc: "文件（无法确定用户目录）"}
+	if _, err := exec.LookPath("secret-tool"); err != nil {
+		return &unavailableSessionStore{}
 	}
-	s := &linuxSessionStore{
-		fallback: &fileSessionStore{
-			path: path,
-			desc: "文件（~/.szunet/session.json，权限 600）",
-		},
-	}
-	if _, err := exec.LookPath("secret-tool"); err == nil {
-		s.useSecret = true
-	}
-	return s
-}
-
-type linuxSessionStore struct {
-	fallback  *fileSessionStore
-	useSecret bool
-}
-
-func (s *linuxSessionStore) Save(v Session) error {
-	if !s.useSecret {
-		return s.fallback.Save(v)
-	}
-	data, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	cmd := exec.Command("secret-tool", "store",
-		"--label=szunet 学校系统登录状态",
-		"service", "szunet",
-		"kind", "session",
-	)
-	cmd.Stdin = strings.NewReader(string(data))
-	if out, err := cmd.CombinedOutput(); err != nil {
-		if ferr := s.fallback.Save(v); ferr == nil {
-			s.useSecret = false
-			return nil
-		}
-		return fmt.Errorf("写入密钥环失败: %v（%s）", err, strings.TrimSpace(string(out)))
-	}
-	return nil
-}
-
-func (s *linuxSessionStore) Load() (Session, error) {
-	if !s.useSecret {
-		return s.fallback.Load()
-	}
-	out, err := exec.Command("secret-tool", "lookup",
-		"service", "szunet",
-		"kind", "session",
-	).Output()
-	if err != nil {
-		if v, ferr := s.fallback.Load(); ferr == nil {
-			return v, nil
-		}
-		return Session{}, ErrSessionNotFound
-	}
-	var v Session
-	if err := json.Unmarshal([]byte(strings.TrimSpace(string(out))), &v); err != nil {
-		return Session{}, fmt.Errorf("密钥环里的登录状态格式不对: %w", err)
-	}
-	return v, nil
-}
-
-func (s *linuxSessionStore) Delete() error {
-	_ = exec.Command("secret-tool", "clear",
-		"service", "szunet",
-		"kind", "session",
-	).Run()
-	return s.fallback.Delete()
-}
-
-func (s *linuxSessionStore) Describe() string {
-	if s.useSecret {
-		return "Linux Secret Service（gnome-keyring / KWallet）"
-	}
-	return s.fallback.Describe()
+	return &secretSessionStore{run: runSecretSessionCommand}
 }
 
 func (s *linuxStore) Save(c Credentials) error {

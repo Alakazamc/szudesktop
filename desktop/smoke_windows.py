@@ -75,6 +75,18 @@ with tempfile.TemporaryDirectory(prefix='szudesktop-smoke-') as cfg:
         check('explicit username reveal',get('/api/credential?reveal=1')['username']=='000000')
         check('credential never returns password','password' not in get('/api/credential?reveal=1'))
         check('delete isolated credential',request('/api/credential',method='DELETE')[0]==200)
+        check('no school session by default',get('/api/session')['saved'] is False)
+        check('graduate session check needs saved session',request('/api/session/check?level=graduate',{})[0]==409)
+        check('session probe validates level',request('/api/session/check?level=invalid',{})[0]==400)
+        check('session rejects cross-origin write',request('/api/session',{'cookie':'test-only=1'},headers={'Origin':'https://example.com'})[0]==403)
+        fake_session='session-smoke-only=not-a-real-cookie'
+        check('save isolated school session',request('/api/session',{'cookie':fake_session})[0]==200)
+        session_status=get('/api/session')
+        check('school session never echoed',session_status['saved'] and fake_session not in json.dumps(session_status) and 'cookie' not in session_status)
+        session_file=Path(cfg)/'session.json'
+        check('school session encrypted on disk',session_file.exists() and fake_session.encode() not in session_file.read_bytes())
+        check('delete isolated school session',request('/api/session',method='DELETE')[0]==200 and not session_file.exists())
+
         code,body,_=request('/api/login',{'username':'','password':''});check('empty login explains failure',code==200 and not json.loads(body)['ok'])
         w=get('/api/workspace');check('initial workspace empty',w['data'] is None)
         snapshot={'version':1,'revision':0,'data':{'test':'restart'}}

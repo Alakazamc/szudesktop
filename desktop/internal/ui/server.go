@@ -51,16 +51,17 @@ type Options struct {
 
 // Server 是本地服务。
 type Server struct {
-	opts      Options
-	store     credential.Store
-	session   credential.SessionStore // 学校系统（ehall）登录状态；与校园网凭据分开存
-	vpn       *vpnManager
-	campus    *campusGateway
-	probe     func() *portal.DetectResult
-	workspace *workspaceStore
-	shutdown  func()
-	instance  *desktopInstance
-	windows   *windowSessions
+	opts         Options
+	store        credential.Store
+	ehallFactory func(string) *ehallClient // test injection; nil in production
+	session      credential.SessionStore   // 学校系统（ehall）登录状态；与校园网凭据分开存
+	vpn          *vpnManager
+	campus       *campusGateway
+	probe        func() *portal.DetectResult
+	workspace    *workspaceStore
+	shutdown     func()
+	instance     *desktopInstance
+	windows      *windowSessions
 
 	mu       sync.Mutex
 	lastErr  string

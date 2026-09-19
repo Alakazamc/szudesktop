@@ -46,6 +46,10 @@ README = """szuDesktop beta0.5 · 荔枝庭院（Windows x64）
 预约在学校页面完成；空闲时段、预约结果、个人成绩和课表尚未自动同步。
 成绩表支持 CSV / TSV 或复制粘贴；不直接读取 PDF、图片和 XLSX。研究生不套用本科绩点规则。
 
+学习工具另提供实验性在线成绩读取：仅在本机应用中输入对应学校业务的 Cookie，
+安全存储失败时拒绝保存。当前只查询第一页，总数未知或尚未取全会明确提示，尚待真实成绩验收。
+请勿把 Cookie 发到聊天或公开反馈中。清除本机会话不会注销学校浏览器登录。
+
 这是学生自制的非官方测试版。庭院币没有真实货币价值，无充值、交易和提现。
 本版尚无数字签名，校园认证仍需在实际教学区 / 宿舍网络验证。
 源码与反馈：https://github.com/Alakazamc/szudesktop
@@ -85,8 +89,11 @@ def main():
     print("   压缩前 %.1f MB / 压缩后 %.1f MB"
           % (len(exe_bytes) / 1024 / 1024, os.path.getsize(out) / 1024 / 1024))
     print("   版本 %s" % ver)
-    print("   sha256 %s" % hashlib.sha256(exe_bytes).hexdigest())
+    print("   EXE sha256 %s" % hashlib.sha256(exe_bytes).hexdigest())
+    print("   ZIP sha256 %s" % hashlib.sha256(Path(out).read_bytes()).hexdigest())
     with zipfile.ZipFile(out) as z:
+        if z.read("szudesktop.exe") != Path(EXE).read_bytes():
+            raise RuntimeError("包内程序与当前构建不一致，请重新打包")
         print("   包内文件:")
         for i in z.infolist():
             print("     %-28s %8d 字节" % (i.filename, i.file_size))

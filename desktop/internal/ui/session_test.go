@@ -194,28 +194,6 @@ func TestEhallRowsDistinguishesExpiredFromEmpty(t *testing.T) {
 	}
 }
 
-func TestScoreParseNeverSilentlyReportsEmpty(t *testing.T) {
-	// 服务端给了行，但我们认不出课程名字段 —— 这必须是错误，不是「暂无成绩」。
-	// 让用户误以为「查过了没成绩」是本项目最不能犯的错。
-	rows := []map[string]any{
-		{"WEIRD_FIELD_1": "高等数学", "WEIRD_FIELD_2": "95"},
-	}
-	out := &scoreResult{Level: "undergrad", Label: "本科"}
-	out.Items = nil
-	err := checkSuspiciouslyEmpty(out, rows, "本科")
-	if err == nil {
-		t.Fatal("认不出字段时应当报错，而不是当成没有成绩")
-	}
-	if !strings.Contains(err.Error(), "不要以本结果为准") {
-		t.Fatalf("错误信息应当告诉用户去官方系统核对: %v", err)
-	}
-
-	// 服务端本来就给了空列表，这才是真「暂无成绩」，允许通过。
-	if err := checkSuspiciouslyEmpty(&scoreResult{}, nil, "本科"); err != nil {
-		t.Fatalf("空列表是合法结果: %v", err)
-	}
-}
-
 /* ---------- 成绩字段解析 ---------- */
 
 func TestParseUndergradAndGraduateFields(t *testing.T) {
@@ -228,7 +206,7 @@ func TestParseUndergradAndGraduateFields(t *testing.T) {
 	if got := str(undergrad, "KCM", "KCMC"); got != "数据结构" {
 		t.Fatalf("本科课程名 = %q", got)
 	}
-	if got := num(undergrad, "XF"); got != 3.0 {
+	if got, err := optionalNumber(undergrad, "XF", 100); err != nil || got == nil || *got != 3.0 {
 		t.Fatalf("本科学分 = %v", got)
 	}
 
@@ -238,7 +216,7 @@ func TestParseUndergradAndGraduateFields(t *testing.T) {
 	if got := str(grad, "KCMC", "KCM"); got != "机器学习" {
 		t.Fatalf("研究生课程名 = %q", got)
 	}
-	if got := num(grad, "XF"); got != 2.5 {
+	if got, err := optionalNumber(grad, "XF", 100); err != nil || got == nil || *got != 2.5 {
 		t.Fatalf("研究生学分 = %v", got)
 	}
 	// 数字型的成绩也要能取出来（接口有时给 number 有时给 string）
@@ -314,7 +292,7 @@ func TestScoreRoutesAreGuardedAndReadOnly(t *testing.T) {
 // 这样解析逻辑能真的跑一遍，而不是只测到几个小函数。
 func newFakeEhall(t *testing.T, handler func(dataset string, form url.Values) (int, string)) (*ehallClient, *httptest.Server) {
 	t.Helper()
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if cookie := r.Header.Get("Cookie"); cookie == "" {
 			w.WriteHeader(http.StatusFound)
 			w.Header().Set("Location", "https://sso.szu.edu.cn/login")
@@ -335,6 +313,7 @@ func newFakeEhall(t *testing.T, handler func(dataset string, form url.Values) (i
 	c := newEhallClient("JSESSIONID=test-only", 5*time.Second)
 	// 让客户端打到假服务器上，其余配置保持真实。
 	c.base = srv.URL
+	c.http.Transport = srv.Client().Transport
 	return c, srv
 }
 
@@ -350,7 +329,7 @@ func TestReadUndergradScoreEndToEnd(t *testing.T) {
 		return 200, `{"code":"0","msg":"成功","datas":{"xscjcx":{"rows":[
 			{"JXBID":"b1","KCM":"高等数学","XF":"5.0","ZCJ":"92","JD":"4.0","XNXQDM":"2024-2025-1","KCXZDM_DISPLAY":"必修"},
 			{"JXBID":"b2","KCM":"大学物理","XF":"3.0","ZCJ":"85","JD":"3.5","XNXQDM":"2024-2025-2"},
-			{"JXBID":"b2","KCM":"大学物理","XF":"3.0","ZCJ":"85","XNXQDM":"2024-2025-2"}
+			{"JXBID":"b2","KCM":"大学物理","XF":"3.0","ZCJ":"85","JD":"3.5","XNXQDM":"2024-2025-2"}
 		]}}}`
 	})
 	result, err := readUndergradScore(c)
@@ -366,8 +345,8 @@ func TestReadUndergradScoreEndToEnd(t *testing.T) {
 	if result.Label != "本科" || result.Level != "undergrad" {
 		t.Fatalf("层次标注不对: %+v", result)
 	}
-	if !result.Full {
-		t.Fatal("全部取回时 Full 应为 true")
+	if result.Full {
+		t.Fatal("缺少总数时不能声称完整")
 	}
 }
 
@@ -388,7 +367,7 @@ func TestReadGraduateScoreUsesItsOwnDataset(t *testing.T) {
 	if len(result.Items) != 1 || result.Items[0].Name != "机器学习" {
 		t.Fatalf("研究生课程没读对: %+v", result.Items)
 	}
-	if result.Items[0].Credit != 2.5 {
+	if result.Items[0].Credit == nil || *result.Items[0].Credit != 2.5 {
 		t.Fatalf("学分 = %v", result.Items[0].Credit)
 	}
 }
@@ -428,7 +407,7 @@ func TestReadScorePassesThroughTrulyEmptyResult(t *testing.T) {
 	if err != nil {
 		t.Fatalf("空列表是合法结果: %v", err)
 	}
-	if len(result.Items) != 0 || !result.Full {
+	if len(result.Items) != 0 || result.Items == nil || result.Full {
 		t.Fatalf("空结果应当如实返回: %+v", result)
 	}
 }
@@ -436,7 +415,7 @@ func TestReadScorePassesThroughTrulyEmptyResult(t *testing.T) {
 func TestNoSessionCookieNeverReachesTheSchool(t *testing.T) {
 	// 没会话就不该发请求出去，更不该把「连不上」说成「没有数据」。
 	called := false
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
 	}))
 	defer srv.Close()

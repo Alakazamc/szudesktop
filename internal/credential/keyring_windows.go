@@ -33,7 +33,7 @@ func platformStore() Store {
 func platformSessionStore() SessionStore {
 	path, err := sessionPath()
 	if err != nil {
-		return &fileSessionStore{path: "session.json", desc: "文件（无法确定用户目录）"}
+		return &unavailableSessionStore{}
 	}
 	return &windowsSessionStore{path: path}
 }
