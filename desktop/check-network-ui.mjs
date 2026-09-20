@@ -22,6 +22,13 @@ assert.equal(await vm.runInContext('refresh()',ctx),false);
 assert.equal(nodes['#network-summary'].textContent,'服务已退出');
 assert.equal(nodes['#network-badge'].textContent,'状态未确认');
 assert.equal(vm.runInContext('net',ctx),null);
+let click,work,message;
+const pendingCtx=vm.createContext({probing:true,campusUI:{click:async()=>false},document:{addEventListener:(_,handler)=>{click=handler}},run:fn=>{work=fn()},toast:t=>{message=t},refresh:()=>{throw Error('duplicate refresh')}});
+vm.runInContext(app.slice(app.indexOf("document.addEventListener('click'"),app.indexOf("document.addEventListener('submit'")),pendingCtx);
+click({target:{closest:()=>({dataset:{action:'refresh'}})},preventDefault:()=>{}});
+await work;
+assert.match(message,/正在刷新/);
+assert.doesNotMatch(message,/失败|已刷新/);
 console.log('PASS failed refresh clears previous online state and reports failure');
 
 const authenticate=app.slice(app.indexOf('async function authenticate('),app.indexOf('\nasync function run('));

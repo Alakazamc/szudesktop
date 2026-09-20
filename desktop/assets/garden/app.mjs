@@ -72,7 +72,7 @@ async function authenticate(logout=false){const {data,remember}=credentialInput(
 async function run(work){if(busy)return;busy=true;const controls=[...document.querySelectorAll('#main button, #main select, #main input[type=file]')].map(b=>[b,b.disabled]);controls.forEach(([b])=>b.disabled=true);try{await work()}catch(e){toast(e.message);if(page==='network')networkResult(e.message,true)}finally{busy=false;controls.forEach(([b,disabled])=>{if(b.isConnected)b.disabled=disabled});clocks()}}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b)return;const a=b.dataset.action;if(a==='navigate'){if(!busy)navigate(b.dataset.page);return}if(a==='gardenTab'){if(!busy){gardenTab=b.dataset.tab;render()}return}e.preventDefault();run(async()=>{
  if(await campusUI.click(a,b))return;
- if(a==='refresh'){toast(await refresh()?'网络状态已刷新':'网络状态刷新失败，请稍后重试');return}
+ if(a==='refresh'){if(probing){toast('正在刷新网络状态，请稍候');return}toast(await refresh()?'网络状态已刷新':'网络状态刷新失败，请稍后重试');return}
  if(a==='logout'){await authenticate(true);return}
  if(a==='reveal'){const output=$('#saved-account');if(!output.hidden){output.hidden=true;output.textContent='';b.textContent='查看已保存卡号'}else{const d=await api('/api/credential?reveal=1');output.textContent='已保存卡号：'+(d.username||'未保存');output.hidden=false;b.textContent='隐藏卡号'}return}
  if(a==='diagnose'){const el=$('#diag-result');el.className='notice';el.textContent='正在检查网络与校园门户…';const d=await api('/api/diag');el.textContent=[d.zone_label,'互联网：'+(d.internet_ok?'可用':'不可用'),'教学区门户：'+(d.teaching_portal_ok?'可达':'未确认'),'宿舍区门户：'+(d.dorm_portal_ok?'可达':'未确认'),...(d.advices||[])].join(' · ');return}
