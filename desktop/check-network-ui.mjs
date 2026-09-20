@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {networkBadge,networkSummary} from './assets/garden/network-status.mjs';
+import {networkBadge,networkSummary,networkBadgeHTML,networkSummaryHTML,networkTone} from './assets/garden/network-status.mjs';
 
 const connected={internet_ok:true,zone_label:'当前已联网',online_known:true,online:true};
 assert.match(networkSummary(connected),/出口已在线/);
@@ -12,15 +12,18 @@ console.log('PASS network reachability, authentication and unknown status remain
 
 const app=readFileSync(new URL('./assets/garden/app.mjs',import.meta.url),'utf8');
 const refresh=app.slice(app.indexOf('async function refresh(){'),app.indexOf('\nfunction networkResult'));
-const nodes={'#network-summary':{textContent:''},'#network-badge':{textContent:''}};
-const ctx=vm.createContext({networkSummary,networkBadge,$:s=>nodes[s],api:async()=>connected});
+const nodes={'#network-summary':{innerHTML:'',dataset:{}},'#network-badge':{innerHTML:'',dataset:{}}};
+const ctx=vm.createContext({networkSummaryHTML,networkBadgeHTML,networkTone,$:s=>nodes[s],api:async()=>connected});
 vm.runInContext('let net=null,saved=false,probing=false;'+refresh,ctx);
 assert.equal(await vm.runInContext('refresh()',ctx),true);
-assert.match(nodes['#network-summary'].textContent,/出口已在线/);
+assert.match(nodes['#network-summary'].innerHTML,/出口已在线/);
+assert.equal(nodes['#network-badge'].dataset.tone,'success');
 ctx.api=async()=>{throw Error('服务已退出')};
 assert.equal(await vm.runInContext('refresh()',ctx),false);
-assert.equal(nodes['#network-summary'].textContent,'服务已退出');
-assert.equal(nodes['#network-badge'].textContent,'状态未确认');
+assert.match(nodes['#network-summary'].innerHTML,/服务已退出/);
+assert.match(nodes['#network-badge'].innerHTML,/状态未确认/);
+assert.equal(nodes['#network-badge'].dataset.tone,'muted');
+assert.doesNotMatch(nodes['#network-summary'].innerHTML,/data-tone="success"/);
 assert.equal(vm.runInContext('net',ctx),null);
 let click,work,message;
 const pendingCtx=vm.createContext({probing:true,schoolUI:{click:async()=>false},campusUI:{click:async()=>false},document:{addEventListener:(_,handler)=>{click=handler}},run:fn=>{work=fn()},toast:t=>{message=t},refresh:()=>{throw Error('duplicate refresh')}});
@@ -38,4 +41,11 @@ vm.runInContext(authenticate,authCtx);
 await vm.runInContext('authenticate()',authCtx);
 assert.equal(refreshed,1);
 console.log('PASS a login that did not verify credentials still refreshes outlet status');
-console.log('3 network UI checks passed');
+const mixed=networkSummaryHTML({...connected,online_known:false,online_error:'<img src=x>'});
+assert.match(mixed,/data-tone="success"/);assert.match(mixed,/data-tone="warning"/);
+assert.match(mixed,/&lt;img src=x&gt;/);assert.doesNotMatch(mixed,/<img src=x>/);
+assert.equal(networkTone({...connected,internet_ok:false}),'error');
+const split=networkSummaryHTML({...connected,internet_ok:false});
+assert.match(split,/data-tone="error"/);assert.match(split,/data-tone="success"/);
+console.log('PASS independent colored states and escaped school error text');
+console.log('4 network UI checks passed');

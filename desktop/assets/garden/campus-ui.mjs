@@ -1,10 +1,11 @@
+import {pixelIcon} from './pixel.mjs';
 import {parseGrades,mergeGrades,makeStudyReminder,reminderICS,BOOKING_URL,GRADE_RULE_URL,PHONE_BOOK,PHONE_FALLBACK,PHONE_NOTE} from './campus.mjs';
 import {gpa} from './engine.mjs';
 
 export function createCampusUI({getState,commit,toast,confirm,api,render}) {
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const link=(url,label,cls='button')=>`<a class="${cls}" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${label} ↗</a>`;
- const itemIcons={'reminder-ics':'i-scroll',feed:'i-mail','session-save':'i-chest','session-check':'i-crystal','online-score':'i-book',preview:'i-scroll',template:'i-scroll',import:'i-chest'};
+ const itemIcons={'reminder-ics':'i-calendar',feed:'i-bell','session-save':'i-chest','session-check':'i-shield','session-clear':'i-key','online-score':'i-medal',preview:'i-scroll',template:'i-scroll',import:'i-chest'};
  const button=(label,action,extra='')=>`<button data-action="campus-${action}" ${extra}>${itemIcons[action]?`<svg class="item-icon" aria-hidden="true"><use href="#${itemIcons[action]}"></use></svg>`:''}${label}</button>`;
  let gradeText='',gradeLevel='undergrad',preview=null,feedSource='undergrad',feed=null,feedError='',loading=false,filterLevel='',filterTerm='';
  // 学校系统（ehall）在线读取相关状态。会话本身不放在这里，只由后端保管。
@@ -19,15 +20,15 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
   return `<p class="notice">${esc(feed.source)} · ${feed.stale?'上次读取的内容':'读取于 '+formatTime(feed.fetched_at)}${feed.message?' · '+esc(feed.message):''}</p><ul class="campus-notices">${sorted.slice(0,12).map(x=>`<li><time>${esc(x.date)}</time>${link(x.url,esc(x.title),'')}</li>`).join('')}</ul>`;
  }
  function services(){const reminders=getState().reminders||[];return `
- <section class="card campus-booking"><div class="card-head"><h2>学习空间与场地预约</h2><span class="badge">社区 · 图书馆</span></div>
+ <section class="card campus-booking"><div class="card-head"><h2 class="icon-heading tone-info">${pixelIcon('i-mug','heading-icon')}学习空间与场地预约</h2><span class="badge" data-tone="info">社区 · 图书馆</span></div>
  <p>社区静音舱包含共享会议室、网络面试间、琴房等空间；请按场地规定的用途预约。本科生与研究生从学校系统登录，具体可预约范围以账号权限为准。</p>
  <div class="actions">${link(BOOKING_URL,'打开静音舱预约','button primary')}${link('https://webvpn.szu.edu.cn/','登录 WebVPN')}${link('https://www.lib.szu.edu.cn/space-and-facilities/discussion-room','图书馆研讨间')}</div>
  <p class="notice">当前预约在学校页面完成；应用尚未读取空闲时段或预约结果。登录后若回到大厅，请再次点击「打开静音舱预约」。图书馆阅览座位另按${link('https://www.lib.szu.edu.cn/space-and-facilities/seat','官方选座规则','')}签到选座。</p>
  <details><summary>添加自习提醒</summary><p class="muted">在官方系统确认预约后，可手动登记时间并导出日历。此处保存的是提醒，不会向学校提交预约。</p>
- <form id="campus-reminder-form" class="grid three"><div><label for="reminder-place">自习地点</label><input id="reminder-place" name="place" maxlength="80" placeholder="填写已预约的场地 / 房间" required></div><div><label for="reminder-start">开始时间</label><input id="reminder-start" name="start" type="datetime-local" required></div><div><label for="reminder-end">结束时间</label><input id="reminder-end" name="end" type="datetime-local" required></div><button>保存本机提醒</button></form></details>
+ <form id="campus-reminder-form" class="grid three"><div><label for="reminder-place">自习地点</label><input id="reminder-place" name="place" maxlength="80" placeholder="填写已预约的场地 / 房间" required></div><div><label for="reminder-start">开始时间</label><input id="reminder-start" name="start" type="datetime-local" required></div><div><label for="reminder-end">结束时间</label><input id="reminder-end" name="end" type="datetime-local" required></div><button>${pixelIcon('i-bell')}保存本机提醒</button></form></details>
  ${reminders.length?`<h3>自习提醒 · 手动登记</h3><ul class="campus-reminders">${[...reminders].sort((a,b)=>a.start-b.start).map(x=>`<li><div><strong>${esc(x.place)}</strong><p>${formatTime(x.start)} — ${formatTime(x.end)}${x.end<Date.now()?' · 已结束':''}</p></div><div class="actions">${button('导出日历','reminder-ics',`data-id="${esc(x.id)}"`)}${button('移除提醒','reminder-delete',`data-id="${esc(x.id)}"`)}</div></li>`).join('')}</ul><small>导入系统日历后可在开始前 15 分钟提醒；是否提醒由日历软件设置决定。</small>`:''}</section>
- <section class="card campus-feed"><div class="card-head"><h2>学校公告</h2><span class="badge">官方公开内容</span></div><div class="actions"><label for="feed-source">来源</label><select id="feed-source"><option value="undergrad" ${feedSource==='undergrad'?'selected':''}>本科 · 教务部</option><option value="graduate" ${feedSource==='graduate'?'selected':''}>研究生院</option></select>${button('读取公告','feed')}${link(feedSource==='undergrad'?'https://jwb.szu.edu.cn/index/jwtz.htm':'https://gra.szu.edu.cn/','查看原页')}</div><div id="campus-feed-content" aria-live="polite">${feedHTML()}</div><small>10 分钟内复用已读取内容；公告按学校页面日期展示，原文以学校发布为准。</small></section>
- <section class="card campus-phone"><div class="card-head"><h2>常用联系与入口</h2><span class="badge">公开信息</span></div>
+ <section class="card campus-feed"><div class="card-head"><h2 class="icon-heading tone-warning">${pixelIcon('i-bell','heading-icon')}学校公告</h2><span class="badge" data-tone="info">官方公开内容</span></div><div class="actions"><label for="feed-source">来源</label><select id="feed-source"><option value="undergrad" ${feedSource==='undergrad'?'selected':''}>本科 · 教务部</option><option value="graduate" ${feedSource==='graduate'?'selected':''}>研究生院</option></select>${button('读取公告','feed')}${link(feedSource==='undergrad'?'https://jwb.szu.edu.cn/index/jwtz.htm':'https://gra.szu.edu.cn/','查看原页')}</div><div id="campus-feed-content" aria-live="polite">${feedHTML()}</div><small>10 分钟内复用已读取内容；公告按学校页面日期展示，原文以学校发布为准。</small></section>
+ <section class="card campus-phone"><div class="card-head"><h2 class="icon-heading tone-magic">${pixelIcon('i-mail','heading-icon')}常用联系与入口</h2><span class="badge">公开信息</span></div>
  <p>${esc(PHONE_NOTE)}</p>
  <ul class="campus-phones">${PHONE_BOOK.map(x=>`<li><span>${esc(x.name)}</span>${x.tel?`<a href="tel:${esc(x.tel)}">${esc(x.tel)}</a>`:`<a href="mailto:${esc(x.mail)}">${esc(x.mail)}</a>`}${link(x.source,'来源','')}</li>`).join('')}</ul>
  <h3>其他部门 · 官方入口</h3>
@@ -64,7 +65,7 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
  function grades(){
   const courses=getState().courses,terms=[...new Set(courses.map(x=>x.term||'').filter(Boolean))].sort();
   const selected=courses.filter(x=>(!filterLevel||x.level===filterLevel)&&(!filterTerm||x.term===filterTerm)),result=gpa(selected);
-  return `<section class="card span"><div class="card-head"><h2>成绩与绩点</h2><span class="badge">计入 ${result.credits} 学分 · 加权绩点 ${result.value.toFixed(2)}</span></div>
+  return `<section class="card span"><div class="card-head"><h2 class="icon-heading tone-magic">${pixelIcon('i-medal','heading-icon')}成绩与绩点</h2><span class="badge" data-tone="magic">计入 <b>${result.credits}</b> 学分 · 加权绩点 <b>${result.value.toFixed(2)}</b></span></div>
   <p>本科和研究生分开记录，批量导入课程后按学分加权。这里的结果用于个人核对，官方平均绩点以学校系统为准。</p>
   <div class="actions">${link('https://ehall.szu.edu.cn/','学校办事大厅')}${link('https://cjzm.szu.edu.cn/gztcyUI/','本科成绩证明')}${link('https://gra.szu.edu.cn/info/1092/3484.htm','研究生成绩单指南')}</div>
   <details open><summary>从学校系统直接读取（可选）</summary>
