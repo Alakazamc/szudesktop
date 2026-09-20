@@ -69,7 +69,7 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | :--- | :----- |
 | Desktop app | Windows x64 (`szudesktop.exe`) |
 | Command line | Windows / macOS / Linux, single binary `szunet` |
-| Current version | `beta0.6` · public beta (pre-release) |
+| Current version | `beta0.6.1` · public beta (pre-release) |
 | Runtime | No dependencies to install; the window is provided by your browser (Edge / Chrome app window) |
 
 ### First run
@@ -120,11 +120,11 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | Lychee Garden | ✅ | Companion care and growth, crops, plots, watering, harvest, decorations, daily goals, achievements and a field guide. No purchases, no real-money trading |
 | Save file | ✅ | Fixed local file, survives restarts and port changes, supports export / import and multi-window conflict protection |
 
-beta0.6 is a public prerelease. Score reading remains limited to the first page; balance is not integrated. Timetables require manual queries and still await full live account validation. In the current source, reservations are completed on the official school page; embedding that page inside the app is not yet implemented. See [STATUS.md](STATUS.md).
+beta0.6.1 is a public prerelease. Score reading remains limited to the first page; balance is not integrated. Timetables require manual queries and still await full live account validation. In the current source, reservations are completed on the official school page; embedding that page inside the app is not yet implemented. See [STATUS.md](STATUS.md).
 
-**Unreleased college notice filtering:** selecting a college automatically reads its public column. Unsupported units have an official-site link; authenticated internal notices are not included. Published beta0.6 assets do not include this update yet.
+**College notice filtering:** selecting a college automatically reads its public column. Unsupported units have an official-site link; authenticated internal notices are not included. This update is included in beta0.6.1.
 
-**Unreleased booking usability fix:** current source removes the booking cookie field, developer-tools instructions and unverified local submission form. Availability is a read-only overview; the booking button opens the official school website in the browser. The published beta0.6 assets do not yet include this change. Embedded official pages and their full login flow remain unverified.
+**Booking usability fix:** current source removes the booking cookie field, developer-tools instructions and unverified local submission form. Availability is a read-only overview; the booking button opens the official school website in the browser. This change is included in beta0.6.1. Embedded official pages and their full login flow remain unverified.
 
 ---
 
@@ -278,8 +278,8 @@ respective owners.
 
 ### Experimental score reading
 
-beta0.6 includes undergraduate and graduate score readers, pending validation with real school records. Enter the Cookie only in the local application. Session storage fails closed if secure storage is unavailable; no plaintext fallback is used. Verification targets the selected academic application and distinguishes missing permission from an expired session. Only the first page is read; unknown totals and partial results are explicitly labelled. Community booking uses a separate session and still requires live verification; sports venues are not integrated.
+beta0.6.1 includes undergraduate and graduate score readers, pending validation with real school records. Enter the Cookie only in the local application. Session storage fails closed if secure storage is unavailable; no plaintext fallback is used. Verification targets the selected academic application and distinguishes missing permission from an expired session. Only the first page is read; unknown totals and partial results are explicitly labelled. Community reservations are completed on the official school page; sports venues are not integrated.
 
 Additional frontend regression check: `node desktop/check-session-ui.mjs`.
 
-The app provides the official academic calendar, local graduate login and timetable reading, and undergraduate personal timetable reading using a business-specific ehall cookie. Timetable adapters still require live account acceptance. Public community rooms and availability can be read on the campus network. In the current source, users open the official school page to sign in, submit a reservation, and view its result. The booking session input and experimental local submission interface shipped in beta0.6 have been removed from the current source; the published download has not been updated. See [STATUS.md](STATUS.md) for current acceptance status.
+The app provides the official academic calendar, local graduate login and timetable reading, and undergraduate personal timetable reading using a business-specific ehall cookie. Timetable adapters still require live account acceptance. Public community rooms and availability can be read on the campus network. In the current source, users open the official school page to sign in, submit a reservation, and view its result. The booking session input and experimental local submission interface shipped in beta0.6 have been removed in beta0.6.1. See [STATUS.md](STATUS.md) for current acceptance status.
