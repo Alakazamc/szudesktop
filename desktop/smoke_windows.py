@@ -60,9 +60,13 @@ with tempfile.TemporaryDirectory(prefix='szudesktop-smoke-') as cfg:
         check('bundled official calendar available offline',get('/api/campus/calendar')['terms'][0]['week_start']=='2026-08-30')
         check('calendar rejects cross origin',request('/api/campus/calendar',headers={'Origin':'https://example.com'})[0]==403)
         check('calendar rejects POST',request('/api/campus/calendar',{})[0]==405)
+        check('academic login starts signed out',get('/api/academic/session')['authenticated'] is False)
+        check('timetable requires academic login',request('/api/academic/timetable')[0]==409)
+        check('academic login rejects cross origin',request('/api/academic/login',{},headers={'Origin':'https://example.com'})[0]==403)
+        check('academic login requires complete fields',request('/api/academic/login',{})[0]==400)
         check('default VPN unavailable',get('/api/vpn/status')['state']=='unavailable')
         check('no account exposed in status',get('/api/status')['username']=='')
-        for path,file in [('/',ROOT/'desktop/index.html'),('/assets/garden/app.mjs',ROOT/'desktop/assets/garden/app.mjs'),('/assets/garden/style.css',ROOT/'desktop/assets/garden/style.css'),('/assets/garden/engine.mjs',ROOT/'desktop/assets/garden/engine.mjs'),('/assets/garden/campus.mjs',ROOT/'desktop/assets/garden/campus.mjs'),('/assets/garden/campus-ui.mjs',ROOT/'desktop/assets/garden/campus-ui.mjs'),('/assets/garden/academic.mjs',ROOT/'desktop/assets/garden/academic.mjs'),('/assets/garden/network-status.mjs',ROOT/'desktop/assets/garden/network-status.mjs'),('/assets/garden/campus.png',ROOT/'desktop/assets/garden/campus.png'),('/assets/szudesktop.ico',ROOT/'desktop/assets/szudesktop.ico')]:
+        for path,file in [('/',ROOT/'desktop/index.html'),('/assets/garden/app.mjs',ROOT/'desktop/assets/garden/app.mjs'),('/assets/garden/style.css',ROOT/'desktop/assets/garden/style.css'),('/assets/garden/engine.mjs',ROOT/'desktop/assets/garden/engine.mjs'),('/assets/garden/campus.mjs',ROOT/'desktop/assets/garden/campus.mjs'),('/assets/garden/campus-ui.mjs',ROOT/'desktop/assets/garden/campus-ui.mjs'),('/assets/garden/academic.mjs',ROOT/'desktop/assets/garden/academic.mjs'),('/assets/garden/school.mjs',ROOT/'desktop/assets/garden/school.mjs'),('/assets/garden/network-status.mjs',ROOT/'desktop/assets/garden/network-status.mjs'),('/assets/garden/campus.png',ROOT/'desktop/assets/garden/campus.png'),('/assets/szudesktop.ico',ROOT/'desktop/assets/szudesktop.ico')]:
             code,body,_=request(path);check('embedded '+path,code==200 and body==file.read_bytes())
         code,css,_=request('/assets/fonts/fusion-pixel.css')
         check('pixel font stylesheet packaged',code==200)

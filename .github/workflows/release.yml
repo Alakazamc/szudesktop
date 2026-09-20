@@ -28,7 +28,9 @@ jobs:
       - name: Session UI regression
         run: node desktop/check-session-ui.mjs
       - name: Academic calendar regression
-        run: node desktop/check-academic.mjs
+        run: |
+          node desktop/check-academic.mjs
+          node desktop/check-school.mjs
       - name: Network and workspace UI regression
         run: |
           node desktop/check-network-ui.mjs

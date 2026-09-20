@@ -245,3 +245,6 @@ nav .sprite { width:24px; height:24px; shape-rendering:crispEdges; }
 
 .hero-garden > .hero-tree { position:absolute; width:82px; height:108px; bottom:27px; left:0; shape-rendering:crispEdges; }
 @media(max-width:650px) { .hero-garden > .hero-tree { width:59px; height:82px; bottom:55px; } }
+
+/* School account and real timetable. */
+.school-captcha-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0}.school-captcha-row img{object-fit:contain;background:white;image-rendering:auto;border:2px solid var(--line,#8b6541)}.school-captcha-row input{max-width:220px}.timetable-days{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:18px 0}.timetable-day{min-width:0}.timetable-day h3{border-bottom:2px solid #bb9966;padding-bottom:8px}.timetable-course{border:2px solid #bb9966;background:#fff8e2;padding:14px;margin:10px 0;overflow-wrap:anywhere}.timetable-course h4{margin:10px 0 6px;font-size:17px}.timetable-course p{margin:6px 0}.timetable-course small{display:block}.timetable-pending{line-height:1.8}#school-login-details{margin:12px 0}

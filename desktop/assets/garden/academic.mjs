@@ -30,6 +30,6 @@ export function createAcademicUI({getState,api,toast}){
    if(force)toast(calendar.stale?'未能更新校历，已保留可用日期':'官方校历已检查');
   }catch(e){error=e.message+'；可查看官方校历或手动设置'}finally{loading=false;paint()}
  }
- function timetable(){return `<section class="card span"><div class="card-head"><h2>我的课表</h2><span class="badge">学校系统查询</span></div><p class="muted">本科与研究生使用不同的选课系统。登录后查看个人课表，具体上课时间、调课与教室以学校系统为准。</p><div class="actions"><a class="button" href="https://ehall.szu.edu.cn/jwapp/sys/kcbcx/*default/index.do" target="_blank" rel="noopener noreferrer">本科课表 ↗</a><a class="button" href="https://ehall.szu.edu.cn/yjsxk" target="_blank" rel="noopener noreferrer">研究生选课与课表 ↗</a></div><small>当前打开官方页面查询。应用内课表同步尚未接入，成绩登录状态不代表课表业务已经可用。</small></section>`}
- return {card,load,timetable};
+
+ return {card,load};
 }

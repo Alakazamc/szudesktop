@@ -59,6 +59,7 @@ type Server struct {
 	vpn          *vpnManager
 	campus       *campusGateway
 	calendar     *calendarService
+	academic     *academicService
 	probe        func() *portal.DetectResult
 	detect       func() *portal.DetectResult
 	workspace    *workspaceStore
@@ -87,7 +88,7 @@ func New(opts Options) *Server {
 		campus = &campusGateway{}
 	}
 	workspace := newWorkspaceStore()
-	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager(), campus: campus, calendar: newCalendarService(filepath.Dir(workspace.path)), probe: portal.Probe, detect: portal.Detect, workspace: workspace, windows: newWindowSessions()}
+	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager(), campus: campus, calendar: newCalendarService(filepath.Dir(workspace.path)), academic: newAcademicService(), probe: portal.Probe, detect: portal.Detect, workspace: workspace, windows: newWindowSessions()}
 }
 
 func parseZone(raw string) (portal.Zone, bool) {
@@ -294,6 +295,11 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 	mux.HandleFunc("/api/session", protectAPI(s.handleSession, http.MethodGet, http.MethodPost, http.MethodDelete))
 	mux.HandleFunc("/api/session/check", protectAPI(s.handleSessionCheck, http.MethodPost))
 	mux.HandleFunc("/api/scores", protectAPI(s.handleScores, http.MethodGet))
+	mux.HandleFunc("/api/academic/session", protectAPI(s.handleAcademicSession, http.MethodGet, http.MethodDelete))
+	mux.HandleFunc("/api/academic/challenge", protectAPI(s.handleAcademicChallenge, http.MethodPost))
+	mux.HandleFunc("/api/academic/captcha", protectAPI(s.handleAcademicCaptcha, http.MethodGet))
+	mux.HandleFunc("/api/academic/login", protectAPI(s.handleAcademicLogin, http.MethodPost))
+	mux.HandleFunc("/api/academic/timetable", protectAPI(s.handleTimetable, http.MethodGet))
 }
 
 /* ---------- 接口 ---------- */

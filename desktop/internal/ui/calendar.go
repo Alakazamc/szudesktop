@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,12 +31,13 @@ type academicTerm struct {
 }
 
 type calendarResult struct {
-	Terms     []academicTerm `json:"terms"`
-	Images    []string       `json:"images"`
-	CheckedAt time.Time      `json:"checked_at"`
-	Source    string         `json:"source"`
-	Stale     bool           `json:"stale"`
-	Message   string         `json:"message,omitempty"`
+	Terms       []academicTerm `json:"terms"`
+	Images      []string       `json:"images"`
+	ImageHashes []string       `json:"image_hashes,omitempty"`
+	CheckedAt   time.Time      `json:"checked_at"`
+	Source      string         `json:"source"`
+	Stale       bool           `json:"stale"`
+	Message     string         `json:"message,omitempty"`
 }
 
 // Dates and Sunday week boundaries visually checked against both official grids.
@@ -168,7 +170,11 @@ func fetchCalendar(ctx context.Context, address string) ([]byte, error) {
 }
 
 func updateCalendar(ctx context.Context, previous calendarResult) (calendarResult, error) {
-	b, err := fetchCalendar(ctx, schoolCalendarURL)
+	return refreshCalendar(ctx, previous, fetchCalendar, recognizeCalendar)
+}
+
+func refreshCalendar(ctx context.Context, previous calendarResult, fetch func(context.Context, string) ([]byte, error), recognize func(context.Context, []byte) (string, error)) (calendarResult, error) {
+	b, err := fetch(ctx, schoolCalendarURL)
 	if err != nil {
 		return previous, errors.New("学校校历暂时无法访问，保留上次校历")
 	}
@@ -176,16 +182,23 @@ func updateCalendar(ctx context.Context, previous calendarResult) (calendarResul
 	if len(images) == 0 {
 		return previous, errors.New("官方校历页面结构变化，保留上次校历")
 	}
-	if !slices.Equal(images, previous.Images) {
+	// Schools can overwrite an image without changing its URL. Hash the image
+	// content on each daily check; only changed content needs local OCR.
+	contents := make([][]byte, len(images))
+	hashes := make([]string, len(images))
+	for i, address := range images {
+		contents[i], err = fetch(ctx, address)
+		if err != nil {
+			return previous, errors.New("校历图片未能完整下载，保留上次校历")
+		}
+		hashes[i] = fmt.Sprintf("%x", sha256.Sum256(contents[i]))
+	}
+	if !slices.Equal(images, previous.Images) || !slices.Equal(hashes, previous.ImageHashes) {
 		var terms []academicTerm
 		// Official page pairs the explanatory sheet with its grid. OCR only adopts
 		// explicit dates from the explanatory sheets, never guesses grid digits.
-		for _, address := range images {
-			image, err := fetchCalendar(ctx, address)
-			if err != nil {
-				return previous, errors.New("新版校历图片未能下载，保留上次校历")
-			}
-			text, err := recognizeCalendar(ctx, image)
+		for i, address := range images {
+			text, err := recognize(ctx, contents[i])
 			if err != nil {
 				return previous, errors.New("发现校历图片更新，但本机未能识别；请查看官方校历或手动设置")
 			}
@@ -201,7 +214,7 @@ func updateCalendar(ctx context.Context, previous calendarResult) (calendarResul
 		if len(terms) == 0 || len(terms)*2 != len(images) {
 			return previous, errors.New("新版校历未能完整识别，请查看官方校历或手动设置")
 		}
-		previous.Terms, previous.Images = terms, images
+		previous.Terms, previous.Images, previous.ImageHashes = terms, images, hashes
 	}
 	previous.CheckedAt = time.Now().UTC()
 	previous.Stale = false
