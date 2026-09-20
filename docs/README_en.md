@@ -119,10 +119,7 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | Lychee Garden | ✅ | Companion care and growth, crops, plots, watering, harvest, decorations, daily goals, achievements and a field guide. No purchases, no real-money trading |
 | Save file | ✅ | Fixed local file, survives restarts and port changes, supports export / import and multi-window conflict protection |
 
-**Not there yet (stated plainly, not glossed over):** grades, balance, timetable and booking
-status cannot sync automatically; in-app availability lookup and submitting bookings are
-not implemented — both need the app to hold a reusable signed-in session, which it currently
-doesn't. Current state and the plan are in [STATUS.md](STATUS.md).
+The table above describes the published beta0.5.1 package. Grades, balance, timetables and bookings do not sync automatically in that release. In-app room availability and booking submission are development preview features; current implementation and live acceptance status are recorded in [STATUS.md](STATUS.md).
 
 ---
 
@@ -248,6 +245,7 @@ presented as a finished, verified feature.
 
 ## Acknowledgements
 
+- [teleostnacl/LoveSzu](https://github.com/teleostnacl/LoveSzu) — reference for undergraduate personal timetable endpoint and field names; implemented independently without copying its source code.
 - [Fusion Pixel Font](https://github.com/TakWolf/fusion-pixel-font) — by TakWolf,
   SIL Open Font License 1.1; the licence ships with the package as `FONT-LICENSE-OFL.txt`
 - [Sleepstars/SZU-login](https://github.com/Sleepstars/SZU-login) — attribution for the
@@ -279,4 +277,4 @@ beta0.5.1 includes undergraduate and graduate score readers, pending validation 
 
 Additional frontend regression check: `node desktop/check-session-ui.mjs`.
 
-The current development branch adds the official academic calendar and teaching week. It reads a local cache at startup and checks the university calendar daily. On Windows, changed calendar images use local system OCR; failed recognition retains the prior dates with an explicit notice. Manual date overrides remain available. Undergraduate and graduate timetable entry points open the official systems; in-app timetable and booking integration are still pending. These changes are not in the published beta0.5.1 package.
+The development branch adds the official academic calendar, local graduate login and timetable reading, and undergraduate personal timetable reading using a business-specific ehall cookie. Timetable adapters still require live account acceptance. Public community rooms and availability can now be read on the campus network. A separate, memory-only WebVPN booking session supports personal records and a review-then-confirm submission flow; live booking authentication and submission remain unverified. Timed-out submissions are never automatically retried. These are preview features, not part of the published beta0.5.1 package. See [STATUS.md](STATUS.md) for current acceptance status.

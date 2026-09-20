@@ -60,6 +60,7 @@ type Server struct {
 	campus       *campusGateway
 	calendar     *calendarService
 	academic     *academicService
+	booking      *bookingService
 	probe        func() *portal.DetectResult
 	detect       func() *portal.DetectResult
 	workspace    *workspaceStore
@@ -88,7 +89,7 @@ func New(opts Options) *Server {
 		campus = &campusGateway{}
 	}
 	workspace := newWorkspaceStore()
-	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager(), campus: campus, calendar: newCalendarService(filepath.Dir(workspace.path)), academic: newAcademicService(), probe: portal.Probe, detect: portal.Detect, workspace: workspace, windows: newWindowSessions()}
+	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager(), campus: campus, calendar: newCalendarService(filepath.Dir(workspace.path)), academic: newAcademicService(), booking: newBookingService(), probe: portal.Probe, detect: portal.Detect, workspace: workspace, windows: newWindowSessions()}
 }
 
 func parseZone(raw string) (portal.Zone, bool) {
@@ -300,6 +301,13 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 	mux.HandleFunc("/api/academic/captcha", protectAPI(s.handleAcademicCaptcha, http.MethodGet))
 	mux.HandleFunc("/api/academic/login", protectAPI(s.handleAcademicLogin, http.MethodPost))
 	mux.HandleFunc("/api/academic/timetable", protectAPI(s.handleTimetable, http.MethodGet))
+	mux.HandleFunc("/api/academic/undergrad/timetable", protectAPI(s.handleUndergradTimetable, http.MethodGet))
+	mux.HandleFunc("/api/booking/rooms", protectAPI(s.handleBookingRooms, http.MethodGet))
+	mux.HandleFunc("/api/booking/availability", protectAPI(s.handleBookingAvailability, http.MethodGet))
+	mux.HandleFunc("/api/booking/session", protectAPI(s.handleBookingSession, http.MethodGet, http.MethodPost, http.MethodDelete))
+	mux.HandleFunc("/api/booking/history", protectAPI(s.handleBookingHistory, http.MethodGet))
+	mux.HandleFunc("/api/booking/prepare", protectAPI(s.handleBookingPrepare, http.MethodPost))
+	mux.HandleFunc("/api/booking/commit", protectAPI(s.handleBookingCommit, http.MethodPost))
 }
 
 /* ---------- 接口 ---------- */

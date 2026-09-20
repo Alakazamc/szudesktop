@@ -1,8 +1,10 @@
+import {createBookingUI} from './booking.mjs';
 import {pixelIcon} from './pixel.mjs';
 import {parseGrades,mergeGrades,makeStudyReminder,reminderICS,BOOKING_URL,GRADE_RULE_URL,PHONE_BOOK,PHONE_FALLBACK,PHONE_NOTE} from './campus.mjs';
 import {gpa} from './engine.mjs';
 
 export function createCampusUI({getState,commit,toast,confirm,api,render}) {
+ const booking=createBookingUI({api,toast,confirm});
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const link=(url,label,cls='button')=>`<a class="${cls}" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${label} ↗</a>`;
  const itemIcons={'reminder-ics':'i-calendar',feed:'i-bell','session-save':'i-chest','session-check':'i-shield','session-clear':'i-key','online-score':'i-medal',preview:'i-scroll',template:'i-scroll',import:'i-chest'};
@@ -19,11 +21,10 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
   const sorted=[...feed.items].sort((a,b)=>b.date.localeCompare(a.date));
   return `<p class="notice">${esc(feed.source)} · ${feed.stale?'上次读取的内容':'读取于 '+formatTime(feed.fetched_at)}${feed.message?' · '+esc(feed.message):''}</p><ul class="campus-notices">${sorted.slice(0,12).map(x=>`<li><time>${esc(x.date)}</time>${link(x.url,esc(x.title),'')}</li>`).join('')}</ul>`;
  }
- function services(){const reminders=getState().reminders||[];return `
- <section class="card campus-booking"><div class="card-head"><h2 class="icon-heading tone-info">${pixelIcon('i-mug','heading-icon')}学习空间与场地预约</h2><span class="badge" data-tone="info">社区 · 图书馆</span></div>
- <p>社区静音舱包含共享会议室、网络面试间、琴房等空间；请按场地规定的用途预约。本科生与研究生从学校系统登录，具体可预约范围以账号权限为准。</p>
- <div class="actions">${link(BOOKING_URL,'打开静音舱预约','button primary')}${link('https://webvpn.szu.edu.cn/','登录 WebVPN')}${link('https://www.lib.szu.edu.cn/space-and-facilities/discussion-room','图书馆研讨间')}</div>
- <p class="notice">当前预约在学校页面完成；应用尚未读取空闲时段或预约结果。登录后若回到大厅，请再次点击「打开静音舱预约」。图书馆阅览座位另按${link('https://www.lib.szu.edu.cn/space-and-facilities/seat','官方选座规则','')}签到选座。</p>
+ function services(){const reminders=getState().reminders||[];return `${booking.card()}
+ <section class="card campus-booking"><div class="card-head"><h2 class="icon-heading tone-info">${pixelIcon('i-mug','heading-icon')}图书馆与自习提醒</h2><span class="badge" data-tone="info">官方入口</span></div>
+ <div class="actions">${link('https://webvpn.szu.edu.cn/','登录 WebVPN')}${link('https://www.lib.szu.edu.cn/space-and-facilities/discussion-room','图书馆研讨间')}</div>
+ <p class="notice">图书馆研讨间与社区场地分属不同系统；阅览座位另按${link('https://www.lib.szu.edu.cn/space-and-facilities/seat','官方选座规则','')}签到选座。</p>
  <details><summary>添加自习提醒</summary><p class="muted">在官方系统确认预约后，可手动登记时间并导出日历。此处保存的是提醒，不会向学校提交预约。</p>
  <form id="campus-reminder-form" class="grid three"><div><label for="reminder-place">自习地点</label><input id="reminder-place" name="place" maxlength="80" placeholder="填写已预约的场地 / 房间" required></div><div><label for="reminder-start">开始时间</label><input id="reminder-start" name="start" type="datetime-local" required></div><div><label for="reminder-end">结束时间</label><input id="reminder-end" name="end" type="datetime-local" required></div><button>${pixelIcon('i-bell')}保存本机提醒</button></form></details>
  ${reminders.length?`<h3>自习提醒 · 手动登记</h3><ul class="campus-reminders">${[...reminders].sort((a,b)=>a.start-b.start).map(x=>`<li><div><strong>${esc(x.place)}</strong><p>${formatTime(x.start)} — ${formatTime(x.end)}${x.end<Date.now()?' · 已结束':''}</p></div><div class="actions">${button('导出日历','reminder-ics',`data-id="${esc(x.id)}"`)}${button('移除提醒','reminder-delete',`data-id="${esc(x.id)}"`)}</div></li>`).join('')}</ul><small>导入系统日历后可在开始前 15 分钟提醒；是否提醒由日历软件设置决定。</small>`:''}</section>
@@ -91,6 +92,7 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
  }
  function previewHTML(){if(!preview)return '';return `<p>识别到 ${preview.courses.length} 门课程，${preview.errors.length} 行需要处理。相同课程代码（或名称）、学期、层次、学分和绩点的记录将跳过；不同成绩的重修记录保留。</p>${preview.errors.length?`<ul class="notice error">${preview.errors.map(x=>`<li>第 ${x.row} 行 ${esc(x.name)}：${esc(x.message)}</li>`).join('')}</ul><p>请修正以上行后重新预览，避免漏掉课程。</p>`:''}<div class="table-wrap"><table><thead><tr><th>课程</th><th>学期</th><th>学分</th><th>绩点</th></tr></thead><tbody>${preview.courses.slice(0,12).map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.term)}</td><td>${x.credit}</td><td>${x.point}</td></tr>`).join('')}</tbody></table></div>${preview.courses.length>12?'<p>仅展示前 12 门，确认后导入全部有效课程。</p>':''}${button('确认合并到课程记录','import',preview.errors.length||!preview.courses.length?'disabled':'class="primary"')}`}
  async function click(action,b){
+  if(await booking.click(action,b))return true;
   if(!action.startsWith('campus-'))return false;
   const a=action.slice(7);
   if(a==='feed'){
@@ -134,13 +136,14 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
  function refreshSessionBox(){const el=document.querySelector('#session-status');if(el)el.innerHTML=sessionHTML()}
  function refreshScoreBox(){const el=document.querySelector('#online-score');if(el)el.innerHTML=onlineScoreHTML()}
  async function loadSession(){
+  booking.load();
   try{const v=await api('/api/session');sessionSaved=!!v.saved;sessionDesc=v.store_desc||'';sessionErr=''}
   catch(e){sessionSaved=false;sessionDesc='';sessionErr=e.message}
   refreshSessionBox();
  }
- async function submit(form,values){if(form.id!=='campus-reminder-form')return false;const next=structuredClone(getState());next.reminders=next.reminders||[];if(next.reminders.length>=50)throw Error('最多保留 50 条提醒，请先移除已结束的提醒');next.reminders.push(makeStudyReminder(values));await commit(next,{formId:form.id,values});toast('已保存本机提醒，学校预约状态不变');return true}
+ async function submit(form,values){if(await booking.submit(form,values))return true;if(form.id!=='campus-reminder-form')return false;const next=structuredClone(getState());next.reminders=next.reminders||[];if(next.reminders.length>=50)throw Error('最多保留 50 条提醒，请先移除已结束的提醒');next.reminders.push(makeStudyReminder(values));await commit(next,{formId:form.id,values});toast('已保存本机提醒，学校预约状态不变');return true}
  function input(e){if(e.target.id==='grade-text'){gradeText=e.target.value;preview=null;const el=document.querySelector('#grade-preview');if(el)el.innerHTML=''}}
- async function change(e){const el=e.target;
+ async function change(e){if(booking.change(e))return;const el=e.target;
   if(el.id==='online-score-level'){onlineLevel=el.value;onlineScore=null;onlineErr='';sessionErr='';refreshScoreBox();refreshSessionBox()}
   else if(el.id==='grade-level'){gradeLevel=el.value;preview=null;document.querySelector('#grade-preview').innerHTML=''}
   else if(el.id==='grade-file'&&el.files[0]){const file=el.files[0];if(file.size>300000)throw Error('文件不能超过 300 KB');if(!/\.(csv|tsv|txt)$/i.test(file.name))throw Error('请使用 CSV / TSV / TXT 文件');const bytes=await file.arrayBuffer();try{gradeText=new TextDecoder('utf-8',{fatal:true}).decode(bytes)}catch{gradeText=new TextDecoder('gb18030',{fatal:true}).decode(bytes)}preview=null;document.querySelector('#grade-text').value=gradeText;document.querySelector('#grade-preview').innerHTML='';toast('文件已读取，请点击预览导入')}

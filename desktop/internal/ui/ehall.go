@@ -80,7 +80,7 @@ func newEhallClient(cookie string, timeout time.Duration) *ehallClient {
 				if req.URL.Query().Get("login") != "" || strings.Contains(req.URL.Path, "/login") {
 					return errSessionInvalid
 				}
-				if req.URL.Path != undergradScorePath && req.URL.Path != gradScorePath {
+				if !ehallPathAllowed(req.URL.Path) {
 					return errUnsafeEhallURL
 				}
 				return nil
@@ -95,7 +95,7 @@ func (c *ehallClient) postForm(path string, form url.Values) ([]byte, error) {
 		return nil, errors.New("还没有学校系统的登录状态")
 	}
 	base, parseErr := url.Parse(c.base)
-	if parseErr != nil || base.Scheme != "https" || base.Host == "" || base.User != nil || base.RawQuery != "" || base.Fragment != "" || (path != undergradScorePath && path != gradScorePath) {
+	if parseErr != nil || base.Scheme != "https" || base.Host == "" || base.User != nil || base.RawQuery != "" || base.Fragment != "" || !ehallPathAllowed(path) {
 		return nil, errUnsafeEhallURL
 	}
 	body := form.Encode()
@@ -142,6 +142,10 @@ func (c *ehallClient) postForm(path string, form url.Values) ([]byte, error) {
 		return nil, fmt.Errorf("学校系统返回 HTTP %d", res.StatusCode)
 	}
 	return data, nil
+}
+
+func ehallPathAllowed(path string) bool {
+	return path == undergradScorePath || path == gradScorePath || path == undergradTimetablePath || path == undergradTermPath
 }
 
 // ehallRows 从 ehall 的响应里取出数据行。

@@ -294,3 +294,15 @@ body[data-page=settings] .pagehead h1 { color:var(--magic); }
 .timetable-day h3,.timetable-course h4 { color:var(--info); }.timetable-course { border-left:4px solid #79a1a4; }
 .campus-notices time { color:var(--warning); }.campus-notices a { color:var(--info); }
 @media(max-width:650px) { .hud > .hud-note { display:none; }.sprite.heading-icon { width:24px; height:24px; flex-basis:24px; }.icon-heading { gap:8px; }.service-fruit .sprite { width:22px; height:22px; }.network-line { padding:10px; } }
+
+/* School room availability uses the same parchment and semantic colors. */
+.booking-slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:8px;margin:14px 0}
+.booking-slots button{display:flex;flex-direction:column;gap:4px;min-height:62px;white-space:normal}
+.booking-slots button[data-tone="success"]{color:var(--success);background:#eaf0d6}
+.booking-slots button[aria-pressed="true"]{color:#245f7a;background:#daedf0;outline:2px solid #36768c;outline-offset:1px}
+.booking-slots button:disabled{opacity:.75;background:#e9dfcb;color:#695f50;box-shadow:none}
+.booking-consent{display:flex;align-items:flex-start;gap:10px;line-height:1.6;margin:16px 0}
+.booking-consent input{width:auto;flex:none;margin-top:5px}
+.booking-history{list-style:none;padding:0}.booking-history li{border-bottom:1px dashed #bf9e70;padding:8px 0}
+.undergrad-arrangement{white-space:pre-wrap;overflow-wrap:anywhere}
+#booking-panel code{overflow-wrap:anywhere}

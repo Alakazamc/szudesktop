@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createSchoolUI,timetableHTML} from './assets/garden/school.mjs';
+import {createSchoolUI,timetableHTML,undergradTimetableHTML} from './assets/garden/school.mjs';
 const nodes=new Map(),node=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',value:'',disabled:false,reset(){this.value=''}});return nodes.get(id)};
 globalThis.document={getElementById:node,querySelector:node};
 const sample={entries:[{name:'<img src=x>',day:2,start:3,end:4,weeks:'1–16周（单）',room:'测试教室'}],unscheduled:[{name:'待排课程'}],term:'测试学期',fetched_at:'2026-09-20T00:00:00Z'};
@@ -22,5 +22,9 @@ await check('login clears password and consumes the image challenge',async()=>{
 });
 await check('expired session removes old schedule and disables read',async()=>{
  await ui.click('school-read');fail=true;await ui.click('school-read');assert.match(node('school-status').innerHTML,/已失效/);assert.doesNotMatch(node('school-timetable').innerHTML,/&lt;img/);assert.equal(node('[data-action="school-read"]').disabled,true);
+});
+await check('undergraduate personal timetable preserves and escapes source text',()=>{
+ const html=undergradTimetableHTML({term:'2026-2027-1',fetched_at:sample.fetched_at,courses:[{name:'<script>',arrangement:'周一 3-4节\n<img src=x>',teacher:'老师'}]});
+ assert.match(html,/&lt;script&gt;/);assert.match(html,/周一 3-4节/);assert.match(html,/&lt;img src=x&gt;/);assert.doesNotMatch(html,/<script>|<img/);
 });
 console.log(`${count} school checks passed`);
