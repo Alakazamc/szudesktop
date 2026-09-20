@@ -144,6 +144,9 @@ func (c *SrunClient) Status() (*OnlineStatus, error) {
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, fmt.Errorf("解析在线状态失败: %w", err)
 	}
+	if strings.TrimSpace(resp.Error) == "" {
+		return nil, fmt.Errorf("在线状态响应缺少有效的 error 字段")
+	}
 
 	return &OnlineStatus{
 		Online:      resp.Error == "ok",

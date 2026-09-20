@@ -1,11 +1,13 @@
 # szuDesktop 项目总清单与当前状态
 
 > **唯一维护文档**：全部问题、功能计划、设计要求、执行顺序与验收记录统一在本文维护。
-> 更新：2026-09-19。合并原 STATUS、任务清单、界面重设计、本地任务副本及两轮代码/视觉审查。
+> 更新：2026-09-20。合并原 STATUS、任务清单、界面重设计、本地任务副本及两轮代码/视觉审查。
 > 原独立清单和设计方案已移除；本地原始调研只作为冻结的历史证据，不再维护另一套任务。
 > 本文是公开安全版本，不包含真实账号、内网拓扑或未公开接口细节；旧调研中的数量、规则、可达性和许可结论须在实际接入时重核。
 
 ## 1. 当前状态
+
+- 2026-09-20 使用路径复核已修复 5 类问题，详见第 20 节。当前公开 Release 仍为 beta0.5.1，本轮候选包与公开附件分开记录。
 
 - 当前预发布版 **beta0.5.1 · 荔枝庭院**，Windows x64。起点 `457353f`；PR #1 已合并到 main（`1644f09`），其测试及各平台构建通过；按用户要求恢复原有星露谷式界面，该阶段已合并并发布 beta0.5 预发布。会话与成绩安全修复见第 17 节；beta0.5.1 已发布到 GitHub，交付记录见第 18 节。
 - 本轮按用户 8 条反馈完成：整页滚动、卡号默认隐藏、生成校园背景、移除重复仿标题栏、本地伙伴/农田完整循环、校内后端业务分层、学习工具与备份、无 CMD 启动和设置内退出。
@@ -629,3 +631,182 @@ WebView 交互（D2）降级为后续「多一种获取方式」，不阻塞当�
 - **"出口被占用"同时外网也不通** —— 这才是真需要处理的：原来那个会话很可能已失效但没有释放。
 
 不要在"已在线"的状态下反复点登录：每次都会走一遍 `ac_id` 探测，而且这次登录同样不会生效。
+
+
+## 20. 当前使用路径复核与修复（2026-09-20）
+
+基于 `3fa3277` 检查实际 Windows 程序、网络状态显示、学校会话清理、农田交互和多窗口备份。保留现有像素风外观；所有测试使用独立存档和虚构测试会话，不登录学校个人业务、不提交预约。
+
+| 编号 | 问题与影响 | 重要性 / 难度 | 处理结果 |
+|---|---|---|---|
+| R01 | 后台在线查询没有显示在页面；不保存账号就不查询，查询失败或异常响应可能被当成离线 | P1 / M | 已修复。出口认证与账号保存分开，前后端区分已在线、未认证、未知；两套门户失败不吞掉，状态页不回传卡号和设备地址 |
+| R02 | 刷新失败保留之前的在线状态；手动刷新仍提示成功；出口被占用后不刷新状态 | P1 / S | 已修复。失败清除旧状态并提示未确认，检查期间重复点击提示正在刷新，登录请求结束后刷新出口状态 |
+| R03 | 农田某种种子耗尽，换成有库存的种子仍显示“种子不足” | P2 / S | 已修复。切换种子立即重绘空地操作按钮 |
+| R04 | 多窗口使用时，旧窗口导出的备份漏掉另一窗口已保存的新记录 | P1 / S | 已修复。导出前读取最新本机存档；读取失败不生成旧快照备份，仍保留写入版本冲突保护 |
+| R05 | 清除学校登录状态后，粘贴但未保存的 Cookie 仍留在输入框 | P1 / S | 已修复。清除成功后同步清空输入框 |
+| R06 | macOS 会话钥匙串读取失败统一当未保存，删除错误被忽略 | P2 / M | 待处理。代码审查确认；当前 Windows 包不受影响，macOS 行为需要单独实现与现场验证 |
+
+验证：
+
+- `go test ./...`、`go vet ./...` 通过；网络后端新增模拟门户回归，覆盖未存账号、未知状态、双协议错误和隐私字段。
+- 前端规则 / 行为共 31 项通过（10 庭院、9 校园、6 会话、3 网络、3 存档）。新增检查已接入 CI。
+- Windows 成品 57 项冒烟全部通过，包含新网络状态资源、无命令行窗口、加密会话、跨端口存档恢复和最后窗口关闭退出。
+- 实际浏览器确认：空账号页面能显示当前出口已在线；萝卜库存为 0 时换草莓立即出现播种按钮；清除会话后文本框为空；页面无脚本异常。桌面与 390px 窄窗没有横向溢出，页面下方入口可访问。
+- “在途切换成绩导致旧结果回填”被现有禁用交互阻止；“复用确认框后 Escape 误确认”在实际旧成品未复现。两项均未当作确定缺陷，也未添加推测性修补。
+
+交付：本轮源码已推送 [PR #4](https://github.com/Alakazamc/szudesktop/pull/4)，分支 `fix/desktop-state-review`。本地候选包 `dist/szudesktop-review-20260920-windows-amd64.zip`，SHA256 `3e68ca47a8edfa84e4e76300fda10be7e6e4e331acea271df11a424510b3d856`；包内 EXE 与本轮构建一致（SHA256 `24f0201df3d76ba4caa8a3669e40e073cad843063b95d8630ec2dc33dd579722`）。这是待发布修复构建，内部版本仍为 beta0.5.1；没有覆盖 GitHub 已发布的 beta0.5.1 附件。
+
+仍需完善的主要业务保持原清单：本科 / 研究生真实成绩验收与完整分页、社区自习室空位查询及预约接入。模拟响应和本机检查不替代学校接口验收；这些不是本轮已完成内容。
+
+## 21. 自动校历、课表入口与校园背景（2026-09-20）
+
+继续在 PR #4 的分支上推进用户提出的四项需求。以下为开发构建状态，不代表已替换 GitHub 的 beta0.5.1 公开附件。
+
+| 编号 | 需求 / 问题 | 重要性 / 难度 | 当前结果与下一步 |
+|---|---|---|---|
+| A21 | 校历必须手动填日期；原算法在周日比官方周次少一周 | P1 / M | 已完成自动校历。本机读取学校官网、缓存日期，程序运行期间每日检查更新；Windows 使用系统文字识别解析更新后的校历图片。保留手动覆盖和恢复自动，不把寒暑假继续累加成教学周 |
+| A22 | 学习空间预约需要跳转、校园网登录不能复用为所有业务登录 | P1 / L | 尚未完成应用内预约。已有浏览器会话本次进入学校二次验证页，等待用户完成验证；未读取受保护的实时场地数据，未提交预约 |
+| A23 | 没有课表入口，也没有本科 / 研究生课表查询适配 | P1 / M–L | 研究生登录、验证码与真实课表接口已做成接入预览，等待本人完成验证码后实拉验收，详见第 23 节。本科入口实为全校课表查询，个人课表仍待接入；不由成绩接口可用推断课表权限 |
+| A24 | 背景层次不足，简单装饰与新场景叠加显得杂乱 | P2 / S | 已换为生成的湖畔黄昏像素校园，增加顶部景色空间，移除与树冠重复的顶栏花草；木框、纸张、像素字体保持原风格 |
+
+### 21.1 官方校历依据及自动更新边界
+
+- 来源：[深圳大学校历](https://www.szu.edu.cn/xxgk/xl.htm)。本轮直接读取官网最新图片并人工看过说明与日历网格；网页检索缓存出现过旧图片，因此没有用检索摘要替代官网文件。
+- 2026–2027 第一学期：2026-08-28 至 2027-01-22，老生 2026-08-31 开始上课；日历网格第 1 周起始日为 2026-08-30（周日）。因此 2026-09-20 是第 4 周。新生本科和研究生开始上课日期不同，界面显示的是全校校历周次，提醒以个人教学通知为准。
+- 2025–2026 第二学期：2026-03-04 至 2026-07-17，2026-03-09 开始上课；第 1 周从 2026-03-08 开始。官网尚未公布的下一学期不自行生成。
+- 新增只读 `/api/campus/calendar`。首次显示随包核实的日期或本机缓存；页面异步检查官网，每小时检查缓存是否超过一天；仅官方图片清单变化时下载并识别。网络失败、布局无法识别或缺少系统识别语言包时保留旧日期，明确提示更新失败并给出官方页和手动设置。
+- Windows 识别使用自带 Windows Runtime OCR，不需要额外安装第三方程序，也不上传图片或个人数据到识别服务；后台启动隐藏控制台。macOS / Linux 目前只能检查图片是否变化和使用已核实日期，新图片识别尚未实现。若校方改变周次编排规则，需要重新核对网格，当前按已核实的周日换周规则计算。
+- 仅刷新校历摘要，不重绘手动日期表单；刷新期间尚未保存的输入不会丢失。日期计算固定为深圳时区。
+
+### 21.2 预约和课表的后续实现顺序
+
+1. 用户在学校官方页完成二次验证后，先核验静音舱的场地、用途、时段、本人预约记录，仅做读取。学校会话与校园网凭据分开处理，现有 ehall 成绩 Cookie 不发送到其他域名。
+2. 依据实际认证机制决定接入方式：独立业务接口配合本机安全会话存储，或使用原生 WebView2 承载学校登录。当前 Edge / Chrome 应用窗口并非原生嵌入式浏览器，不能直接假定 iframe 能保留登录。不会移除学校的 iframe / CSP 防护来强行嵌入。
+3. 时段查询和本人记录验收后，再做用户选定场地、日期、时段并确认提交的预约操作；不做自动抢位。本轮没有提交任何预约。
+4. 本科入口来自[教务部](https://jwb.szu.edu.cn/)的课程表查询链接；研究生入口使用[学校学生页面](https://www.szu.edu.cn/jsrk/xs.htm)给出的研究生选课系统。当前应用只是提供官方查询入口，不声称已有本地课表。
+
+### 21.3 背景及验证
+
+- 新背景：`desktop/assets/garden/campus.png`，使用内置 imagegen 生成。提示词摘要：原创 16-bit 像素画；深圳亚热带校园、湖面倒影、傍晚桃色云层、远处教学楼、荔枝树和棕榈；细节沿两侧分布，中部留出纸张界面的阅读空间；禁止文字、商标、游戏角色及已知游戏场景。不是实际校园地图，不使用星露谷原版资产。
+- 自动校历真实链路验收：使用隔离配置故意设置过期图片清单，让实际 Windows 成品重新下载并识别官网四张图片；成功解析两个学期，日期与人工核对一致。无学校账号或个人会话参与。
+- `go test ./...`、`go vet ./...` 通过；前端 35 项通过，包含新校历 4 项。Windows 成品 61 项冒烟通过，包括离线校历、跨来源限制、新资源打包和无控制台启动。
+- 浏览器实测：默认显示第 4 周；手动设置 2026-09-14 后显示第 1 周；恢复自动后回到第 4 周；点击更新未清空未保存的日期。桌面和 390px 窄窗检查通过，无横向溢出。
+- 本地预览包：`dist/szudesktop-campus-preview-20260920-windows-amd64.zip`，6,959,907 字节，SHA256 `1eb127dfccf274f38f607d83c007cc01f2068e0ad410e641e791e6e106a06ddd`；包内程序与本轮成品一致，EXE SHA256 `7ba68f0d4e5c40d4be4dda9b04970d406052369fcd1450b8214c47c9f41c56fa`。内部版本仍为 beta0.5.1，压缩包名称及说明已标为预览构建。
+
+## 22. 根据真实深大照片重绘像素校园（2026-09-20）
+
+用户要求将泛校园背景改为深圳大学实景，并尽可能将场景细节、小图标替换成星露谷物语、泰拉瑞亚、Minecraft 风格的物件。
+
+| 项目 | 重要性 / 难度 | 完成内容 |
+|---|---|---|
+| B01 文山湖实景背景 | P2 / S | 已替换 `desktop/assets/garden/campus.png`。保留文山湖棕榈、湖岸步道、圆形花钵及校园楼群；加入结伴散步、读书、推自行车的同学、鸭子、小猫、灯笼、史莱姆和草方块 |
+| B02 游戏物件图标 | P2 / S | 新增 18 个项目内绘制的像素 SVG 物件：木屋、水晶、路牌、浇水壶、书本、工作台、金币、面包、爱心、箱子、幼苗、镐、花朵、灯笼、信件、卷轴、沙漏、树。覆盖六个导航、庭院分区、农田操作、背包数值、专注和校园服务操作，保留文字标签 |
+| B03 场景展示与细节统一 | P2 / S | 顶部标明“深圳大学 · 文山湖”，增加“看看像素校园”整图浏览；支持按钮返回与 Escape 关闭。重绘首页树木装饰，背景展示高度与窄窗排版一起调整 |
+
+参考照片与素材：
+
+- 地貌及建筑依据：[Lake Wenshan of Shenzhen University](https://commons.wikimedia.org/wiki/File:Lake_Wenshan_of_Shenzhen_University.jpg)，Jauhnn，2010 年照片，作者在原页声明 Public Domain。
+- 校园生活参考：[深圳大学校园环境提升 / 翰博设计](https://www.gooood.cn/shenzhen-university-campus-environment-enhancement.htm)，2023-12-11；使用文山湖边背包同学散步照片作为生活氛围参考。原项目页面署名 DID studio、HOPE 翰博设计 杨洋。原照片仅留在忽略目录作输入，没有打包或提交。
+- 新背景通过内置 imagegen 以两张照片为参考重新生成；场景为游戏化插画，非校园精确地图。图标在现有 SVG 系统中重新绘制，没有提取游戏安装包中的图片或代码。荔宝、伙伴养成与应用操作逻辑保持现有设计。
+
+<details><summary>最终图像提示词（内置 imagegen，输入 1 为地貌照片，输入 2 为生活照片）</summary>
+
+Use case: style-transfer. Asset: final full-bleed desktop app background, wide 16:9 pixel-art illustration at 1920x1080 or larger. Create PIXEL SHENZHEN UNIVERSITY, specifically the real Wenshan Lake 粤海校区文山湖 in the supplied photographs. Image 1 is the primary real-place architecture and spatial reference: retain the unmistakable palm trunks framing both sides, stone steps descending toward the lake, round pale planters, hedge-lined path, curved shore, cream low-rise campus buildings across the lake with taller urban blocks behind. Image 2 provides student-life reference and the real stepped lakeside terraces with circular tree planters and backpack-wearing students walking in pairs. Recompose these into a coherent illustrated scene of this actual university, no invented European clocktower, castle or generic fantasy university. THE MAIN CHANGE IS TO RENDER EVERY VISIBLE ELEMENT AS A DETAILED GAME SPRITE OR GAME TILE. Strong Stardew Valley style for cozy dense palm and lychee foliage, small 16-bit backpack students strolling, chatting, reading on benches; Terraria style for detailed wood lanterns, tiny orange campus cats, occasional peaceful blue slime tucked beside the path and layered plants; Minecraft-style block textures for grass-topped earth edges, stone-brick steps, blocky flower pots, wooden benches, tiny decorative chest and lanterns. Make the three influences clearly recognizable but unified in a single crisp 2D pixel-art language, not a collage of screenshots or flat modern icons, not 3D voxel rendering. A lively ordinary university afternoon: roughly 8-12 tiny students around the shoreline/path, a student holding a book, another wheeling a bicycle, two ducks on the lake. The campus remains the subject, game items are integrated into daily life rather than dominating. Keep human figures small. Rich harmonious greens, clear jade water with pixel reflections, warm afternoon light, muted pink flowers, pale blue sky. Composition optimized for a wallpaper behind parchment UI: keep the primary scene and lively campus details visible in the upper 45 percent and outer sides; put the lake horizon and distant campus around upper third; keep the top center relatively quiet to fit a wooden title sign. The descending path and round pots can occupy the foreground. Light airy water area, layered depth, crisp deliberate square pixel clusters and selective dark outlines. No smooth painted gradients, no photoreal texture remnants. No text, no labels, no watermark, no interface panels. The result should feel like Shenzhen University has become a playable Stardew/Terraria/Minecraft crossover campus.
+
+</details>
+
+验证与交付：
+
+- 相关前端回归 31 项通过；18 个新增 SVG 物件的引用均可解析。实际浏览器验证导航、桌面与 390px 窄窗、整图加载、Escape 与返回按钮；无横向溢出、无脚本错误。
+- Windows 构建同步通过；61 项成品冒烟通过。最后只调整首页树木在桌面布局上的垂直位置后重新构建，未重复无关后端测试。
+- 新预览包：`dist/szudesktop-pixel-szu-20260920-windows-amd64.zip`，6,924,130 字节，SHA256 `688209d005d1aae2edb0d00ba3cac34552eecf0919a6fa65b7a38a3acb309560`。包内 EXE 与最终构建相同，SHA256 `a7131a1e335002d592185fbd2ee7833e0a06d19df70bf5d712756b6aaf4e0e89`。
+- 继续更新现有 PR #4；此包是预览构建，内部版本仍为 beta0.5.1，没有覆盖公开 Release。第 21 节的预约和课表待办保持原状态。
+
+## 23. 教务登录、真实课表接入与校历更新检测（2026-09-20）
+
+用户要求在应用内提供教务登录，本轮授权使用本人账号测试，并要求接入真实课表。以下区分代码完成与学校实测，不把模拟通过写成真实个人业务验收。
+
+| 编号 | 问题 / 工作 | 重要性 / 难度 | 本轮结果 |
+|---|---|---|---|
+| J01 | 课表只能打开外链，缺少本地教务登录 | P1 / M | 已实现研究生教务接入预览：本地学号 / 密码表单、学校图片验证码、登录、读取课表及清除本次登录。密码不保存；会话仅在内存，退出应用即清除。已实际取得学校验证码；等待用户完成验证码后的真实账号验收 |
+| J02 | 研究生课表缺少实际数据适配 | P1 / M | 根据学校当前页面脚本实现只读接口，展示星期、节次、原始周次说明、教师、教室、节次方案；已选但未排定时间的课程另列。只提供当前选课学期，不声称支持历史学期。真实本地登录后的完整响应尚待验收 |
+| J03 | 本科入口名称容易被理解为个人课表 | P1 / M–L | 实际页面标题为“全校课表查询”，已修正入口名称。本科个人课表尚未接入；本轮统一认证尝试返回用户名或密码错误后停止，没有继续猜测或反复登录 |
+| J04 | 校方覆盖同地址的校历图片时不能发现更新 | P1 / S | 已修复。每天联网检查时比较校历图片内容的 SHA256；地址不变但内容变化也会重新本机识别。未变化不重复识别，下载或识别失败保留旧日期与旧指纹 |
+
+### 23.1 官方接口依据与实测范围
+
+- [研究生选课官方入口](https://ehall.szu.edu.cn/yjsxk)当前脚本：[登录与课表操作](https://ehall.szu.edu.cn/yjsxkapp/sys/xsxkapp/public/index.js)、[课表展示字段](https://ehall.szu.edu.cn/yjsxkapp/sys/xsxkapp/public/kb.js)。仅根据接口协议和字段事实用 Go 重新实现，未将学校前端脚本打包。
+- 只访问明确列出的学校 HTTPS 地址：验证码、登录校验、本人学生信息、本人课表及公开学期信息。研究生课表查询为 `/yjsxkapp/sys/xsxkapp/xsxkCourse/loadKbxx.do`；没有选课、退课、预约或签到提交路径。
+- 官方密码编码存在与标准 DES 不同的密钥位排列，已按公开协议转换后调用标准库，使用四组虚构输入与学校公开编码器核对。此编码只是接口兼容；安全传输依靠 HTTPS，不把协议编码当成本地密码加密存储。
+- 浏览器中已有的本人研究生会话可进入“查看我的课表”；官方页面当前显示“没有课程安排记录”。这仅证实官方页面结果，不等于本地登录与解析已经验收，也不说明其他学期没有课程。
+- 本地预览已取得官方验证码并准备登录表单。验证码必须由本人完成；截至记录时，尚未收到成功登录结果。未使用已有浏览器 Cookie 绕过这一独立验证，未保存真实账号、密码、Cookie、姓名或课表到源码、测试样例和发布包。
+- 本科统一认证与研究生选课为不同链路；本科认证研究仅留在本地忽略目录，没有将未完成的认证代码作为正式功能发布。当前研究生模块的登录不会被当作成绩系统或预约系统已登录。
+
+### 23.2 校历是怎样得到的
+
+1. 本机访问[官方校历页](https://www.szu.edu.cn/xxgk/xl.htm)，读取校历图片地址并下载图片；不需要学生账号。
+2. 每日检查图片内容是否变化。Windows 使用系统自带 OCR 在本机读取“校历说明”中的学期起止和老生上课日期，不调用云端识别。
+3. 按此前人工核实的周日换周规则计算教学周，固定使用深圳日期；允许手动覆盖，假期不继续累加成教学周。
+4. 首次离线可使用随包核实的日期。下载失败、文字识别失败或学校布局变化时保留缓存并提示，不自动猜下一学期。若校方改变周次规则仍需重新核验；macOS / Linux 的新版图片识别仍未实现。
+
+### 23.3 验证与交付
+
+- Go 全项目测试及 vet 通过。新增回归覆盖协议编码、固定 HTTPS 目标、跨来源拒绝、验证码失效及重复提交、登录后的业务读取、清除登录、空课表与无效响应区分、未排课课程保留，以及同 URL 校历图片替换。
+- 前端共 40 项检查通过，其中新增教务 5 项；Windows 实际成品冒烟 66 项通过。页面实际取得验证码；桌面与 390px 窄窗无横向溢出、无脚本错误。包含课程的展示使用虚构数据做回归，不能替代真实非空课表验收。
+- 新模块显示“接入测试”。本科个人课表、预约、真实成绩完整分页仍沿用原清单继续推进；本轮没有完成这些业务，也没有替换公开 Release。
+- 本地预览包：`dist/szudesktop-academic-preview-20260920-windows-amd64.zip`，6,970,064 字节，SHA256 `17a48fb3c6641c6cf6d0ebd3ce03f625ffc88c7fac05eb08e77fc73b42f2b48d`。包内 EXE 与本轮构建逐字节一致，11,840,512 字节，SHA256 `c97a6c8ed75bcf3ca8931e0ac23593c061f4b3171dbefc80fb2f46a63e48b8b4`。版本仍为 beta0.5.1，压缩包及快速开始明确标为教务接入预览。
+
+
+## 24. 状态颜色与像素物品图标（2026-09-20）
+
+| 编号 | 问题 / 工作 | 重要性 / 难度 | 本轮结果 |
+|---|---|---|---|
+| V01 | 网络状态文字都用棕色，成功、失败和未确认难区分 | P1 / S | 已完成。外网与校园认证分两行，按各自状态使用草绿 / 红 / 琥珀色；查询失败立即清除旧绿色。颜色之外保留完整文字和图标，不把外网可用当成校园认证通过 |
+| V02 | 标题、数值、徽章层级缺少色彩 | P2 / S | 已完成。学习与信息用湖蓝、庭院和校历用草绿、成长与成绩用紫、伙伴心情用玫红、币值和待确认用琥珀色；正文维持纸张上的深色阅读对比度 |
+| V03 | 服务入口重复使用同一图标，卡片较空 | P2 / S | 已完成。扩充现有原生 SVG 像素图标，新增 12 个：联网、断网、盾牌、日历、羽毛笔、勋章、挎包、茶杯、指南针、云、钥匙和铃铛。用于状态、标题、日期、教务操作及各个校园入口；均为本项目绘制，没有打包游戏原始贴图 |
+| V04 | 新日期图标使 390px 顶栏出现横向溢出 | P1 / S | 实际浏览检查发现并修复。窄窗继续隐藏生活提示，六个主页宽度均与可用视口一致 |
+
+验证：41 项既有及相关前端检查通过；网络回归增加颜色状态独立性、失败清除绿色以及接口错误文本转义。Windows 已重新构建，实际运行检查首页、校园网、校园服务、庭院、学习、设置，390px 窄窗无横向溢出，无缺失图标或控制台错误。本轮仅改界面，未重复整套后端实网验收；教务和预约的待办边界仍见第 23 节。
+
+交付：`dist/szudesktop-color-pixel-preview-20260920-windows-amd64.zip`，6,974,193 字节，SHA256 `3da7902bd5e2a39b14bcf8fc55b23ef686c2822ec987a255b3f086ade3ad31a0`。包内 EXE 与本次构建一致，11,852,800 字节，SHA256 `9ac8041f6e894bac677ce5281a0883ee088bbd43d7a6cf5989fda84bcbf47f1f`。预览仍基于 beta0.5.1，未覆盖公开 Release。继续更新现有 PR #4。
+
+
+## 25. 本科个人课表与社区场地接入推进（2026-09-20）
+
+本节是第 23 节 J01–J03 和预约待办的最新状态；所有未完成项仍保留在这一个文档中。没有提交任何真实预约，没有把模拟账号检查记为真实业务验收。
+
+| 编号 | 工作 / 剩余问题 | 重要性 / 难度 | 当前结果与下一步 |
+|---|---|---|---|
+| J01 | 研究生教务真实登录验收 | P1 / S（需本人验证） | 再次确认官方浏览器会话可查看本人课表，当前官方页无课程安排；本机登录仍未完成。已向用户交接图片验证码表单，未收到成功结果。需要本人填写当前教务密码和验证码，再核对本地响应 |
+| J03 | 本科个人课表 | P1 / M | 已添加 `wdkb`「我的课表」接口与本地展示，修正将 `kcbcx` 全校查询当个人课表的入口。当前通过本科业务的 ehall Cookie 读取；本轮官方个人课表入口在现有浏览器显示 403，原因尚未核实，仍需有效的本科业务会话验收。不能由研究生登录推断本科可用 |
+| R01 | 应用内真实空位 | P1 / M | 已完成校内网络实测：本次构建读到 15 个场地、指定日期 20 个开放半小时时段及真实空闲状态。用户可在应用内选择场地、日期并刷新；不再只能打开外链 |
+| R02 | 预约登录与本人记录 | P1 / M（需本人会话） | 已实现预约专用 Cookie 验证、本人记录分页、清除会话；仅内存保存，关闭即清除。真实登录待用户在本机页面提供预约 WebVPN 会话。研究生登录和成绩 Cookie 均不复用到预约域名 |
+| R03 | 应用内提交预约 | P1 / M | 代码实现选时段、填写电话与入学年份、阅读完整规则、预检查、再次确认后提交；一次性确认凭证在发送前消耗，空位变化会拒绝，超时提示先核对记录、不自动重复提交。仅模拟验收通过，真实提交待本人选定实际用途、场地和时段，不能宣传为已完成真实预约验收 |
+| R04 | 自动承接学校浏览器登录 | P2 / L | 仍未实现。当前程序使用 Edge / Chrome 应用窗口，不能自动取得官方浏览器会话；本科及预约暂用手动 Cookie 连接。后续原生登录承载或正式授权接口另行评估，不能把这一步藏掉 |
+| R05 | 图书馆阅览座位 / 研讨间 | P2 / L | 属于另一套系统，本轮没有接入。继续保留官方入口，与社区会议室、面试间、琴房分开说明 |
+
+### 25.1 实际协议与数据边界
+
+- 本科事实参考：[LoveSzu TimetableApi.java](https://github.com/teleostnacl/LoveSzu/blob/main/Timetable/src/main/java/com/teleostnacl/szu/timetable/retrofit/TimetableApi.java)。个人课表为 `/jwapp/sys/wdkb/modules/xskcb/xskcb.do`，学期参数 `XNXQDM`；当前学期查询为 `jshkcb/dqxnxq.do`。本项目独立实现，没有复制参考项目代码，已加入中英 README 致谢。该参考实现较旧，当前账号实测仍是必要验收条件。
+- 本科保留 `KCM / KCH / KXH / SKJS / YPSJDD` 课程、代码、课序、教师及时间地点原文；不猜测拆分周次和节次，不混用研究生规则。登录页、权限错误、无法识别的课程、条数不完整都不会变成空课表。缺少当前学期时允许用户填写校方学期。
+- 社区接口依据是学校当前公开页面脚本。本轮实际读取 `/venue-api/booth/list`、`booth/info/{id}`、`boothType/info/{id}`、`booth/{id}/available-time`，与官方脚本的 48 格半小时和开放时段位图核对：1 为空闲，0 为已预约，-1 为不可选，未知值显示未确认。缺日期或不足 48 格明确报错。
+- 公开查询走学校校内 HTTP 服务，不携带任何 Cookie 或账号；学校该主机 HTTPS 本轮不可用。带登录状态的请求固定走 `https://swzx.webvpn.szu.edu.cn/venue-api`，不跟随重定向，不降级到 HTTP。匿名请求本人记录实际返回 401，WebVPN 则转到认证页面。
+- 预约 Cookie 先通过本人记录接口验证再标记连接；只在内存保管，不写庭院存档、日志或发布包。界面不展示校园卡号、开锁密码、手机号。本人记录支持 30 条分页，读取失败不显示为「没有预约」。
+- 预约日期使用深圳时区，以学校返回的开放天数与上限检查。已开始的时段在本应用内不允许选择，界面明确说明；提交时再次通过 HTTPS 核验空位，最终业务权限和每日累计上限由学校裁定。不含抢位、自动循环提交、开锁或管理接口。
+
+### 25.2 验证与交付
+
+- Go 全项目测试及 vet 通过。新增检查覆盖实际半小时状态映射、深圳日期边界、公开请求不带会话、登录清除、权限与非 JSON 区分、空位被占、重复时段、未同意规则、确认凭证复用、提交超时不重试，以及本科原文保留和不完整响应拒绝。
+- 前端 47 项通过（含新增预约 5 项、本科展示 1 项）。Windows 实际构建的既有 66 项冒烟通过；另外实测新接口未登录拒绝、无确认凭证拒绝、跨来源拒绝。
+- 本轮 Windows 实际成品连学校成功读取 15 个场地、2026-09-21 的真实开放时段；浏览器查询、选中/取消状态正常，桌面和 390px 窄窗无横向溢出，无页面脚本错误。没有用模拟数据冒充这一实网结果。
+- 预览包：`dist/szudesktop-booking-timetable-preview-20260920-windows-amd64.zip`，6,999,925 字节，SHA256 `ec2116a1f25e2daedebe97a24ad819ce89b6fe47f767f182c3ed98f13acc3536`。包内 EXE 与构建相同，11,930,112 字节，SHA256 `8d722619454c59982877e9a45ee62c1795c78716b82bdef1ed5d4ca33c09a135`。
+- 继续更新 PR #4；内部版本仍 beta0.5.1，明确标为接入预览，不覆盖公开 Release。可宣传的新增能力是「校内社区场地实时查询」，暂不能宣称「本科课表与预约全流程已完成真实验收」。
+
+## 26. beta0.6 公开预发布（2026-09-20）
+
+用户在了解第 25 节真实验收边界后要求发布。本次发布目标为 `beta0.6`，沿用公开测试版标记，不覆盖旧的 beta0.5.1 附件。程序、命令行、页面、关于页和包内说明同步版本号，下载包附 SHA256 校验文件。
+
+- 新版包含文山湖像素背景、彩色状态、30 个像素物件、网络与存档修复、自动校历、社区实时场地/空位查询，以及教务和预约接入测试。
+- 真实已验证：校内公开场地和空位查询、官方校历本机读取；上轮 47 项前端检查、66 项 Windows 成品检查及 Go 测试/vet 均通过，PR #4 的测试、跨平台构建与 Windows 构建也全部通过。
+- 继续保留 J01、J03、R02–R05：研究生真实登录、本科权限/响应、预约真实会话/提交、自动承接浏览器登录、图书馆独立预约。发布不会把这些条目标成完成；没有代用户提交任何真实预约。
+- 发布流程为更新 PR #4 → 检查通过后合并 → 标记 `beta0.6` → GitHub 构建 → 核对公开下载文件及压缩包内程序。公开入口：[beta0.6](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.6)。

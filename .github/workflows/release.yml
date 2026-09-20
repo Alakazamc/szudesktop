@@ -27,6 +27,15 @@ jobs:
         run: node desktop/check-campus.mjs
       - name: Session UI regression
         run: node desktop/check-session-ui.mjs
+      - name: Academic calendar regression
+        run: |
+          node desktop/check-academic.mjs
+          node desktop/check-school.mjs
+          node desktop/check-booking.mjs
+      - name: Network and workspace UI regression
+        run: |
+          node desktop/check-network-ui.mjs
+          node desktop/check-workspace-ui.mjs
       - name: 静态检查
         run: go vet ./...
       - name: 单元测试
@@ -86,6 +95,7 @@ jobs:
           path: |
             dist/szudesktop-windows-amd64.exe
             dist/szudesktop-*-windows-amd64.zip
+            dist/szudesktop-*-windows-amd64.zip.sha256
           if-no-files-found: error
 
   release:

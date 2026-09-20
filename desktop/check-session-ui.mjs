@@ -3,7 +3,7 @@ import {createCampusUI} from './assets/garden/campus-ui.mjs';
 import {createState} from './assets/garden/engine.mjs';
 const nodes=new Map();
 const node=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',value:''});return nodes.get(id)};
-globalThis.document={querySelector:node};
+globalThis.document={querySelector:node,getElementById:node};
 let response={level:'undergrad',label:'本科',items:[],fetched:0,full:false},calls=[];
 const ui=createCampusUI({getState:createState,commit:async()=>{},toast:()=>{},confirm:async()=>true,render:()=>{},api:async(path)=>{calls.push(path);if(path.startsWith('/api/scores'))return response;return {saved:true,store_desc:'测试加密存储',message:'可访问'}}});
 let count=0;
@@ -38,7 +38,8 @@ await check('changing academic level clears old grades and probes selected busin
 await check('saving or clearing a session removes previous personal results',async()=>{
  node('#session-cookie').value='test-only';await ui.click('campus-session-save',{});
  assert.equal(node('#session-cookie').value,'');assert.doesNotMatch(node('#online-score').innerHTML,/&lt;img/);
- await ui.click('campus-online-score',{});await ui.click('campus-session-clear',{});
+ await ui.click('campus-online-score',{});node('#session-cookie').value='unsaved-test-cookie';await ui.click('campus-session-clear',{});
+ assert.equal(node('#session-cookie').value,'');
  assert.doesNotMatch(node('#online-score').innerHTML,/&lt;img/);
  assert.match(ui.grades(),/不会注销浏览器或撤销学校会话/);
 });

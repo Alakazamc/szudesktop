@@ -116,8 +116,8 @@ func (c *DrcomClient) Logout() (*Result, error) {
 	return &Result{OK: false, Message: friendlyDrcomMessage(resp.Msg), Raw: raw}, nil
 }
 
-// Status 查询当前账号在宿舍区的在线情况。
-// 不同版本的 ePortal 返回值差异较大，解析不出来时按「未知」处理，不直接报错。
+// Status 按请求出口查询宿舍区在线情况，不需要账号密码。
+// 解析失败或缺少状态字段时返回错误，避免把未知误报为离线。
 func (c *DrcomClient) Status() (*OnlineStatus, error) {
 	u := fmt.Sprintf("%s/eportal/portal/rad_user_info?callback=dr1003&_=%d", c.Host, time.Now().Unix())
 	body, err := c.get(u)
@@ -127,11 +127,15 @@ func (c *DrcomClient) Status() (*OnlineStatus, error) {
 
 	var resp drcomResp
 	if err := json.Unmarshal(body, &resp); err != nil {
-		return &OnlineStatus{Raw: truncate(string(body), 300)}, nil
+		return nil, fmt.Errorf("解析在线状态失败: %w", err)
+	}
+	result := rawToString(resp.Result)
+	if result != "0" && result != "1" {
+		return nil, fmt.Errorf("在线状态响应缺少有效的 result 字段")
 	}
 
 	return &OnlineStatus{
-		Online:   rawToString(resp.Result) == "1",
+		Online:   result == "1",
 		Username: resp.UserName,
 		IP:       resp.OnlineIP,
 		Raw:      truncate(string(body), 300),
