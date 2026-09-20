@@ -278,3 +278,5 @@ respective owners.
 beta0.5.1 includes undergraduate and graduate score readers, pending validation with real school records. Enter the Cookie only in the local application. Session storage fails closed if secure storage is unavailable; no plaintext fallback is used. Verification targets the selected academic application and distinguishes missing permission from an expired session. Only the first page is read; unknown totals and partial results are explicitly labelled. Community quiet pods and sports venues require separate integration and verification.
 
 Additional frontend regression check: `node desktop/check-session-ui.mjs`.
+
+The current development branch adds the official academic calendar and teaching week. It reads a local cache at startup and checks the university calendar daily. On Windows, changed calendar images use local system OCR; failed recognition retains the prior dates with an explicit notice. Manual date overrides remain available. Undergraduate and graduate timetable entry points open the official systems; in-app timetable and booking integration are still pending. These changes are not in the published beta0.5.1 package.

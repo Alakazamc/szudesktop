@@ -58,6 +58,7 @@ type Server struct {
 	session      credential.SessionStore   // 学校系统（ehall）登录状态；与校园网凭据分开存
 	vpn          *vpnManager
 	campus       *campusGateway
+	calendar     *calendarService
 	probe        func() *portal.DetectResult
 	detect       func() *portal.DetectResult
 	workspace    *workspaceStore
@@ -85,7 +86,8 @@ func New(opts Options) *Server {
 	if err != nil {
 		campus = &campusGateway{}
 	}
-	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager(), campus: campus, probe: portal.Probe, detect: portal.Detect, workspace: newWorkspaceStore(), windows: newWindowSessions()}
+	workspace := newWorkspaceStore()
+	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager(), campus: campus, calendar: newCalendarService(filepath.Dir(workspace.path)), probe: portal.Probe, detect: portal.Detect, workspace: workspace, windows: newWindowSessions()}
 }
 
 func parseZone(raw string) (portal.Zone, bool) {
@@ -286,6 +288,7 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 	mux.HandleFunc("/api/vpn/proxy", protectAPI(s.handleVPNProxy, http.MethodPost))
 	mux.HandleFunc("/api/campus/status", protectAPI(s.handleCampusStatus, http.MethodGet))
 	mux.HandleFunc("/api/campus/notices", protectAPI(s.handleCampusNotices, http.MethodGet))
+	mux.HandleFunc("/api/campus/calendar", protectAPI(s.handleCalendar, http.MethodGet))
 	// 学校系统（ehall）会话与个人业务。
 	// 会话本身是敏感凭据，读写都走 POST/DELETE，状态查询只回报长度不回报内容。
 	mux.HandleFunc("/api/session", protectAPI(s.handleSession, http.MethodGet, http.MethodPost, http.MethodDelete))
