@@ -110,8 +110,8 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | Access point ID (`ac_id`) discovery | ✅ | Tries in order: your manual value → what worked on this port before → the gateway redirect → a guess. Guesses are labelled as such |
 | Connection diagnostics | ✅ | Lists zone decision, portal reachability, protocol fingerprint and the conclusion |
 | Credential storage | ✅ | Windows DPAPI; saved **only after a successful sign-in and only if you ticked "remember"** |
-| Notices | ✅ | Reads public notices from the Office of Academic Affairs and the Graduate School in-app, with dates and source links, cached for 10 minutes |
-| Room availability and booking | Partial | Live community rooms and half-hour availability on the campus network. Separate booking sessions, personal records and confirmed submission are **pending live acceptance**. Library services remain external |
+| Notices | Partial | Current source groups notices by college or department: 28 academic-unit links, 17 readable college columns, plus Academic Affairs and the Graduate School. Dates and original links are preserved with a 10-minute cache; other units link to their official sites |
+| Room availability and booking | Partial | Live community rooms and half-hour availability on the campus network. Current source opens the official school page for login and booking, without asking users to copy booking cookies. Library services use a separate official system |
 | Calendar and timetables | Partial | Official calendar updates and manual week overrides. Undergraduate personal timetable reading and graduate login are **pending full live account validation** |
 | Study reminders | ✅ | Add a reminder manually, export a standard ICS calendar (15 minutes before start). **A reminder is not a booking** |
 | Common contacts | Partial | Only numbers verifiable on official school pages (library help desks); other offices link to their official pages |
@@ -120,7 +120,11 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | Lychee Garden | ✅ | Companion care and growth, crops, plots, watering, harvest, decorations, daily goals, achievements and a field guide. No purchases, no real-money trading |
 | Save file | ✅ | Fixed local file, survives restarts and port changes, supports export / import and multi-window conflict protection |
 
-beta0.6 is a public prerelease. Score reading remains limited to the first page; balance is not integrated. Timetables and bookings require manual queries, and account authentication and submission still await live acceptance. See [STATUS.md](STATUS.md).
+beta0.6 is a public prerelease. Score reading remains limited to the first page; balance is not integrated. Timetables require manual queries and still await full live account validation. In the current source, reservations are completed on the official school page; embedding that page inside the app is not yet implemented. See [STATUS.md](STATUS.md).
+
+**Unreleased college notice filtering:** selecting a college automatically reads its public column. Unsupported units have an official-site link; authenticated internal notices are not included. Published beta0.6 assets do not include this update yet.
+
+**Unreleased booking usability fix:** current source removes the booking cookie field, developer-tools instructions and unverified local submission form. Availability is a read-only overview; the booking button opens the official school website in the browser. The published beta0.6 assets do not yet include this change. Embedded official pages and their full login flow remain unverified.
 
 ---
 
@@ -278,4 +282,4 @@ beta0.6 includes undergraduate and graduate score readers, pending validation wi
 
 Additional frontend regression check: `node desktop/check-session-ui.mjs`.
 
-beta0.6 adds the official academic calendar, local graduate login and timetable reading, and undergraduate personal timetable reading using a business-specific ehall cookie. Timetable adapters still require live account acceptance. Public community rooms and availability can now be read on the campus network. A separate, memory-only WebVPN booking session supports personal records and a review-then-confirm submission flow; live booking authentication and submission remain unverified. Timed-out submissions are never automatically retried. These integrations ship as experimental features in beta0.6; publication does not imply live acceptance has passed. See [STATUS.md](STATUS.md) for current acceptance status.
+The app provides the official academic calendar, local graduate login and timetable reading, and undergraduate personal timetable reading using a business-specific ehall cookie. Timetable adapters still require live account acceptance. Public community rooms and availability can be read on the campus network. In the current source, users open the official school page to sign in, submit a reservation, and view its result. The booking session input and experimental local submission interface shipped in beta0.6 have been removed from the current source; the published download has not been updated. See [STATUS.md](STATUS.md) for current acceptance status.

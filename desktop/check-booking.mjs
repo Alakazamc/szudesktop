@@ -1,28 +1,36 @@
 import assert from 'node:assert/strict';
 import {createBookingUI,bookingSlotsHTML} from './assets/garden/booking.mjs';
-const nodes=new Map();const node=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',value:''});return nodes.get(id)};
-globalThis.document={getElementById:node};
+const panel={innerHTML:''};
+globalThis.document={getElementById:id=>id==='booking-panel'?panel:null};
 const day={room:{id:1,name:'测试会议室',description:'<img src=x>',type:{samePersonMaxReservationPerDay:4}},date:'2026-09-21',fetched_at:'2026-09-20T08:00:00Z',slots:[{index:28,start:'14:00',end:'14:30',state:'available'},{index:29,start:'14:30',end:'15:00',state:'occupied'}]};
-let approve=false,expired=false,calls=[],count=0;
-const ui=createBookingUI({toast(){},confirm:async()=>approve,api:async(path,body,method)=>{calls.push({path,body,method});if(path.endsWith('/session'))return {authenticated:method!=='DELETE'};if(expired)throw Object.assign(Error('登录失效'),{code:401});if(path.endsWith('/rooms'))return {rooms:[{...day.room,status:true}],today:'2026-09-20'};if(path.includes('/availability'))return day;if(path.endsWith('/prepare'))return {token:'once',room:'测试会议室',date:day.date,times:['14:00–14:30']};if(path.endsWith('/commit'))return {ok:true,message:'已提交'};return {records:[],total:0,page:1}}});
+let calls=[],failure=false,empty=false,count=0;
+const ui=createBookingUI({api:async path=>{calls.push(path);if(failure)throw Error('无法读取学校场地信息');if(path.endsWith('/rooms'))return {rooms:empty?[]:[{...day.room,status:true}],today:'2026-09-20'};if(path.includes('/availability'))return day;assert.fail('unexpected private API: '+path)}});
 async function check(name,f){await f();count++;console.log('PASS',name)}
-await check('slots have labels, selection state, disabled occupancy and escaped content',()=>{
- const html=bookingSlotsHTML(day,[28]);assert.match(html,/已选中/);assert.match(html,/已预约/);assert.match(html,/&lt;img src=x&gt;/);assert.match(html,/data-index="29"[^>]+disabled/);assert.match(html,/aria-pressed="true"/);
+await check('booking goes directly to school, without a manual session or unfinished local form',()=>{
+ assert.match(ui.card(),/href="https:\/\/swzx\.webvpn\.szu\.edu\.cn\/#\/pages\/booth\/szu-booth-list"/);
+ assert.match(ui.card(),/登录并预约/);assert.match(ui.card(),/在浏览器打开学校页面/);
+ assert.doesNotMatch(ui.card(),/Cookie|F12|booking-cookie|booking-form|booking-connect/);
+ assert.equal(calls.length,0);
 });
-await check('live conditions invalidate old slots and selection',async()=>{
+await check('availability is an escaped read-only overview, not a false selection step',()=>{
+ const html=bookingSlotsHTML(day);assert.match(html,/空闲/);assert.match(html,/已预约/);assert.match(html,/&lt;img src=x&gt;/);
+ assert.doesNotMatch(html,/<button|aria-pressed|已选中/);assert.match(html,/去学校页面预约/);
+});
+await check('query uses public endpoints and changing conditions discards previous slots',async()=>{
  await ui.click('booking-rooms');await ui.click('booking-query');assert.match(ui.card(),/14:00/);
- ui.change({target:{id:'booking-date',value:'2026-09-21'}});assert.doesNotMatch(ui.card(),/data-index="28"/);assert.match(ui.card(),/条件已更改/);
+ ui.change({target:{id:'booking-date',value:'2026-09-22'}});assert.doesNotMatch(ui.card(),/14:00/);assert.match(ui.card(),/条件已更改/);
+ await ui.click('booking-query');assert.match(calls.at(-1),/date=2026-09-22/);
+ assert.ok(calls.every(x=>x==='/api/booking/rooms'||x.startsWith('/api/booking/availability?')));
 });
-await check('cancelled review cannot submit a reservation',async()=>{
- await ui.load();await ui.click('booking-query');await ui.click('booking-slot',{dataset:{index:'28'}});
- await ui.submit({id:'booking-form'},{phone:'13800000000',grade:'2025',agree:'on'});
- assert.equal(calls.filter(x=>x.path.endsWith('/commit')).length,0);
+await check('query failure clears stale availability and keeps official booking reachable',async()=>{
+ failure=true;await ui.click('booking-query');assert.doesNotMatch(ui.card(),/14:00/);assert.match(ui.card(),/无法读取学校场地信息/);assert.match(ui.card(),/登录并预约/);failure=false;
 });
-await check('explicit confirmation uses a one-time token, never repeats personal payload',async()=>{
- approve=true;await ui.submit({id:'booking-form'},{phone:'13800000000',grade:'2025',agree:'on'});
- const commits=calls.filter(x=>x.path.endsWith('/commit'));assert.equal(commits.length,1);assert.deepEqual(commits[0].body,{token:'once'});assert.match(ui.card(),/学校本次返回空预约列表/);
+await check('empty room list is explicit and still offers the school page',async()=>{
+ empty=true;await ui.click('booking-rooms');assert.match(ui.card(),/没有返回可查询的场地/);assert.doesNotMatch(ui.card(),/id="booking-room"/);assert.match(ui.card(),/登录并预约/);
 });
-await check('expired login removes cached history and submission form',async()=>{
- expired=true;await ui.click('booking-history');assert.doesNotMatch(ui.card(),/id="booking-form"/);assert.doesNotMatch(ui.card(),/学校本次返回空预约列表/);assert.match(ui.card(),/登录失效/);
+await check('retired private actions cannot send a session or reservation request',async()=>{
+ const before=calls.length;
+ for(const action of ['booking-connect','booking-history','booking-slot','booking-commit'])assert.equal(await ui.click(action),false);
+ assert.equal(calls.length,before);
 });
 console.log(`${count} booking checks passed`);

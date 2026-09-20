@@ -73,3 +73,63 @@ func TestParseSchoolNotices(t *testing.T) {
 		t.Fatalf("unexpected: %+v", items)
 	}
 }
+
+func TestCollegeNoticeDateLayouts(t *testing.T) {
+	cases := []struct{ name, markup, date string }{
+		{"sibling", `<li><a href="/info/100/1.htm" title="学院公开通知">学院公开通知</a><span class="news_meta">2026-09-18</span></li>`, "2026-09-18"},
+		{"optional li closing", `<ul><li><a href="/info/100/1.htm">第一条学院通知</a><span>2026-09-18</span><li><a href="/info/100/2.htm">第二条学院通知</a><span>2026-09-17</span></ul>`, "2026-09-18"},
+		{"year above month day", `<li><a href="/info/100/1.htm" title="人工智能学院通知"><div class="sj"><p>2026</p><p>09/17</p></div>人工智能学院通知</a></li>`, "2026-09-17"},
+		{"month day above year", `<a href="/info/100/1.htm" title="化学学院通知"><div class="date"><b>07-02</b><span>2025</span></div>化学学院通知</a>`, "2025-07-02"},
+		{"Chinese month", `<a href="/info/100/1.htm" title="体育学院通知"><div class="time"><span>10</span><b>04月</b><em>2026</em></div>体育学院通知</a>`, "2026-04-10"},
+		{"publication not excerpt date", `<div class="event-list-item"><a href="/info/100/1.htm" title="生命学院通知">生命学院通知</a><div class="date-excerpt">活动在 2026-03-01 举行</div><div class="fbtime">发布时间：2026-03-19</div><a href="/info/100/1.htm">详情</a></div>`, "2026-03-19"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := parseNotices(c.markup, "https://fe.szu.edu.cn/")
+			if len(got) == 0 || got[0].Date != c.date {
+				t.Fatalf("got %+v", got)
+			}
+		})
+	}
+	markup := `<ul><li><a href="/info/100/1.htm">没有日期的通知</a></li><li><a href="/info/100/2.htm">旁边有日期通知</a><span>2026-09-18</span></li></ul>`
+	got := parseNotices(markup, "https://fe.szu.edu.cn/")
+	if len(got) != 1 || !strings.HasSuffix(got[0].URL, "/2.htm") {
+		t.Fatalf("borrowed neighbour's date: %+v", got)
+	}
+}
+
+func TestCollegeNoticeCachesAreSeparate(t *testing.T) {
+	old := noticeClient
+	publicNotices.results = map[string]noticeResult{}
+	publicNotices.retry = map[string]time.Time{}
+	t.Cleanup(func() {
+		noticeClient = old
+		publicNotices.results = map[string]noticeResult{}
+		publicNotices.retry = map[string]time.Time{}
+	})
+	calls := 0
+	noticeClient = &http.Client{Transport: noticeTransport(func(r *http.Request) (*http.Response, error) {
+		calls++
+		if r.Header.Get("Cookie") != "" {
+			t.Fatal("public request carried a cookie")
+		}
+		body := `<li><a href="/info/100/1.htm" title="` + r.URL.Host + `学院公告">学院公告</a><span>2026-09-18</span></li>`
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
+	})}
+	server := &Server{}
+	for _, id := range []string{"college-fe", "college-law", "college-fe"} {
+		w := httptest.NewRecorder()
+		server.handleCampusNotices(w, httptest.NewRequest("GET", "/api/campus/notices?source="+id, nil))
+		if w.Code != 200 || !strings.Contains(w.Body.String(), noticeSources[id].Name) {
+			t.Fatal(id, w.Body.String())
+		}
+	}
+	if calls != 2 {
+		t.Fatal("sources must have independent caches", calls)
+	}
+	w := httptest.NewRecorder()
+	server.handleCampusNotices(w, httptest.NewRequest("GET", "/api/campus/notices?source=college-csse", nil))
+	if w.Code != 503 || calls != 2 {
+		t.Fatal("unavailable source must not pretend to have an empty feed")
+	}
+}

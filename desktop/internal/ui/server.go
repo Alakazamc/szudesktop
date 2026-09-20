@@ -289,6 +289,7 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 	mux.HandleFunc("/api/vpn/disconnect", protectAPI(s.handleVPNDisconnect, http.MethodPost))
 	mux.HandleFunc("/api/vpn/proxy", protectAPI(s.handleVPNProxy, http.MethodPost))
 	mux.HandleFunc("/api/campus/status", protectAPI(s.handleCampusStatus, http.MethodGet))
+	mux.HandleFunc("/api/campus/notice-sources", protectAPI(s.handleCampusNoticeSources, http.MethodGet))
 	mux.HandleFunc("/api/campus/notices", protectAPI(s.handleCampusNotices, http.MethodGet))
 	mux.HandleFunc("/api/campus/calendar", protectAPI(s.handleCalendar, http.MethodGet))
 	// 学校系统（ehall）会话与个人业务。
