@@ -69,7 +69,7 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | :--- | :----- |
 | Desktop app | Windows x64 (`szudesktop.exe`) |
 | Command line | Windows / macOS / Linux, single binary `szunet` |
-| Current version | `beta0.6.1` · public beta (pre-release) |
+| Current version | [beta0.6.1](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.6.1) · public beta (pre-release); Windows download published |
 | Runtime | No dependencies to install; the window is provided by your browser (Edge / Chrome app window) |
 
 ### First run

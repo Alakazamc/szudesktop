@@ -867,3 +867,6 @@ Use case: style-transfer. Asset: final full-bleed desktop app background, wide 1
 - 桌面界面、命令行版本、中英文 README 和压缩包内快速开始说明统一更新为 beta0.6.1。
 - 发布验收：由 GitHub Actions 执行回归、Go 检查与测试、Windows 构建和整机冒烟，再生成桌面包及五个平台命令行程序；任务完成后核实产物。
 - 本次发布不代表课表/成绩真实账号验收或应用内预约已经完成。
+
+- 发布结果：GitHub Actions [35514050275](https://github.com/Alakazamc/szudesktop/actions/runs/35514050275) 全部成功，包含 Windows 整机冒烟。公开预发布 [beta0.6.1](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.6.1) 已上传 8 个文件；标签对应 `20fbe2a`。
+- GitHub 发布文件摘要：Windows ZIP SHA256 `b29359fe33add5a37963dc187461f35723c19a92586b40cb03ec1e35388d28e0`；EXE SHA256 `59bfccdc0a6274eccdbb75576ba9c054edf6e7b20b31e3557c73aa245a28e5c5`。

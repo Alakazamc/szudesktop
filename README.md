@@ -64,7 +64,7 @@ szuDesktop 同时对付这两件事：**一个按钮完成认证，一个按钮�
 | :-- | :---- |
 | 桌面端 | Windows x64（`szudesktop.exe`） |
 | 命令行 | Windows / macOS / Linux，单文件 `szunet` |
-| 当前版本 | `beta0.6.1` · 公开测试版（预发布） |
+| 当前版本 | [beta0.6.1](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.6.1) · 公开测试版（预发布），Windows 下载包已发布 |
 | 运行环境 | 无需安装依赖；窗口由本机浏览器提供（Edge / Chrome 应用窗口） |
 
 ### 首次使用
