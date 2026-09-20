@@ -692,3 +692,32 @@ WebView 交互（D2）降级为后续「多一种获取方式」，不阻塞当�
 - `go test ./...`、`go vet ./...` 通过；前端 35 项通过，包含新校历 4 项。Windows 成品 61 项冒烟通过，包括离线校历、跨来源限制、新资源打包和无控制台启动。
 - 浏览器实测：默认显示第 4 周；手动设置 2026-09-14 后显示第 1 周；恢复自动后回到第 4 周；点击更新未清空未保存的日期。桌面和 390px 窄窗检查通过，无横向溢出。
 - 本地预览包：`dist/szudesktop-campus-preview-20260920-windows-amd64.zip`，6,959,907 字节，SHA256 `1eb127dfccf274f38f607d83c007cc01f2068e0ad410e641e791e6e106a06ddd`；包内程序与本轮成品一致，EXE SHA256 `7ba68f0d4e5c40d4be4dda9b04970d406052369fcd1450b8214c47c9f41c56fa`。内部版本仍为 beta0.5.1，压缩包名称及说明已标为预览构建。
+
+## 22. 根据真实深大照片重绘像素校园（2026-09-20）
+
+用户要求将泛校园背景改为深圳大学实景，并尽可能将场景细节、小图标替换成星露谷物语、泰拉瑞亚、Minecraft 风格的物件。
+
+| 项目 | 重要性 / 难度 | 完成内容 |
+|---|---|---|
+| B01 文山湖实景背景 | P2 / S | 已替换 `desktop/assets/garden/campus.png`。保留文山湖棕榈、湖岸步道、圆形花钵及校园楼群；加入结伴散步、读书、推自行车的同学、鸭子、小猫、灯笼、史莱姆和草方块 |
+| B02 游戏物件图标 | P2 / S | 新增 18 个项目内绘制的像素 SVG 物件：木屋、水晶、路牌、浇水壶、书本、工作台、金币、面包、爱心、箱子、幼苗、镐、花朵、灯笼、信件、卷轴、沙漏、树。覆盖六个导航、庭院分区、农田操作、背包数值、专注和校园服务操作，保留文字标签 |
+| B03 场景展示与细节统一 | P2 / S | 顶部标明“深圳大学 · 文山湖”，增加“看看像素校园”整图浏览；支持按钮返回与 Escape 关闭。重绘首页树木装饰，背景展示高度与窄窗排版一起调整 |
+
+参考照片与素材：
+
+- 地貌及建筑依据：[Lake Wenshan of Shenzhen University](https://commons.wikimedia.org/wiki/File:Lake_Wenshan_of_Shenzhen_University.jpg)，Jauhnn，2010 年照片，作者在原页声明 Public Domain。
+- 校园生活参考：[深圳大学校园环境提升 / 翰博设计](https://www.gooood.cn/shenzhen-university-campus-environment-enhancement.htm)，2023-12-11；使用文山湖边背包同学散步照片作为生活氛围参考。原项目页面署名 DID studio、HOPE 翰博设计 杨洋。原照片仅留在忽略目录作输入，没有打包或提交。
+- 新背景通过内置 imagegen 以两张照片为参考重新生成；场景为游戏化插画，非校园精确地图。图标在现有 SVG 系统中重新绘制，没有提取游戏安装包中的图片或代码。荔宝、伙伴养成与应用操作逻辑保持现有设计。
+
+<details><summary>最终图像提示词（内置 imagegen，输入 1 为地貌照片，输入 2 为生活照片）</summary>
+
+Use case: style-transfer. Asset: final full-bleed desktop app background, wide 16:9 pixel-art illustration at 1920x1080 or larger. Create PIXEL SHENZHEN UNIVERSITY, specifically the real Wenshan Lake 粤海校区文山湖 in the supplied photographs. Image 1 is the primary real-place architecture and spatial reference: retain the unmistakable palm trunks framing both sides, stone steps descending toward the lake, round pale planters, hedge-lined path, curved shore, cream low-rise campus buildings across the lake with taller urban blocks behind. Image 2 provides student-life reference and the real stepped lakeside terraces with circular tree planters and backpack-wearing students walking in pairs. Recompose these into a coherent illustrated scene of this actual university, no invented European clocktower, castle or generic fantasy university. THE MAIN CHANGE IS TO RENDER EVERY VISIBLE ELEMENT AS A DETAILED GAME SPRITE OR GAME TILE. Strong Stardew Valley style for cozy dense palm and lychee foliage, small 16-bit backpack students strolling, chatting, reading on benches; Terraria style for detailed wood lanterns, tiny orange campus cats, occasional peaceful blue slime tucked beside the path and layered plants; Minecraft-style block textures for grass-topped earth edges, stone-brick steps, blocky flower pots, wooden benches, tiny decorative chest and lanterns. Make the three influences clearly recognizable but unified in a single crisp 2D pixel-art language, not a collage of screenshots or flat modern icons, not 3D voxel rendering. A lively ordinary university afternoon: roughly 8-12 tiny students around the shoreline/path, a student holding a book, another wheeling a bicycle, two ducks on the lake. The campus remains the subject, game items are integrated into daily life rather than dominating. Keep human figures small. Rich harmonious greens, clear jade water with pixel reflections, warm afternoon light, muted pink flowers, pale blue sky. Composition optimized for a wallpaper behind parchment UI: keep the primary scene and lively campus details visible in the upper 45 percent and outer sides; put the lake horizon and distant campus around upper third; keep the top center relatively quiet to fit a wooden title sign. The descending path and round pots can occupy the foreground. Light airy water area, layered depth, crisp deliberate square pixel clusters and selective dark outlines. No smooth painted gradients, no photoreal texture remnants. No text, no labels, no watermark, no interface panels. The result should feel like Shenzhen University has become a playable Stardew/Terraria/Minecraft crossover campus.
+
+</details>
+
+验证与交付：
+
+- 相关前端回归 31 项通过；18 个新增 SVG 物件的引用均可解析。实际浏览器验证导航、桌面与 390px 窄窗、整图加载、Escape 与返回按钮；无横向溢出、无脚本错误。
+- Windows 构建同步通过；61 项成品冒烟通过。最后只调整首页树木在桌面布局上的垂直位置后重新构建，未重复无关后端测试。
+- 新预览包：`dist/szudesktop-pixel-szu-20260920-windows-amd64.zip`，6,924,130 字节，SHA256 `688209d005d1aae2edb0d00ba3cac34552eecf0919a6fa65b7a38a3acb309560`。包内 EXE 与最终构建相同，SHA256 `a7131a1e335002d592185fbd2ee7833e0a06d19df70bf5d712756b6aaf4e0e89`。
+- 继续更新现有 PR #4；此包是预览构建，内部版本仍为 beta0.5.1，没有覆盖公开 Release。第 21 节的预约和课表待办保持原状态。

@@ -4,7 +4,8 @@ import {gpa} from './engine.mjs';
 export function createCampusUI({getState,commit,toast,confirm,api,render}) {
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const link=(url,label,cls='button')=>`<a class="${cls}" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${label} ↗</a>`;
- const button=(label,action,extra='')=>`<button data-action="campus-${action}" ${extra}>${label}</button>`;
+ const itemIcons={'reminder-ics':'i-scroll',feed:'i-mail','session-save':'i-chest','session-check':'i-crystal','online-score':'i-book',preview:'i-scroll',template:'i-scroll',import:'i-chest'};
+ const button=(label,action,extra='')=>`<button data-action="campus-${action}" ${extra}>${itemIcons[action]?`<svg class="item-icon" aria-hidden="true"><use href="#${itemIcons[action]}"></use></svg>`:''}${label}</button>`;
  let gradeText='',gradeLevel='undergrad',preview=null,feedSource='undergrad',feed=null,feedError='',loading=false,filterLevel='',filterTerm='';
  // 学校系统（ehall）在线读取相关状态。会话本身不放在这里，只由后端保管。
  let sessionSaved=false,sessionDesc='',sessionErr='',sessionBusy=false,onlineScore=null,onlineErr='',onlineBusy=false,onlineLevel='undergrad';
