@@ -59,7 +59,7 @@ with tempfile.TemporaryDirectory(prefix='szudesktop-smoke-') as cfg:
         check('notices reject POST',request('/api/campus/notices?source=undergrad',{})[0]==405)
         check('default VPN unavailable',get('/api/vpn/status')['state']=='unavailable')
         check('no account exposed in status',get('/api/status')['username']=='')
-        for path,file in [('/',ROOT/'desktop/index.html'),('/assets/garden/app.mjs',ROOT/'desktop/assets/garden/app.mjs'),('/assets/garden/style.css',ROOT/'desktop/assets/garden/style.css'),('/assets/garden/engine.mjs',ROOT/'desktop/assets/garden/engine.mjs'),('/assets/garden/campus.mjs',ROOT/'desktop/assets/garden/campus.mjs'),('/assets/garden/campus-ui.mjs',ROOT/'desktop/assets/garden/campus-ui.mjs'),('/assets/garden/campus.png',ROOT/'desktop/assets/garden/campus.png'),('/assets/szudesktop.ico',ROOT/'desktop/assets/szudesktop.ico')]:
+        for path,file in [('/',ROOT/'desktop/index.html'),('/assets/garden/app.mjs',ROOT/'desktop/assets/garden/app.mjs'),('/assets/garden/style.css',ROOT/'desktop/assets/garden/style.css'),('/assets/garden/engine.mjs',ROOT/'desktop/assets/garden/engine.mjs'),('/assets/garden/campus.mjs',ROOT/'desktop/assets/garden/campus.mjs'),('/assets/garden/campus-ui.mjs',ROOT/'desktop/assets/garden/campus-ui.mjs'),('/assets/garden/network-status.mjs',ROOT/'desktop/assets/garden/network-status.mjs'),('/assets/garden/campus.png',ROOT/'desktop/assets/garden/campus.png'),('/assets/szudesktop.ico',ROOT/'desktop/assets/szudesktop.ico')]:
             code,body,_=request(path);check('embedded '+path,code==200 and body==file.read_bytes())
         code,css,_=request('/assets/fonts/fusion-pixel.css')
         check('pixel font stylesheet packaged',code==200)

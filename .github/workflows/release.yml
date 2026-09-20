@@ -27,6 +27,10 @@ jobs:
         run: node desktop/check-campus.mjs
       - name: Session UI regression
         run: node desktop/check-session-ui.mjs
+      - name: Network and workspace UI regression
+        run: |
+          node desktop/check-network-ui.mjs
+          node desktop/check-workspace-ui.mjs
       - name: 静态检查
         run: go vet ./...
       - name: 单元测试

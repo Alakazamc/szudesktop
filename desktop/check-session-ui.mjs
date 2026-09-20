@@ -38,7 +38,8 @@ await check('changing academic level clears old grades and probes selected busin
 await check('saving or clearing a session removes previous personal results',async()=>{
  node('#session-cookie').value='test-only';await ui.click('campus-session-save',{});
  assert.equal(node('#session-cookie').value,'');assert.doesNotMatch(node('#online-score').innerHTML,/&lt;img/);
- await ui.click('campus-online-score',{});await ui.click('campus-session-clear',{});
+ await ui.click('campus-online-score',{});node('#session-cookie').value='unsaved-test-cookie';await ui.click('campus-session-clear',{});
+ assert.equal(node('#session-cookie').value,'');
  assert.doesNotMatch(node('#online-score').innerHTML,/&lt;img/);
  assert.match(ui.grades(),/不会注销浏览器或撤销学校会话/);
 });

@@ -108,7 +108,7 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
    finally{sessionBusy=false;refreshSessionBox()}
   }else if(a==='session-clear'){
    if(await confirm('清除学校系统登录状态？','只清除本机保存的登录状态，不影响你的校园网账号密码，也不会退出浏览器里的登录。清除后需要重新复制一次 Cookie。')){
-    try{await api('/api/session',{},'DELETE');sessionSaved=false;sessionErr='';onlineScore=null;onlineErr='';toast('已清除本机保存的登录状态')}
+    try{await api('/api/session',{},'DELETE');const box=document.querySelector('#session-cookie');if(box)box.value='';sessionSaved=false;sessionErr='';onlineScore=null;onlineErr='';toast('已清除本机保存的登录状态')}
     catch(e){toast(e.message)}
     refreshSessionBox();refreshScoreBox();
    }

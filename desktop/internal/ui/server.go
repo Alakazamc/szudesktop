@@ -9,6 +9,7 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log"
@@ -58,6 +59,7 @@ type Server struct {
 	vpn          *vpnManager
 	campus       *campusGateway
 	probe        func() *portal.DetectResult
+	detect       func() *portal.DetectResult
 	workspace    *workspaceStore
 	shutdown     func()
 	instance     *desktopInstance
@@ -83,7 +85,7 @@ func New(opts Options) *Server {
 	if err != nil {
 		campus = &campusGateway{}
 	}
-	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager(), campus: campus, probe: portal.Probe, workspace: newWorkspaceStore(), windows: newWindowSessions()}
+	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager(), campus: campus, probe: portal.Probe, detect: portal.Detect, workspace: newWorkspaceStore(), windows: newWindowSessions()}
 }
 
 func parseZone(raw string) (portal.Zone, bool) {
@@ -294,22 +296,24 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 /* ---------- 接口 ---------- */
 
 type statusResp struct {
-	Zone       string   `json:"zone"`
-	ZoneLabel  string   `json:"zone_label"`
-	InternetOK bool     `json:"internet_ok"`
-	Online     bool     `json:"online"`
-	OnlineIP   string   `json:"online_ip"`
-	Username   string   `json:"username"`
-	Saved      bool     `json:"saved"`      // 有没有存过凭据
-	StoreDesc  string   `json:"store_desc"` // 凭据存在哪
-	LastError  string   `json:"last_error"`
-	Advices    []string `json:"advices"`
+	Zone        string   `json:"zone"`
+	ZoneLabel   string   `json:"zone_label"`
+	InternetOK  bool     `json:"internet_ok"`
+	Online      bool     `json:"online"`
+	OnlineKnown bool     `json:"online_known"`
+	OnlineError string   `json:"online_error"`
+	OnlineIP    string   `json:"online_ip"`
+	Username    string   `json:"username"`
+	Saved       bool     `json:"saved"`      // 有没有存过凭据
+	StoreDesc   string   `json:"store_desc"` // 凭据存在哪
+	LastError   string   `json:"last_error"`
+	Advices     []string `json:"advices"`
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
-	user, pass, credErr := s.creds()
+	creds, credErr := s.store.Load()
 
-	det := portal.Detect()
+	det := s.detect()
 	zone := s.selectedZone(det.Zone)
 	out := statusResp{
 		Zone:       string(zone),
@@ -317,18 +321,17 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		InternetOK: det.InternetOK,
 		StoreDesc:  s.store.Describe(),
 	}
-	if credErr == nil {
-		out.Saved = true
-		// Account identifiers are private by default; reveal only via an explicit user action.
-		//
-		// 联网时也照查（QueryOnline 的注释里写了为什么）。以前这里跳过，
-		// 用户看到的就是一句"没查到"，会以为掉线了跑去反复点登录。
-		if st, err := portal.QueryOnline(zone, s.opts.SrunHost, s.opts.DrcomHost, user, pass); err == nil && st != nil {
-			out.Online = st.Online
-			out.OnlineIP = st.IP
-		}
-	} else {
-		out.LastError = credErr.Error()
+	out.Saved = credErr == nil && creds.Username != "" && creds.Password != ""
+	if credErr != nil && !errors.Is(credErr, credential.ErrNotFound) {
+		out.LastError = "暂时无法读取已保存的校园网账号，请检查本机凭据存储"
+	}
+	// 门户按请求出口查询认证状态，与本机有没有保存账号无关。
+	// 账号和设备 IP 默认不向页面回传；查询失败也不等于明确离线。
+	if st, err := portal.QueryOnline(zone, s.opts.SrunHost, s.opts.DrcomHost, "", ""); err != nil {
+		out.OnlineError = "暂时无法确认校园网认证状态，请稍后刷新或运行网络诊断"
+	} else if st != nil {
+		out.OnlineKnown = true
+		out.Online = st.Online
 	}
 
 	s.mu.Lock()
