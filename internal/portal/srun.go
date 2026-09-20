@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -118,6 +120,10 @@ type srunUserInfo struct {
 }
 
 // Status 查询账号当前是否在线。
+//
+// 顺带把"这个出口上有几台设备在线"读出来。深澜新版（学生区城市热点）
+// 是按设备登记会话的，一个账号可以挂多台，但一个出口 IP 仍然只认一个账号。
+// 撞上 ip_already_online 时，这是唯一能把情况说清楚的信息。
 func (c *SrunClient) Status() (*OnlineStatus, error) {
 	u := fmt.Sprintf("%s/cgi-bin/rad_user_info?callback=_&_=%d", c.Host, time.Now().Unix())
 	body, err := c.get(u)
@@ -129,17 +135,80 @@ func (c *SrunClient) Status() (*OnlineStatus, error) {
 		Error    string `json:"error"`
 		UserName string `json:"user_name"`
 		OnlineIP string `json:"online_ip"`
+
+		// 这两个字段实测都存在，但注意：返回里**没有 user_name**，
+		// 所以 Username 通常是空的，别指望靠它认出"在线的是谁"。
+		OnlineDeviceTotal  string `json:"online_device_total"`
+		OnlineDeviceDetail string `json:"online_device_detail"`
 	}
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, fmt.Errorf("解析在线状态失败: %w", err)
 	}
 
 	return &OnlineStatus{
-		Online:   resp.Error == "ok",
-		Username: resp.UserName,
-		IP:       resp.OnlineIP,
-		Raw:      truncate(string(body), 300),
+		Online:      resp.Error == "ok",
+		Username:    resp.UserName,
+		IP:          resp.OnlineIP,
+		DeviceTotal: parseOnlineDeviceCount(resp.OnlineDeviceTotal),
+		Devices:     parseOnlineDevices(resp.OnlineDeviceDetail),
+		Raw:         truncate(string(body), 300),
 	}, nil
+}
+
+// parseOnlineDeviceCount 把 online_device_total 这个字符串数字读成 int。
+// 读不出来就返回 0——它只是提示用的补充信息，不值得让整次查询失败。
+func parseOnlineDeviceCount(s string) int {
+	n, err := strconv.Atoi(strings.TrimSpace(s))
+	if err != nil || n < 0 {
+		return 0
+	}
+	return n
+}
+
+// parseOnlineDevices 把 online_device_detail 里的设备列表读成一句句人话。
+//
+// 这个字段是「JSON 字符串里再套一层 JSON」：
+//
+//	{"344898392":{"class_name":"Macintosh","ip":"10.20.30.40","os_name":"Mac OS"}}
+//
+// 外层键是 rad_online_id。读不出来就返回 nil，不影响 Online 的判断。
+func parseOnlineDevices(detail string) []string {
+	if strings.TrimSpace(detail) == "" {
+		return nil
+	}
+
+	var raw map[string]struct {
+		Class string `json:"class_name"`
+		OS    string `json:"os_name"`
+		IP    string `json:"ip"`
+	}
+	if err := json.Unmarshal([]byte(detail), &raw); err != nil {
+		return nil
+	}
+
+	// 按 rad_online_id 排序，保证同样的输入总给出同样的顺序。
+	ids := make([]string, 0, len(raw))
+	for id := range raw {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		d := raw[id]
+		desc := d.OS
+		if desc == "" {
+			desc = d.Class
+		}
+		if desc == "" {
+			desc = "未知设备"
+		}
+		if d.IP != "" {
+			desc += " · " + d.IP
+		}
+		out = append(out, desc)
+	}
+	return out
 }
 
 // Login 执行一次完整的深澜认证。
@@ -200,15 +269,29 @@ func (c *SrunClient) Login() (*Result, error) {
 
 	raw := truncate(string(body), 2000)
 
-	// error 为 ok 就是成功；suc_msg 里带 already_online 说明本来就在线，
-	// 这同样证明协议走通了，算成功，不主动去踢掉原有会话。
+	// 深澜这里有两种"已在线"，含义完全不同，以前混着都当成功，是错的：
 	//
-	// 这里细分成两种"已在线"：
-	//   ip_already_online —— 这个网络出口已经有别的账号挂着，本次登录没生效；
-	//   already_online    —— 是自己这个账号本来就在线。
-	// 对用户来说结果都是"能上网"，但提示要给对，不然会以为换号成功了。
+	//   already_online    —— 当前这个账号本来就在线，会话有效、能上网 → 算成功
+	//
+	//   ip_already_online —— 这个出口上已经挂着会话，服务端在**校验账号密码和
+	//                        ac_id 之前**就短路返回了（实测确认过）。
+	//                        也就是说：它既没验证过这组账号密码，也没验证过这个
+	//                        ac_id，本次登录确实没生效。
+	//
+	// 所以后者既不能报成功，更不能把没验证过的 ac_id 写进缓存——那会让你
+	// 下次在别的网络里拿着错值去认证，反而更难查。
 	if resp.Error == "ok" {
-		// 认证被服务端接受，说明这个 ac_id 是对的，记下来给下次用。
+		if strings.Contains(resp.SucMsg, "ip_already_online") {
+			return &Result{
+				OK:         false,
+				Message:    c.explainIPAlreadyOnline(),
+				Raw:        raw,
+				AcID:       acID,
+				AcIDSource: string(acIDSource),
+			}, nil
+		}
+
+		// 走到这里才算认证被服务端接受，说明这个 ac_id 是对的，记下来给下次用。
 		//
 		// 但"猜出来的"值不写进缓存：guess 只证明编号存在，不证明
 		// 你就挂在这个接入点上。把猜的当定论存下来，会让你下次
@@ -218,16 +301,44 @@ func (c *SrunClient) Login() (*Result, error) {
 		}
 
 		msg := "认证成功"
-		switch {
-		case strings.Contains(resp.SucMsg, "ip_already_online"):
-			msg = "这个网络出口已经有账号在线了，本次登录没有生效"
-		case strings.Contains(resp.SucMsg, "already_online"):
+		if strings.Contains(resp.SucMsg, "already_online") {
 			msg = "该账号本来就在线，无需重复认证"
 		}
 		return &Result{OK: true, Message: msg, Raw: raw, AcID: acID, AcIDSource: string(acIDSource)}, nil
 	}
 
 	return &Result{OK: false, Message: friendlySrunError(resp), Raw: raw}, nil
+}
+
+// explainIPAlreadyOnline 给"出口已被占用"这个结果配一句能照着做的话。
+//
+// 光说"已经有账号在线"没用。用户真正想知道的是两件事：这算不算失败、
+// 我现在到底能不能上网。所以顺手查一次在线信息，把设备数和 IP 带上；
+// 查得到活跃会话，就明确告诉他"能上网就别折腾了"。
+//
+// 这次多出来的查询是只读的，而且只在登录失败这条路径上跑，值得。
+func (c *SrunClient) explainIPAlreadyOnline() string {
+	const lead = "这个网络出口已经有会话在线了，本次登录没有生效"
+
+	st, err := c.Status()
+	if err != nil || !st.Online {
+		return lead + "。如果你现在能上网，说明那个会话是有效的，不用再登录"
+	}
+
+	var detail strings.Builder
+	if st.DeviceTotal > 0 {
+		fmt.Fprintf(&detail, "这个出口上现在有 %d 台设备在线", st.DeviceTotal)
+		if st.IP != "" {
+			fmt.Fprintf(&detail, "（IP %s）", st.IP)
+		}
+		detail.WriteString("。")
+	}
+	if len(st.Devices) > 0 {
+		detail.WriteString("在线设备：" + strings.Join(st.Devices, "、") + "。")
+	}
+
+	return lead + "。" + detail.String() +
+		"能上网就说明那个会话是有效的，不用再登录；想换账号，得先让原来那个会话下线"
 }
 
 // Logout 注销当前会话（相当于把自己踢下线）。

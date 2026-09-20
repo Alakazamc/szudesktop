@@ -295,18 +295,17 @@ func cmdStatus(args []string) {
 		"teaching_portal": det.TeachPortalOK,
 	}
 
+	// 联网时也照查（QueryOnline 的注释里写了为什么）。这里只负责把
+	// 查到的结果显示出来，区域到协议的映射统一放在 portal 包里。
 	var status *portal.OnlineStatus
-	if credErr == nil && zone != portal.ZoneOnline && zone != portal.ZoneOutside {
-		switch zone {
-		case portal.ZoneTeaching:
-			status, _ = portal.NewSrunClient(o.srunHost, user, pass).Status()
-		case portal.ZoneDorm:
-			status, _ = portal.NewDrcomClient(o.drcomHost, user, pass).Status()
-		}
+	var statusErr error
+	if credErr == nil {
+		status, statusErr = portal.QueryOnline(zone, o.srunHost, o.drcomHost, user, pass)
 	}
 	if status != nil {
 		out["online"] = status.Online
 		out["online_ip"] = status.IP
+		out["online_devices"] = status.DeviceTotal
 	}
 
 	if o.asJSON {
@@ -316,14 +315,20 @@ func cmdStatus(args []string) {
 
 	fmt.Printf("网络区域: %s\n", zone.Label())
 	fmt.Printf("外网连通: %s\n", yesNo(det.InternetOK))
-	if status != nil {
+	switch {
+	case status != nil:
 		fmt.Printf("账号状态: %s\n", onlineText(status.Online))
 		if status.IP != "" {
 			fmt.Printf("在线 IP : %s\n", status.IP)
 		}
-	} else if credErr != nil {
+		if len(status.Devices) > 0 {
+			fmt.Printf("在线设备: %s\n", strings.Join(status.Devices, "、"))
+		}
+	case statusErr != nil:
+		fmt.Printf("账号状态: 没查到（%v）\n", statusErr)
+	case credErr != nil:
 		fmt.Printf("账号状态: 没查到（%v）\n", credErr)
-	} else {
+	default:
 		fmt.Printf("账号状态: 没查到\n")
 	}
 }

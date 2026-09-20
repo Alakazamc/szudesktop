@@ -320,19 +320,12 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	if credErr == nil {
 		out.Saved = true
 		// Account identifiers are private by default; reveal only via an explicit user action.
-		if zone != portal.ZoneOnline && zone != portal.ZoneOutside {
-			var st *portal.OnlineStatus
-			var err error
-			switch zone {
-			case portal.ZoneTeaching:
-				st, err = portal.NewSrunClient(s.opts.SrunHost, user, pass).Status()
-			case portal.ZoneDorm:
-				st, err = portal.NewDrcomClient(s.opts.DrcomHost, user, pass).Status()
-			}
-			if err == nil && st != nil {
-				out.Online = st.Online
-				out.OnlineIP = st.IP
-			}
+		//
+		// 联网时也照查（QueryOnline 的注释里写了为什么）。以前这里跳过，
+		// 用户看到的就是一句"没查到"，会以为掉线了跑去反复点登录。
+		if st, err := portal.QueryOnline(zone, s.opts.SrunHost, s.opts.DrcomHost, user, pass); err == nil && st != nil {
+			out.Online = st.Online
+			out.OnlineIP = st.IP
 		}
 	} else {
 		out.LastError = credErr.Error()

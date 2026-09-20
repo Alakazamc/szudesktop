@@ -131,7 +131,7 @@ func TestAcIDPatternReadsPortalConfig(t *testing.T) {
 	}{
 		{
 			name: "双引号",
-			html: `CONFIG = { page: 'account', acid: "12", ip: "172.27.47.91" }`,
+			html: `CONFIG = { page: 'account', acid: "12", ip: "10.20.30.40" }`,
 			want: "12",
 		},
 		{

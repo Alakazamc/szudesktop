@@ -52,5 +52,15 @@ type OnlineStatus struct {
 	Online   bool
 	Username string
 	IP       string
-	Raw      string
+
+	// DeviceTotal 是这个出口上登记在线的设备数，Devices 是每台设备的一句话描述。
+	//
+	// 深澜新版（学生区城市热点）改成按设备登记会话，一个账号可以同时挂多台，
+	// 但「一个出口 IP 只能挂一个账号」这条老规矩没变。所以这两个字段是分辨
+	// 「这个出口被别人占了」还是「是我自己的旧会话」的关键线索——也是
+	// ip_already_online 那类报错唯一能说清楚的具体信息。
+	DeviceTotal int
+	Devices     []string
+
+	Raw string
 }
