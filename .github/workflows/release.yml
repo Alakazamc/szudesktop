@@ -95,6 +95,7 @@ jobs:
           path: |
             dist/szudesktop-windows-amd64.exe
             dist/szudesktop-*-windows-amd64.zip
+            dist/szudesktop-*-windows-amd64.zip.sha256
           if-no-files-found: error
 
   release:

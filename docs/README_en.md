@@ -69,7 +69,7 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | :--- | :----- |
 | Desktop app | Windows x64 (`szudesktop.exe`) |
 | Command line | Windows / macOS / Linux, single binary `szunet` |
-| Current version | `beta0.5.1` · public beta (pre-release) |
+| Current version | `beta0.6` · public beta (pre-release) |
 | Runtime | No dependencies to install; the window is provided by your browser (Edge / Chrome app window) |
 
 ### First run
@@ -111,7 +111,8 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | Connection diagnostics | ✅ | Lists zone decision, portal reachability, protocol fingerprint and the conclusion |
 | Credential storage | ✅ | Windows DPAPI; saved **only after a successful sign-in and only if you ticked "remember"** |
 | Notices | ✅ | Reads public notices from the Office of Academic Affairs and the Graduate School in-app, with dates and source links, cached for 10 minutes |
-| Booking entry points | Partial | Official entry points for community quiet pods and library discussion rooms. **In-app availability lookup is not available, and it never submits a booking for you** |
+| Room availability and booking | Partial | Live community rooms and half-hour availability on the campus network. Separate booking sessions, personal records and confirmed submission are **pending live acceptance**. Library services remain external |
+| Calendar and timetables | Partial | Official calendar updates and manual week overrides. Undergraduate personal timetable reading and graduate login are **pending full live account validation** |
 | Study reminders | ✅ | Add a reminder manually, export a standard ICS calendar (15 minutes before start). **A reminder is not a booking** |
 | Common contacts | Partial | Only numbers verifiable on official school pages (library help desks); other offices link to their official pages |
 | Grades and GPA | Partial | Paste or import CSV / TSV grade tables for undergrad and postgrad, converted by the school's own rules. **No PDF / image / XLSX parsing, no automatic online sync** |
@@ -119,7 +120,7 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | Lychee Garden | ✅ | Companion care and growth, crops, plots, watering, harvest, decorations, daily goals, achievements and a field guide. No purchases, no real-money trading |
 | Save file | ✅ | Fixed local file, survives restarts and port changes, supports export / import and multi-window conflict protection |
 
-The table above describes the published beta0.5.1 package. Grades, balance, timetables and bookings do not sync automatically in that release. In-app room availability and booking submission are development preview features; current implementation and live acceptance status are recorded in [STATUS.md](STATUS.md).
+beta0.6 is a public prerelease. Score reading remains limited to the first page; balance is not integrated. Timetables and bookings require manual queries, and account authentication and submission still await live acceptance. See [STATUS.md](STATUS.md).
 
 ---
 
@@ -273,8 +274,8 @@ respective owners.
 
 ### Experimental score reading
 
-beta0.5.1 includes undergraduate and graduate score readers, pending validation with real school records. Enter the Cookie only in the local application. Session storage fails closed if secure storage is unavailable; no plaintext fallback is used. Verification targets the selected academic application and distinguishes missing permission from an expired session. Only the first page is read; unknown totals and partial results are explicitly labelled. Community quiet pods and sports venues require separate integration and verification.
+beta0.6 includes undergraduate and graduate score readers, pending validation with real school records. Enter the Cookie only in the local application. Session storage fails closed if secure storage is unavailable; no plaintext fallback is used. Verification targets the selected academic application and distinguishes missing permission from an expired session. Only the first page is read; unknown totals and partial results are explicitly labelled. Community booking uses a separate session and still requires live verification; sports venues are not integrated.
 
 Additional frontend regression check: `node desktop/check-session-ui.mjs`.
 
-The development branch adds the official academic calendar, local graduate login and timetable reading, and undergraduate personal timetable reading using a business-specific ehall cookie. Timetable adapters still require live account acceptance. Public community rooms and availability can now be read on the campus network. A separate, memory-only WebVPN booking session supports personal records and a review-then-confirm submission flow; live booking authentication and submission remain unverified. Timed-out submissions are never automatically retried. These are preview features, not part of the published beta0.5.1 package. See [STATUS.md](STATUS.md) for current acceptance status.
+beta0.6 adds the official academic calendar, local graduate login and timetable reading, and undergraduate personal timetable reading using a business-specific ehall cookie. Timetable adapters still require live account acceptance. Public community rooms and availability can now be read on the campus network. A separate, memory-only WebVPN booking session supports personal records and a review-then-confirm submission flow; live booking authentication and submission remain unverified. Timed-out submissions are never automatically retried. These integrations ship as experimental features in beta0.6; publication does not imply live acceptance has passed. See [STATUS.md](STATUS.md) for current acceptance status.

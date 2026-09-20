@@ -29,7 +29,7 @@ DIST = os.path.join(ROOT, "dist")
 EXE = os.path.join(DIST, "szudesktop-windows-amd64.exe")
 MAIN_GO = os.path.join(DESKTOP, "cmd", "szudesktop", "main.go")
 
-README = """szuDesktop beta0.5.1 · 荔枝庭院（Windows x64）
+README = """szuDesktop beta0.6 · 荔枝庭院（Windows x64）
 
 1. 解压后双击 szudesktop.exe，不需要安装，不会弹出命令行窗口。
 2. 校园网账号与密码默认留空；填写后点击登录。勾选记住，仅在认证成功后保存。
