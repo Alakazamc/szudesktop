@@ -810,3 +810,11 @@ Use case: style-transfer. Asset: final full-bleed desktop app background, wide 1
 - 真实已验证：校内公开场地和空位查询、官方校历本机读取；上轮 47 项前端检查、66 项 Windows 成品检查及 Go 测试/vet 均通过，PR #4 的测试、跨平台构建与 Windows 构建也全部通过。
 - 继续保留 J01、J03、R02–R05：研究生真实登录、本科权限/响应、预约真实会话/提交、自动承接浏览器登录、图书馆独立预约。发布不会把这些条目标成完成；没有代用户提交任何真实预约。
 - 发布流程为更新 PR #4 → 检查通过后合并 → 标记 `beta0.6` → GitHub 构建 → 核对公开下载文件及压缩包内程序。公开入口：[beta0.6](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.6)。
+
+### 26.1 GitHub 发布结果
+
+- PR #4 已合并，发布标签 `beta0.6` 指向 `224ce2a2e42b57de3dca5c93e7fcc7ca4658aec0`；合并后的代码树与通过检查的 PR 完全一致。
+- [发布构建 35508307598](https://github.com/Alakazamc/szudesktop/actions/runs/35508307598) 全部成功，GitHub 已公开预发布，附 8 个文件：Windows 桌面 ZIP、独立 EXE、ZIP 校验文件及 5 个平台/架构的命令行文件。已发布 Windows 成品以 GitHub 构建为准，本机构建的二进制及 ZIP 哈希可因构建环境不同而不同。
+- Windows ZIP：6,999,916 字节，SHA256 `e8d189a0a2466a7b80cc6ebccbe5973c32c00b7d656cde838baef497b6f220d4`。
+- Windows EXE：11,930,624 字节，SHA256 `c8f285a684db10b55a6637b072e87257078d1b070fa042efc24fc35e4c8b2809`。
+- [Windows 下载包](https://github.com/Alakazamc/szudesktop/releases/download/beta0.6/szudesktop-beta0.6-windows-amd64.zip) · [发布说明](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.6)。旧版本附件保留，教务与预约的待验收项保持第 25 节状态。
