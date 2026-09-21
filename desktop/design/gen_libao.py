@@ -15,6 +15,7 @@
   python gen_libao.py --preview  # 另存 _libao_preview.html 供截图目检
   python gen_libao.py --write    # 直接替换 index.html 两处（改前先备份判断）
 """
+import os
 import re
 import sys
 
@@ -117,7 +118,7 @@ MODAL_OLD = re.compile(
     r'<svg width="46" height="52" viewBox="0 0 52 60" role="img" aria-label="荔宝">.*?</svg>',
     re.S)
 
-INDEX = r"D:\szudesktop\desktop\index.html"
+INDEX = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "index.html")
 
 
 def write_index():

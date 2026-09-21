@@ -27,7 +27,9 @@
 * { box-sizing: border-box; }
 html { scrollbar-color: #a8733f #eed6a7; scroll-padding-top: 80px; }
 body { margin: 0; min-height: 100vh; background: #76824c url(campus.png) center top / cover fixed no-repeat; }
-body::before { content: ""; position: fixed; inset: 0; pointer-events: none; background: #5b3b1609; z-index: -1; }
+/* 顶部保留清晰的校园场景（木牌悬在画面上），进入内容区后逐渐压暗，
+   让木框导航和纸面卡片从背景里浮出来——不这么做时，满屏高饱和细节会和卡片抢注意力。 */
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: -1; background: linear-gradient(180deg,rgba(58,36,15,.08) 0,rgba(58,36,15,.13) 250px,rgba(58,36,15,.4) 460px,rgba(58,36,15,.45) 100%); }
 img, svg { image-rendering: pixelated; }
 button, input, select { font: inherit; }
 button, a, input, select { touch-action: manipulation; }

@@ -8,7 +8,7 @@
 // 与厂商无关联：本项目与深信服科技股份有限公司**不存在任何关联、合作或授权关系**。
 // EasyConnect 及相关名称的一切权利归深信服所有；学校服务端固件升级可能导致本包失效。
 //
-// 五步流程（整理记录见 design/vpn-notes.md）：
+// 五步流程（协议分析笔记按项目约定只留本地，不进公开仓库）：
 //  1. Web 登录（RSA+CSRF）拿 TWFID，可能触发短信/TOTP 二步验证
 //  2. 用 TWFID 明文 HTTP 探针换取 ECAgent token（藏在 TLS ServerHello SessionId 里）
 //  3. token = ECAgent(31 字节+NUL) + TWFID(16 字节) = 48 字节

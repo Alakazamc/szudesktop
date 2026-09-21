@@ -901,3 +901,34 @@ Use case: style-transfer. Asset: final full-bleed desktop app background, wide 1
 
 - 本轮为源码改动：未打 tag、未发布、未覆盖 GitHub 上 beta0.6.1 的附件。`dist/szudesktop-windows-amd64.exe` 只用于本轮验证。
 - 分支清理：`feat/beta05-lychee-garden`、`fix/desktop-state-review`、`fix/restore-pixel-campus`、`fix/session-score-safety` 的本地与远端副本已按用户确认删除。前两个内容已完全并入 main；后两个各含一个被 main 上新版本取代的旧提交，直接合并会回退代码与文档（`fix/session-score-safety` 合并将删掉 3737 行，含 F20 修复）。仓库现在只有 main。
+
+## 30. 仓库瘦身与背景呈现修复（2026-09-21，未发布）
+
+用户要求清理冗余文件（本地与云端）并指出背景仍不好看。清理范围由我判断，删除项与理由如下。
+
+### 30.1 仓库里删除的内容
+
+| 项 | 体积 | 为什么删 |
+|---|---|---|
+| `desktop/assets/art/`（33 个文件） | 279KB | 构建与页面都不引用（构建只打包 `garden/` 与 CSS 引用的字体）；其中 `junimo-*`、`dwarf.png`、`m1–m4.png`、`bird.gif`、`coursor.png` 是未核实的旧游戏素材，属 F11 的许可风险；`flora/` 与运行时用的 `garden/flora/` 重复 |
+| `fonts/svbold.ttf`、`svthin.ttf` | — | 从第三方仓库抓的星露谷字体，构建早已排除，但一直留在公开仓库里 |
+| `design/` 下 25 个一次性脚本 | — | 抓素材 / 协议探针 / 截图 / 切片工具，构建与 CI 都不引用。保留 4 个素材生成器：`gen_icon.py`（构建脚本提示）、`gen_flora.py`（自绘花草来源）、`gen_libao.py`、`gen_avatar.py`（角色与头像 SVG 来源） |
+| `design/vpn-notes.md` | 5KB | 学校 VPN 认证流程笔记，不宜放在公开仓库；移到本地 `.local-docs/`（已忽略）并更新 `internal/vpn/vpn.go` 里指向它的注释 |
+
+顺带修掉两个生成器的硬编码绝对路径（`D:\szudesktop\...`）：`gen_flora.py` 默认输出改为运行时目录 `assets/garden/flora`，`gen_libao.py` 改为从脚本位置推导 `index.html`。
+
+### 30.2 背景呈现
+
+- **量化**：`campus.png` 从 1672×941 / **2.68MB** 压到 **694KB**（128 色 PNG-8，-74%）。像素画在放大对比图上看不出差别，q64 才会让湖面反光发平，故选 128 色。嵌入资源总量 3840KB → 1785KB，Windows 成品 11.6MB → **9.6MB**。
+- **压暗**：`body::before` 从 4% 平铺薄纱改为竖向渐变（顶部 8%，250px 处 13%，460px 后 40–45%）。顶部保留清晰的文山湖场景给木牌，进入内容区后背景退到纸面卡片后面。原因：原先整屏高饱和细节与卡片抢注意力，纸面与背景之间是硬边。
+- 未改动美术本身；`看看像素校园` 大图浏览读的是原图，不受压暗影响。若之后仍觉得画面不好看，再按「黄昏暖调、低饱和、中间留白、去掉游戏梗物件」重新生成。
+
+### 30.3 本地与云端
+
+- 本地删除 `dist/` 里的历史包（0.2.0 → beta0.6、各预览包、旧平台二进制）、`outputs/`、`.tmp-campus/`、`.scratch_probe/szunet-test.exe` 与 `shots/`，合计 244MB → 38MB。保留当前构建的 `dist/szudesktop-windows-amd64.exe`、`.local-docs/`（冻结证据）与 `.scratch_probe` 其余部分（预约登录衔接与本科课表还没做完，里面可能还有可复用的接口样本）。
+- 云端删除 GitHub Actions 的历史构建产物 154 个 / 133MB；**Release 附件不受影响，8 个预发布全部保留**作为交付历史（其中 beta0.1–0.4 虽旧，仍是可下载的交付记录，删除会让用户拿不到旧版，未做）。
+
+### 30.4 验证
+
+- 65 项前端检查、`go vet`、`go test ./...`（8 个包）全部通过；`build-windows.py` 重新构建成功，`smoke_windows.py` 74 项通过（含「旧游戏素材未打包」「旧游戏字体未打包」两条仍为 404 的断言）。
+- 浏览器实测：`body::before` 计算样式确认为新渐变、`z-index:-1` 不变；页面引用的 `campus.png` 实际 694KB；无控制台报错。**没有真实截图**：本环境内嵌浏览器视口 0×0，截不了图，压暗效果是按同一组参数用 Pillow 合成的示意图确认的，真实观感请在打开应用后自行判断。

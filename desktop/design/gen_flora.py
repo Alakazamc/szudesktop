@@ -17,7 +17,10 @@ import sys
 
 from PIL import Image
 
-DEFAULT_OUT = r"D:\szudesktop\desktop\assets\art\flora"
+# 默认写到页面真正读取的目录（desktop/assets/garden/flora）。
+# 注意：这里生成 11 种，页面目前只引用 berrybush 和 tallgrass，其余是备用装饰；
+# 重跑会先清空该目录再写全套，多出来的文件可以自行删掉。
+DEFAULT_OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "garden", "flora")
 
 
 def p(x):
