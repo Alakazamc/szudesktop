@@ -8,7 +8,7 @@
 ## 1. 当前状态
 
 - 2026-09-21 完成一轮工程债清理：版本号单一来源、桌面设置接通开机自启、首次使用引导、macOS 钥匙串错误分类、统一「未经真实验收」标注，详见第 29 节。均为源码改动，未打 tag、未发布。本轮复核另发现 F21（macOS 凭据经命令行参数暴露）待做。
-- 当前公开 Release 为 **beta0.6.1**，交付记录见第 28 节。
+- 当前公开 Release 为 **beta0.7**（2026-09-21），交付记录见第 31 节；上一版 beta0.6.1 见第 28 节。
 - 2026-09-20 使用路径复核已修复 5 类问题，详见第 20 节；当时的候选包与公开附件分开记录。
 
 - beta0.5.1 阶段的预发布版 **荔枝庭院**，Windows x64。起点 `457353f`；PR #1 已合并到 main（`1644f09`），其测试及各平台构建通过；按用户要求恢复原有星露谷式界面，该阶段已合并并发布 beta0.5 预发布。会话与成绩安全修复见第 17 节；beta0.5.1 已发布到 GitHub，交付记录见第 18 节。
@@ -960,3 +960,18 @@ Use case: style-transfer. Asset: final full-bleed desktop app background, wide 1
 - 相对 beta0.6.1 的用户可见变化：设置页可开关开机自启并显示真实状态；首次打开的短引导；成绩/课表/在线读取统一为「接入测试 · 未经真实验收」徽章；背景压暗与整图量化（Windows 成品 11.6MB → 9.6MB）。
 - 仓库层面：删除未核实的旧游戏素材与第三方字体（F11 风险收窄）、25 个一次性脚本、VPN 协议笔记移出公开仓库。
 - 仍未完成、不因本版改变：本科/研究生真实账号验收、应用内预约衔接与提交、余额/流量数据层、实验 VPN 的 F06/F07/F08、F21（macOS 凭据经 argv）。
+
+### 31.5 发布结果与附件核对（2026-09-21）
+
+- 标签 `beta0.7` 触发 [CI 35562728027](https://github.com/Alakazamc/szudesktop/actions/runs/35562728027)：test、5 个平台 CLI、Windows 桌面构建、release 全部成功。
+- 公开 [beta0.7](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.7) 为预发布，8 个附件。已从 GitHub 下载核对：
+  - ZIP 5,003,257 字节，SHA256 `6f6f4957ffa655713af90eb6445471cbc6a406f83266ba017e1cf08a88eae1c6`（比 beta0.6.1 的 7,073,704 字节小约 2MB，主要是背景图量化的结果）
+  - 独立 EXE 10,049,024 字节，SHA256 `85da336c7d867829d427c2cd4bca8b7186bee0b4e98eeef28f76466df2b74d65`，与 ZIP 内 `szudesktop.exe` 逐字节一致
+  - 包内程序与独立 EXE 自报版本均为 beta0.7；包内快速开始首行为 `szuDesktop beta0.7 · 荔枝庭院（Windows x64）`
+- **发布后发现并修复**：`.sha256` 附件带 CRLF——CI 的 windows 任务里 `Path.write_text` 文本模式把 `\n` 翻成 `\r\n`，Linux / macOS 用户执行 `sha256sum -c` 会因为行尾的 `\r` 直接报错（coreutils 会把它当成文件名的一部分）。`make_release.py` 已改为 `newline="\n"`，今后不再出现；beta0.7 的这个附件同时替换为 LF 版本。**ZIP 与 EXE 未改动、哈希值不变**，替换后用线上文件实测 `sha256sum -c` 通过。
+
+## 32. 待办（本次未做）
+
+- **必须现场做的**：本科 / 研究生真实账号验收（成绩、课表、教务登录）、教学区与宿舍校园网真机认证、预约登录衔接与提交。
+- **代码侧**：F21（macOS 凭据经 argv 暴露，`security` 没有从 stdin 读密码的参数，需要换实现方式）、F06/F07/F08 实验 VPN、F15 余额 / 流量数据层、D5 白名单转发、R05 图书馆座位系统。
+- **例行维护**：`ubuntu-latest` 将于 2026-10-19 迁移到 Ubuntu 26，届时核对各 action。

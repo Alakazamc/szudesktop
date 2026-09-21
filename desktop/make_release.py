@@ -90,7 +90,10 @@ def main():
         if os.path.exists(lic):
             z.writestr("LICENSE", open(lic, "rb").read())
 
-    Path(out+".sha256").write_text(hashlib.sha256(Path(out).read_bytes()).hexdigest()+"  "+os.path.basename(out)+"\n", encoding="ascii")
+    # newline="\n" 不能省：这个脚本在 Windows 上跑（CI 的 windows 任务也一样），
+    # 文本模式默认把 \n 翻成 \r\n，下载者用 Linux/macOS 的 sha256sum -c 会直接失败
+    # （coreutils 不会去掉行尾的 \r，会当成文件名的一部分）。
+    Path(out+".sha256").write_text(hashlib.sha256(Path(out).read_bytes()).hexdigest()+"  "+os.path.basename(out)+"\n", encoding="ascii", newline="\n")
     # 打印清单 + 校验和，方便发布时贴出去
     print("->", out)
     print("   压缩前 %.1f MB / 压缩后 %.1f MB"
