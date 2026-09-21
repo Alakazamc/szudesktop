@@ -277,6 +277,17 @@ func cmdLogout(args []string) {
 	}
 }
 
+// queryOnline 是命令行查询在线状态的入口，做成变量方便测试替换。
+var queryOnline = portal.QueryOnline
+
+// statusOnline 查出当前出口的在线状态，命令行与桌面端 /api/status 用的是同一个门户查询。
+//
+// 有没有账号都要查：门户是按出口 IP 回答的，跟本机存没存账号无关，
+// 而用户问的恰恰是「我这个出口到底认证了没」。
+func statusOnline(zone portal.Zone, o *options, user, pass string) (*portal.OnlineStatus, error) {
+	return queryOnline(zone, o.srunHost, o.drcomHost, user, pass)
+}
+
 func cmdStatus(args []string) {
 	fs := flag.NewFlagSet("status", flag.ExitOnError)
 	var o options
@@ -294,13 +305,13 @@ func cmdStatus(args []string) {
 		"teaching_portal": det.TeachPortalOK,
 	}
 
-	// 联网时也照查（QueryOnline 的注释里写了为什么）。这里只负责把
-	// 查到的结果显示出来，区域到协议的映射统一放在 portal 包里。
-	var status *portal.OnlineStatus
-	var statusErr error
-	if credErr == nil {
-		status, statusErr = portal.QueryOnline(zone, o.srunHost, o.drcomHost, user, pass)
-	}
+	// 联网时也照查（QueryOnline 的注释里写了为什么），有没有账号都要查：
+	// 门户按出口 IP 回答，跟本机存没存账号无关。以前这里写的是
+	// if credErr == nil { 查 }，没存账号的人永远只看到「没查到」，
+	// 会以为自己掉线——F20 在桌面端修过同一个毛病，CLI 这条漏了
+	// （2026-09-21 在校园网里实测发现：桌面端报「已在线」，CLI 报「没查到」）。
+	status, statusErr := statusOnline(zone, &o, user, pass)
+	out["online_known"] = status != nil
 	if status != nil {
 		out["online"] = status.Online
 		out["online_ip"] = status.IP
@@ -325,10 +336,13 @@ func cmdStatus(args []string) {
 		}
 	case statusErr != nil:
 		fmt.Printf("账号状态: 没查到（%v）\n", statusErr)
-	case credErr != nil:
-		fmt.Printf("账号状态: 没查到（%v）\n", credErr)
 	default:
 		fmt.Printf("账号状态: 没查到\n")
+	}
+	// 没存账号时补一句怎么登录；但状态本身照报，不能把「没查到」当结论。
+	if credErr != nil && status != nil && !status.Online {
+		fmt.Println()
+		fmt.Println("提示: 本机没有保存账号。要登录先跑 `szunet config set`，或用 -u / -p 临时指定。")
 	}
 }
 
