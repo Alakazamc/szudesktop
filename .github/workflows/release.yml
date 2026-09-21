@@ -82,30 +82,32 @@ jobs:
         run: |
           set -e
           sw_vers || true
-          KC="$RUNNER_TEMP/szunet-probe.keychain-db"
-          security create-keychain -p probe "$KC"
-          security unlock-keychain -p probe "$KC"
-          security list-keychains -d user -s "$KC"
+          ONE=szunet-probe-one
+          TWO=szunet-probe-two
           cleanup() {
-            security delete-generic-password -a probe -s szunet-probe-one >/dev/null 2>&1 || true
-            security delete-generic-password -a probe -s szunet-probe-two >/dev/null 2>&1 || true
-            security delete-keychain "$KC" >/dev/null 2>&1 || true
+            security delete-generic-password -a probe -s "$ONE" >/dev/null 2>&1 || true
+            security delete-generic-password -a probe -s "$TWO" >/dev/null 2>&1 || true
           }
           trap cleanup EXIT
 
+          # 刻意不建临时钥匙串、也不改搜索列表：生产的 promptWrite / promptRead
+          # 都是不带 -k 的，写读都落在默认钥匙串上。上一版探针用
+          # `list-keychains -s $KC` 把搜索列表限制到临时钥匙串，而 add 没带 -k
+          # 仍写进默认钥匙串，于是 find 必然报 could not be found——那是探针自己的 bug。
+
           # 只作记录、不作断言：`security -w` 问几遍并不稳定。同一镜像
-          # （macos-26-arm64）的两次运行里，一次要求确认（只喂一行报
-          # passwords don't match、退出码 44，这就是 F26），另一次只问一遍就收下了。
-          if printf 'v1\n' | security add-generic-password -a probe -s szunet-probe-one -U -w >/dev/null 2>&1; then
+          # （macos-26-arm64 / macOS 26.6.2）的几次运行里，一次要求确认
+          # （只喂一行报 passwords don't match、退出码 44，这就是 F26），
+          # 另一次只问一遍就收下了。
+          if printf 'v1\n' | security add-generic-password -a probe -s "$ONE" -U -w >/dev/null 2>&1; then
             echo "记录：本次 runner 上只喂一行也能写入（没有要求确认）"
           else
             echo "记录：本次 runner 上只喂一行失败（要求输入两遍确认）——F26 就是这种情况"
           fi
 
           # 必须成立的是这一条：程序实际采用的「密码 + 确认」两行喂法能写入并读回一致。
-          # 只问一遍的版本上，多出的第二行只是没人读的剩余输入，不影响结果。
-          printf 'v2\nv2\n' | security add-generic-password -a probe -s szunet-probe-two -U -w
-          got=$(security find-generic-password -a probe -s szunet-probe-two -w)
+          printf 'v2\nv2\n' | security add-generic-password -a probe -s "$TWO" -U -w
+          got=$(security find-generic-password -a probe -s "$TWO" -w)
           test "$got" = "v2"
           echo "F21 / F26 成立：无控制终端下 security -w 从标准输入读取，两行喂法可写入并读回一致"
 
