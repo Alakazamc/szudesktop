@@ -58,6 +58,13 @@ jobs:
       - uses: actions/setup-go@v7.0.0
         with:
           go-version-file: go.mod
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.13'
+      # 必须先同步资源：desktop/internal/ui/assets/ 是生成物、不进仓库，
+      # 少了它 go:embed all:assets 会直接失败（beta0.7.2 的 test-macos 就是这么红的）。
+      - name: 同步桌面资源
+        run: python desktop/sync-assets.py
       - name: darwin 静态检查
         run: go vet ./...
       - name: 凭据包测试（darwin 构建）
