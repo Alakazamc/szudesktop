@@ -307,7 +307,7 @@ C 类须验证各系统会话；D1/D2 不是“一次完成全部解锁”。预
 - **未验收**：实际教学区/宿舍账号登录与注销、校内后端部署、实验 VPN、数字签名、长期经济平衡。不能将候选版宣传成所有学校业务均已接入。
 - 发布候选产物：`dist/szudesktop-windows-amd64.exe`、`dist/szudesktop-beta0.5-windows-amd64.zip` 与旁边 SHA256。发布包不含开发测试存档。
 - 可用宣传表述：“szuDesktop beta0.5：校园网工具、官方服务导航与一座可离线养成的荔枝庭院。支持伙伴照料、种植经营、学习专注和本机备份。Windows 单文件，无需安装。”加注非官方测试版与个人学校业务仍以官方入口为准。
-- **GitHub 交付方式**：PR #1 已合并；本次风格恢复已推送 [PR #2](https://github.com/Alakazamc/szudesktop/pull/2)（`fix/restore-pixel-campus`）。源码审核与正式发布分开，本轮不打 tag、不发布 Release。
+- **GitHub 交付方式**：PR #1 已合并；本次风格恢复已推送 [PR #2](https://github.com/SzuDesktopTeam/szudesktop/pull/2)（`fix/restore-pixel-campus`）。源码审核与正式发布分开，本轮不打 tag、不发布 Release。
 
 
 ## 11. 恢复原有星露谷式界面并精修（2026-09-18）
@@ -318,7 +318,7 @@ C 类须验证各系统会话；D1/D2 不是“一次完成全部解锁”。预
 - **精修**：缩减招牌区和庭院说明占位，资源与每日补给合并；统一像素边框和按钮按压反馈；长说明与输入保持清晰。小屋恢复木墙、地板、窗框和地毯，农田加入草地与土垄，图鉴和市场沿用同一套木纸样式。
 - **保留修复**：自然滚动、窄窗布局、卡号默认隐藏、GUI 启动、稳定存档、伙伴农田经营与学习工具均保留；荔宝对话框位于文档正常流，不遮挡操作。
 - **字体与素材**：复用本地 Fusion Pixel 字体，并附上[官方 OFL 声明](https://github.com/TakWolf/fusion-pixel-font/blob/master/LICENSE-OFL)。原版 SVBold/SVThin 和来源未核实的游戏贴图继续排除，不妨碍恢复风格。花草来自仓库自身 `gen_flora.py` 和已有 `art/flora` 绘制结果。
-- **交付方式**：核查时发现 PR #1 已合并，因此从最新 main 建立 `fix/restore-pixel-campus`，已提交 [后续修正 PR #2](https://github.com/Alakazamc/szudesktop/pull/2)。仍只维护本文，不建立第二份视觉任务清单。
+- **交付方式**：核查时发现 PR #1 已合并，因此从最新 main 建立 `fix/restore-pixel-campus`，已提交 [后续修正 PR #2](https://github.com/SzuDesktopTeam/szudesktop/pull/2)。仍只维护本文，不建立第二份视觉任务清单。
 - **本轮验收通过**：Node 10 组规则检查、Windows GUI 重新构建、实际 exe 冒烟全通过；字体样式表与全部分片、许可、原创花草均可从成品读取。卡号默认隐藏、跨来源拒绝、正常退出和换进程/端口恢复存档均通过。
 - **实际画面与交互**：1366×768 和 1440×900 检查首页/伙伴/农田；390×844 检查网络与农田滚到底、服务搜索，无横向溢出，卡号输入为空。每日补给与摸摸头能正确更新资源、亲密度和日志。浏览器 error 日志为空。截图已更新为 `docs/screenshot-desktop.png` 和 `docs/screenshot-garden.png`。
 - **测试脚本修正**：Windows 下 urllib 关闭连接的方式偶发导致来源拒绝/退出检查收到连接重置；改用直接回环 HTTP 连接，避开系统代理并完整读取响应。应用来源保护未放宽。
@@ -582,9 +582,9 @@ WebView 交互（D2）降级为后续「多一种获取方式」，不阻塞当�
 - 版本号统一为 beta0.5.1，保留历史 beta0.5 及附件；标签触发 GitHub Actions 从对应源码重新构建 Windows EXE、免安装 ZIP 与命令行程序。
 - 发布内容：学校会话安全存储、成绩权限与失效区分、缺失绩点与零绩点区分、不完整成绩结果提示，以及切换培养层次后清除旧查询结果。原有像素风界面、庭院与本机存档保留。
 - 在线成绩仍为实验性功能，尚待真实学校成绩验收；目前只读取第一页。社区静音舱仍在官方页面预约，未实现自动查询空位或代提交预约。
-- 目标发布页：https://github.com/Alakazamc/szudesktop/releases/tag/beta0.5.1 。发布成功与附件校验结果以本节后续记录为准。
+- 目标发布页：https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.5.1 。发布成功与附件校验结果以本节后续记录为准。
 
-- **已发布并核对**：`beta0.5.1` 标签对应源码 `a06344d`；[发布流水线](https://github.com/Alakazamc/szudesktop/actions/runs/35438357252) 全部成功，Release 为公开预发布，共 7 个附件。本地版本检查 25 项、Windows 运行冒烟 56 项通过；CI 再次完成测试、各平台构建和 Windows 冒烟。
+- **已发布并核对**：`beta0.5.1` 标签对应源码 `a06344d`；[发布流水线](https://github.com/SzuDesktopTeam/szudesktop/actions/runs/35438357252) 全部成功，Release 为公开预发布，共 7 个附件。本地版本检查 25 项、Windows 运行冒烟 56 项通过；CI 再次完成测试、各平台构建和 Windows 冒烟。
 - 已从 GitHub 下载 ZIP 并核对：6,906,115 字节，SHA256 `06320062d9c2ff371a4d5eecff357b75bb15961a4c3a6eb57bdf412384514d60`。包内 EXE 的 SHA256 与 GitHub 独立 EXE 附件相同：`86f764dbfb4b808d28ca799417e66f46f582274eb6429c94b1edb1b0e8f27303`（11,674,112 字节）。快速开始版本为 beta0.5.1，包内仅程序、快速开始和两份许可证。以上为实际公开 CI 产物，替代第 17 节的本地候选包作为当前下载记录。
 
 
@@ -658,7 +658,7 @@ WebView 交互（D2）降级为后续「多一种获取方式」，不阻塞当�
 - 实际浏览器确认：空账号页面能显示当前出口已在线；萝卜库存为 0 时换草莓立即出现播种按钮；清除会话后文本框为空；页面无脚本异常。桌面与 390px 窄窗没有横向溢出，页面下方入口可访问。
 - “在途切换成绩导致旧结果回填”被现有禁用交互阻止；“复用确认框后 Escape 误确认”在实际旧成品未复现。两项均未当作确定缺陷，也未添加推测性修补。
 
-交付：本轮源码已推送 [PR #4](https://github.com/Alakazamc/szudesktop/pull/4)，分支 `fix/desktop-state-review`。本地候选包 `dist/szudesktop-review-20260920-windows-amd64.zip`，SHA256 `3e68ca47a8edfa84e4e76300fda10be7e6e4e331acea271df11a424510b3d856`；包内 EXE 与本轮构建一致（SHA256 `24f0201df3d76ba4caa8a3669e40e073cad843063b95d8630ec2dc33dd579722`）。这是待发布修复构建，内部版本仍为 beta0.5.1；没有覆盖 GitHub 已发布的 beta0.5.1 附件。
+交付：本轮源码已推送 [PR #4](https://github.com/SzuDesktopTeam/szudesktop/pull/4)，分支 `fix/desktop-state-review`。本地候选包 `dist/szudesktop-review-20260920-windows-amd64.zip`，SHA256 `3e68ca47a8edfa84e4e76300fda10be7e6e4e331acea271df11a424510b3d856`；包内 EXE 与本轮构建一致（SHA256 `24f0201df3d76ba4caa8a3669e40e073cad843063b95d8630ec2dc33dd579722`）。这是待发布修复构建，内部版本仍为 beta0.5.1；没有覆盖 GitHub 已发布的 beta0.5.1 附件。
 
 仍需完善的主要业务保持原清单：本科 / 研究生真实成绩验收与完整分页、社区自习室空位查询及预约接入。模拟响应和本机检查不替代学校接口验收；这些不是本轮已完成内容。
 
@@ -814,15 +814,15 @@ Use case: style-transfer. Asset: final full-bleed desktop app background, wide 1
 - 新版包含文山湖像素背景、彩色状态、30 个像素物件、网络与存档修复、自动校历、社区实时场地/空位查询，以及教务和预约接入测试。
 - 真实已验证：校内公开场地和空位查询、官方校历本机读取；上轮 47 项前端检查、66 项 Windows 成品检查及 Go 测试/vet 均通过，PR #4 的测试、跨平台构建与 Windows 构建也全部通过。
 - 继续保留 J01、J03、R02–R05：研究生真实登录、本科权限/响应、预约真实会话/提交、自动承接浏览器登录、图书馆独立预约。发布不会把这些条目标成完成；没有代用户提交任何真实预约。
-- 发布流程为更新 PR #4 → 检查通过后合并 → 标记 `beta0.6` → GitHub 构建 → 核对公开下载文件及压缩包内程序。公开入口：[beta0.6](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.6)。
+- 发布流程为更新 PR #4 → 检查通过后合并 → 标记 `beta0.6` → GitHub 构建 → 核对公开下载文件及压缩包内程序。公开入口：[beta0.6](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.6)。
 
 ### 26.1 GitHub 发布结果
 
 - PR #4 已合并，发布标签 `beta0.6` 指向 `224ce2a2e42b57de3dca5c93e7fcc7ca4658aec0`；合并后的代码树与通过检查的 PR 完全一致。
-- [发布构建 35508307598](https://github.com/Alakazamc/szudesktop/actions/runs/35508307598) 全部成功，GitHub 已公开预发布，附 8 个文件：Windows 桌面 ZIP、独立 EXE、ZIP 校验文件及 5 个平台/架构的命令行文件。已发布 Windows 成品以 GitHub 构建为准，本机构建的二进制及 ZIP 哈希可因构建环境不同而不同。
+- [发布构建 35508307598](https://github.com/SzuDesktopTeam/szudesktop/actions/runs/35508307598) 全部成功，GitHub 已公开预发布，附 8 个文件：Windows 桌面 ZIP、独立 EXE、ZIP 校验文件及 5 个平台/架构的命令行文件。已发布 Windows 成品以 GitHub 构建为准，本机构建的二进制及 ZIP 哈希可因构建环境不同而不同。
 - Windows ZIP：6,999,916 字节，SHA256 `e8d189a0a2466a7b80cc6ebccbe5973c32c00b7d656cde838baef497b6f220d4`。
 - Windows EXE：11,930,624 字节，SHA256 `c8f285a684db10b55a6637b072e87257078d1b070fa042efc24fc35e4c8b2809`。
-- [Windows 下载包](https://github.com/Alakazamc/szudesktop/releases/download/beta0.6/szudesktop-beta0.6-windows-amd64.zip) · [发布说明](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.6)。旧版本附件保留，教务与预约的待验收项保持第 25 节状态。
+- [Windows 下载包](https://github.com/SzuDesktopTeam/szudesktop/releases/download/beta0.6/szudesktop-beta0.6-windows-amd64.zip) · [发布说明](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.6)。旧版本附件保留，教务与预约的待验收项保持第 25 节状态。
 
 
 ### 26.2 发布后预约入口反馈（2026-09-20）
@@ -872,7 +872,7 @@ Use case: style-transfer. Asset: final full-bleed desktop app background, wide 1
 - 发布验收：由 GitHub Actions 执行回归、Go 检查与测试、Windows 构建和整机冒烟，再生成桌面包及五个平台命令行程序；任务完成后核实产物。
 - 本次发布不代表课表/成绩真实账号验收或应用内预约已经完成。
 
-- 发布结果：GitHub Actions [35514050275](https://github.com/Alakazamc/szudesktop/actions/runs/35514050275) 全部成功，包含 Windows 整机冒烟。公开预发布 [beta0.6.1](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.6.1) 已上传 8 个文件；标签对应 `20fbe2a`。
+- 发布结果：GitHub Actions [35514050275](https://github.com/SzuDesktopTeam/szudesktop/actions/runs/35514050275) 全部成功，包含 Windows 整机冒烟。公开预发布 [beta0.6.1](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.6.1) 已上传 8 个文件；标签对应 `20fbe2a`。
 - GitHub 发布文件摘要：Windows ZIP SHA256 `b29359fe33add5a37963dc187461f35723c19a92586b40cb03ec1e35388d28e0`；EXE SHA256 `59bfccdc0a6274eccdbb75576ba9c054edf6e7b20b31e3557c73aa245a28e5c5`。
 
 ## 29. 工程债清理：版本号单一来源、开机自启接线、首次引导、macOS 钥匙串与统一验收标注（2026-09-21，未发布）
@@ -963,8 +963,8 @@ Use case: style-transfer. Asset: final full-bleed desktop app background, wide 1
 
 ### 31.5 发布结果与附件核对（2026-09-21）
 
-- 标签 `beta0.7` 触发 [CI 35562728027](https://github.com/Alakazamc/szudesktop/actions/runs/35562728027)：test、5 个平台 CLI、Windows 桌面构建、release 全部成功。
-- 公开 [beta0.7](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.7) 为预发布，8 个附件。已从 GitHub 下载核对：
+- 标签 `beta0.7` 触发 [CI 35562728027](https://github.com/SzuDesktopTeam/szudesktop/actions/runs/35562728027)：test、5 个平台 CLI、Windows 桌面构建、release 全部成功。
+- 公开 [beta0.7](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.7) 为预发布，8 个附件。已从 GitHub 下载核对：
   - ZIP 5,003,257 字节，SHA256 `6f6f4957ffa655713af90eb6445471cbc6a406f83266ba017e1cf08a88eae1c6`（比 beta0.6.1 的 7,073,704 字节小约 2MB，主要是背景图量化的结果）
   - 独立 EXE 10,049,024 字节，SHA256 `85da336c7d867829d427c2cd4bca8b7186bee0b4e98eeef28f76466df2b74d65`，与 ZIP 内 `szudesktop.exe` 逐字节一致
   - 包内程序与独立 EXE 自报版本均为 beta0.7；包内快速开始首行为 `szuDesktop beta0.7 · 荔枝庭院（Windows x64）`
@@ -1016,11 +1016,14 @@ Linux 早已改成只经标准输入，只有 macOS 这条漏着，而 `szunet-d
 
 只有一个安全修复，按 beta0.5.1 的习惯用修复版号而不是 beta0.8。
 
-- 标签 `beta0.7.1` 触发 [CI 35577757052](https://github.com/Alakazamc/szudesktop/actions/runs/35577757052)：test、5 个平台 CLI、Windows 桌面构建、release 全部成功。公开 [beta0.7.1](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.7.1) 为预发布，8 个附件。
+- 标签 `beta0.7.1` 触发 [CI 35577757052](https://github.com/SzuDesktopTeam/szudesktop/actions/runs/35577757052)：test、5 个平台 CLI、Windows 桌面构建、release 全部成功。公开 [beta0.7.1](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.7.1) 为预发布，8 个附件。
 - 发布说明这次是手工补的：CI 用 `generate_release_notes` 只会生成一行 compare 链接（本项目是直接提交、没有 PR），所以用 `gh release edit --notes` 写清了「相对 beta0.7 的变化」「macOS 未真机验证的边界」「下载项说明」。
 - 附件核对：
   - `.sha256` 附件行尾为 LF（`cat -A` 无 `^M`），值 `aa2cc634faa938a3e7a3582bb2e9bed792bb5a43431ce0f9a50835f0253b754b`；上一版修复的 `newline="\n"` 生效。
   - 独立 EXE 10,049,024 字节，SHA256 `4cdc5ca78d538597564ba96abf454c0151093eded61e587ad56fb5fd7fbdee9d`，运行后自报 `szuDesktop beta0.7.1`。
   - `szunet-darwin-amd64`：本地用同一提交交叉编译（`-trimpath -ldflags "-s -w"`）得到 6,815,600 字节，与线上附件**大小完全一致**；未 strip 的同一构建里能查到 `keychainSave`／`promptWrite`／`promptRead`／`ensurePromptWriteWorks` 符号，二进制内含 `beta0.7.1` 与 `szunet-selftest-` 字符串，确认 F21 的修复确实进了 macOS 命令行版。
-  - **ZIP 改走 CI 产物核对**：本次网络到 GitHub 资源站（release-assets）长时间不通（github.com 与 release-assets 均 TLS 超时，api.github.com 正常），ZIP 与 `.sha256` 都无法从发布页直接下载（只下到 2.1MB/5.0MB 就停滞）。改从该次 [CI 运行](https://github.com/Alakazamc/szudesktop/actions/runs/35577757052) 的构建产物取同一份文件核对：内层 ZIP 5,003,244 字节，SHA256 `aa2cc634…` 与线上 `.sha256` 声明的值**完全一致**；包内 `szudesktop.exe` 10,049,024 字节、SHA256 `4cdc5ca7…`，与线上独立 EXE **逐字节一致**；包内文件为 exe + 快速开始 + 两份许可证。
-  - 仍需说明：这条链证明的是「发布件的哈希自洽、ZIP 与 EXE 同源」，**没有**做「从发布页下载 ZIP」这一步（当时网络不可达）。beta0.7 的同名检查是完整走完的，流水线未变。
+  - **ZIP 核对**（网络一度不通，重试后补齐）：首次下载时 GitHub 资源站不可达（github.com 与 release-assets 均 TLS 超时，只下到 2.1MB / 5.0MB 就停滞），期间先用同一次 [CI 运行](https://github.com/Alakazamc/szudesktop/actions/runs/35577757052) 的构建产物交叉核对（内层 ZIP 哈希与线上 `.sha256` 声明值一致、包内 exe 与线上独立 exe 逐字节一致）。网络恢复后从发布页重新下载，完成完整核对：
+    - `sha256sum -c` 通过（`.sha256` 为 LF）——这是上一轮 `newline="
+"` 修复后的第一个新版本，Linux / macOS 用户不会再遇到行尾 `` 导致的校验失败
+    - 包内 `szudesktop.exe` 10,049,024 字节、SHA256 `4cdc5ca7…`，与线上独立 EXE **逐字节一致**，运行自报 `szuDesktop beta0.7.1`
+    - 包内文件为 exe + 快速开始 + 字体许可 + 项目许可
