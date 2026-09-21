@@ -173,13 +173,14 @@ CLI self-checks that the write path works using a throwaway item; if it does not
 clear error instead of falling back to putting the password on the command line (where other
 processes on the same machine could see it).
 
-**A defect worth stating plainly (F26):** the new macOS CI probe showed `passwords don't match`
-on real hardware — `security -w` asks **twice** (password, then confirmation), while beta0.7.1
-and beta0.7.2 fed it a single line. On those two releases the macOS CLI therefore **could not
-save credentials at all**: it failed with a clear error, leaked nothing and wrote no plaintext,
-but the feature did not work. It now feeds the password plus the confirmation line. **The fix is
-not released yet.** That probe no longer swallows failures and now gates the release job.
-See F21 / F25 / F26 in STATUS.md.
+**A defect worth stating plainly (F26):** the new macOS CI probe once hit `passwords don't match`
+on real hardware — `security -w` **can** ask twice (password, then confirmation), while beta0.7.1
+and beta0.7.2 fed it a single line. On such machines the macOS CLI **could not save credentials at
+all**: it failed with a clear error, leaked nothing and wrote no plaintext, but the feature did not
+work. The behaviour is not stable — the four later runs on the same image (macOS 26.6.2) asked only
+once. It now feeds the password plus a confirmation line, which works in both cases (the "asks once"
+case is verified on real hardware). **The fix is not released yet.** That probe no longer swallows
+failures and now gates the release job. See F21 / F25 / F26 in STATUS.md.
 
 ---
 
