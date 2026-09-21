@@ -60,7 +60,7 @@
 | F19 | CI 依赖升级及 Node 20 弃用告警待核对 | P2 | S | 已完成（PR CI 验证） | 查各 action 实际最新标签后升级：checkout v7.0.1 / setup-go v7.0.0 / setup-python v7.0.0 / upload-artifact v7.0.1 / download-artifact v8.0.1 / action-gh-release v3.0.3；不能只凭旧警告盲改 |
 | F20 | 出口已被占用时报成成功、能上网时反而跳过在线查询 | P1 | S | 已完成（本地验证） | 2026-09-20 真实网络复现：深澜 `ip_already_online` 是 IP 级短路，账号密码与 `ac_id` 都未被校验，不能算成功、更不能缓存 `ac_id`；能上外网时也必须在统计在线状态，否则用户只看到"没查到"而误判掉线 |
 
-| F21 | macOS 保存凭据把密码 JSON 当命令行参数传给 `security -w`，本机其他用户或进程 `ps` 可见 | P0 | M | 待做 | 2026-09-21 复核 R06 时发现。Linux 版第 17 节已改为只经标准输入，Windows 走 DPAPI，只有 darwin 这条漏着；影响随发布分发的 `szunet-darwin-*`（勾选记住密码时）与将来的 macOS 桌面版。`security` 没有从 stdin 读密码的参数，需要换实现方式，不能只在文档里提醒 |
+| F21 | macOS 保存凭据把密码 JSON 当命令行参数传给 `security -w`，本机其他用户或进程 `ps` 可见 | P0 | M | 已修复（待 macOS 真机验收，见第 33 节） | 改为 `-w` 放末尾触发提示输入 + 子进程脱离控制终端 + 密码经标准输入喂入；写前用一次性条目自检、写后读回校验，自检不过就明确报错，不退回 argv 写法 |
 
 ### 3.2 排版、外观与交互
 
@@ -959,7 +959,7 @@ Use case: style-transfer. Asset: final full-bleed desktop app background, wide 1
 - 版本号单一来源 `internal/version/VERSION` 升到 `beta0.7`；页面顶栏、关于页、打包脚本与快速开始都从它取。
 - 相对 beta0.6.1 的用户可见变化：设置页可开关开机自启并显示真实状态；首次打开的短引导；成绩/课表/在线读取统一为「接入测试 · 未经真实验收」徽章；背景压暗与整图量化（Windows 成品 11.6MB → 9.6MB）。
 - 仓库层面：删除未核实的旧游戏素材与第三方字体（F11 风险收窄）、25 个一次性脚本、VPN 协议笔记移出公开仓库。
-- 仍未完成、不因本版改变：本科/研究生真实账号验收、应用内预约衔接与提交、余额/流量数据层、实验 VPN 的 F06/F07/F08、F21（macOS 凭据经 argv）。
+- 仍未完成、不因本版改变：本科/研究生真实账号验收、应用内预约衔接与提交、余额/流量数据层、实验 VPN 的 F06/F07/F08。
 
 ### 31.5 发布结果与附件核对（2026-09-21）
 
@@ -973,5 +973,41 @@ Use case: style-transfer. Asset: final full-bleed desktop app background, wide 1
 ## 32. 待办（本次未做）
 
 - **必须现场做的**：本科 / 研究生真实账号验收（成绩、课表、教务登录）、教学区与宿舍校园网真机认证、预约登录衔接与提交。
-- **代码侧**：F21（macOS 凭据经 argv 暴露，`security` 没有从 stdin 读密码的参数，需要换实现方式）、F06/F07/F08 实验 VPN、F15 余额 / 流量数据层、D5 白名单转发、R05 图书馆座位系统。
+- **代码侧**：F06/F07/F08 实验 VPN、F15 余额 / 流量数据层、D5 白名单转发、R05 图书馆座位系统。
 - **例行维护**：`ubuntu-latest` 将于 2026-10-19 迁移到 Ubuntu 26，届时核对各 action。
+
+## 33. F21 修复：macOS 凭据不再经命令行参数暴露（2026-09-21，未发布）
+
+**问题**：darwin 的保存路径用 `security add-generic-password ... -w <密码 JSON>` 写入，
+密码会出现在子进程的命令行参数里，同机其它进程 `ps` 就能看到。Windows 走 DPAPI、
+Linux 早已改成只经标准输入，只有 macOS 这条漏着，而 `szunet-darwin-*` 是随发布分发的。
+
+**依据**：Apple man page 对 `-w` 的说明是 "Put at end of command to be prompted (recommended)"，
+即官方推荐让 `security` 提示输入，而不是把密码写进命令行。提示走 `readpassphrase(3)`，
+它在打不开 `/dev/tty` 时会退回读标准输入。
+
+**做法**（`internal/credential/keychain_prompt.go` + `nocontrollingtty_*.go`）：
+
+1. 执行 `security add-generic-password -a <账号> -s <条目> -U -w`，`-w` 放最后且不带值；
+2. 子进程脱离控制终端（`Setsid`）。否则命令行版在终端里跑时，子进程会去读用户的键盘，
+   我们喂进去的管道没人读，保存会卡住等输入；
+3. 密码连同换行从标准输入喂入；命令行参数里只有账号与条目名，没有机密；
+4. **写前自检**：先用一次性条目（`szunet-selftest-*`）跑一遍「写 → 读回 → 比对 → 删除」，
+   确认这条路在本机可用。自检不过就明确报错，绝不退回 argv 写法，也不碰用户的真实凭据
+   （直接在真实条目上试错的代价是：万一没喂进去，留下的就是空值或错值）；
+5. **写后校验**：读回比对，不一致就报错，不静默成功。自检结果只缓存成功——
+   失败不缓存，用户解锁钥匙串后重试还能成功。
+
+**验证**：
+
+- 可移植测试 5 项（`keychain_prompt_test.go`，用假命令）：密码不进 argv、存入值与读回一致、
+  自检条目用完即清、自检不可用时拒绝保存且不写真实条目、读回不一致必须报错、
+  自检只在成功后缓存。本机 Windows 实测通过。
+- unix 真命令测试（`keychain_prompt_unix_test.go`）：把 `securityBin` 指向假脚本，
+  走真实 exec（含 `Setsid` 与标准输入管道），断言命令行参数里没有密码、
+  值经 stdin 完整送达、且确实执行了读回校验。由 Linux CI 执行。
+- 交叉编译 darwin / linux / windows 通过；`go vet`（含 darwin 目标）通过；
+  Windows 成品重新构建后 74 项冒烟通过。
+- **未验证**：真实 macOS 上 `security` 的提示输入是否确实读标准输入（`readpassphrase` 的退回行为）。
+  若不成立，`szunet config set` 在 macOS 上会**明确报错**而不是静默泄漏——这是有意的取舍：
+  宁可失败并让用户知道，也不要偷偷退回会被 `ps` 看到的写法。真机验收前不要把这条记成「已现场验证」。

@@ -1,12 +1,15 @@
 //go:build darwin
 
+// macOS 上校园网凭据和学校会话都进系统钥匙串，各占一个条目，
+// 用户可以只清会话不动密码。
+//
+// 写入路径在 keychain_prompt.go：密码只从标准输入喂给 security，
+// 不放进命令行参数——否则同机其他进程用 ps 就能看到（F21）。
 package credential
 
 import (
 	"encoding/json"
 	"fmt"
-	"os/exec"
-	"strings"
 )
 
 // 钥匙串条目的标识。账号信息整体以 JSON 形式存在密码字段里，
@@ -30,35 +33,16 @@ func platformSessionStore() SessionStore { return &darwinSessionStore{} }
 
 type darwinSessionStore struct{}
 
-// runSecurity 调用系统 security 命令。做成变量是为了在 macOS 上能替换成假命令做测试，
-// 否则单元测试会去动用户真实钥匙串。
-var runSecurity = func(args ...string) ([]byte, error) {
-	return exec.Command("security", args...).Output()
-}
-
 func (s *darwinSessionStore) Save(v Session) error {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command("security", "add-generic-password",
-		"-a", sessionAccount,
-		"-s", sessionService,
-		"-w", string(data),
-		"-U",
-	)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("写入钥匙串失败: %v（%s）", err, strings.TrimSpace(string(out)))
-	}
-	return nil
+	return keychainSave(sessionService, sessionAccount, data)
 }
 
 func (s *darwinSessionStore) Load() (Session, error) {
-	out, err := runSecurity("find-generic-password",
-		"-a", sessionAccount,
-		"-s", sessionService,
-		"-w",
-	)
+	out, err := promptRead(sessionService, sessionAccount)
 	if err != nil {
 		if securityItemNotFound(err) {
 			return Session{}, ErrSessionNotFound
@@ -68,17 +52,18 @@ func (s *darwinSessionStore) Load() (Session, error) {
 		return Session{}, fmt.Errorf("%w（%v）", ErrSessionStorageUnavailable, err)
 	}
 	var v Session
-	if err := json.Unmarshal([]byte(strings.TrimSpace(string(out))), &v); err != nil {
+	if err := json.Unmarshal(out, &v); err != nil {
 		return Session{}, fmt.Errorf("钥匙串里的登录状态格式不对: %w", err)
 	}
 	return v, nil
 }
 
 func (s *darwinSessionStore) Delete() error {
-	if _, err := runSecurity("delete-generic-password",
+	_, err := runSecurity([]string{"delete-generic-password",
 		"-a", sessionAccount,
 		"-s", sessionService,
-	); err != nil {
+	}, nil)
+	if err != nil {
 		if securityItemNotFound(err) {
 			return nil // 本来就没有，等于已经删掉
 		}
@@ -97,26 +82,11 @@ func (s *darwinStore) Save(c Credentials) error {
 	if err != nil {
 		return err
 	}
-
-	// -U 表示条目已存在就更新，避免重复添加时报错。
-	cmd := exec.Command("security", "add-generic-password",
-		"-a", keychainAccount,
-		"-s", keychainService,
-		"-w", string(data),
-		"-U",
-	)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("写入钥匙串失败: %v（%s）", err, strings.TrimSpace(string(out)))
-	}
-	return nil
+	return keychainSave(keychainService, keychainAccount, data)
 }
 
 func (s *darwinStore) Load() (Credentials, error) {
-	out, err := runSecurity("find-generic-password",
-		"-a", keychainAccount,
-		"-s", keychainService,
-		"-w",
-	)
+	out, err := promptRead(keychainService, keychainAccount)
 	if err != nil {
 		if securityItemNotFound(err) {
 			return Credentials{}, ErrNotFound
@@ -127,17 +97,18 @@ func (s *darwinStore) Load() (Credentials, error) {
 	}
 
 	var c Credentials
-	if err := json.Unmarshal([]byte(strings.TrimSpace(string(out))), &c); err != nil {
+	if err := json.Unmarshal(out, &c); err != nil {
 		return Credentials{}, fmt.Errorf("钥匙串里的凭据格式不对: %w", err)
 	}
 	return c, nil
 }
 
 func (s *darwinStore) Delete() error {
-	if _, err := runSecurity("delete-generic-password",
+	_, err := runSecurity([]string{"delete-generic-password",
 		"-a", keychainAccount,
 		"-s", keychainService,
-	); err != nil {
+	}, nil)
+	if err != nil {
 		if securityItemNotFound(err) {
 			return nil // 本来就没有，等于已经删掉
 		}
