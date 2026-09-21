@@ -8,7 +8,7 @@ package diagnose
 import (
 	"fmt"
 
-	"github.com/Alakazamc/szudesktop/internal/portal"
+	"github.com/SzuDesktopTeam/szudesktop/internal/portal"
 )
 
 // Report 是一次诊断的完整结果。

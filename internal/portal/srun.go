@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Alakazamc/szudesktop/internal/crypto"
+	"github.com/SzuDesktopTeam/szudesktop/internal/crypto"
 )
 
 // DefaultSrunHost 是深大教学区的深澜认证门户。

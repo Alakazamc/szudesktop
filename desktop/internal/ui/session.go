@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Alakazamc/szudesktop/internal/credential"
+	"github.com/SzuDesktopTeam/szudesktop/internal/credential"
 )
 
 // 学校系统（ehall）个人业务的本地接口。

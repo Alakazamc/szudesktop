@@ -1022,7 +1022,7 @@ Linux 早已改成只经标准输入，只有 macOS 这条漏着，而 `szunet-d
   - `.sha256` 附件行尾为 LF（`cat -A` 无 `^M`），值 `aa2cc634faa938a3e7a3582bb2e9bed792bb5a43431ce0f9a50835f0253b754b`；上一版修复的 `newline="\n"` 生效。
   - 独立 EXE 10,049,024 字节，SHA256 `4cdc5ca78d538597564ba96abf454c0151093eded61e587ad56fb5fd7fbdee9d`，运行后自报 `szuDesktop beta0.7.1`。
   - `szunet-darwin-amd64`：本地用同一提交交叉编译（`-trimpath -ldflags "-s -w"`）得到 6,815,600 字节，与线上附件**大小完全一致**；未 strip 的同一构建里能查到 `keychainSave`／`promptWrite`／`promptRead`／`ensurePromptWriteWorks` 符号，二进制内含 `beta0.7.1` 与 `szunet-selftest-` 字符串，确认 F21 的修复确实进了 macOS 命令行版。
-  - **ZIP 核对**（网络一度不通，重试后补齐）：首次下载时 GitHub 资源站不可达（github.com 与 release-assets 均 TLS 超时，只下到 2.1MB / 5.0MB 就停滞），期间先用同一次 [CI 运行](https://github.com/Alakazamc/szudesktop/actions/runs/35577757052) 的构建产物交叉核对（内层 ZIP 哈希与线上 `.sha256` 声明值一致、包内 exe 与线上独立 exe 逐字节一致）。网络恢复后从发布页重新下载，完成完整核对：
+  - **ZIP 核对**（网络一度不通，重试后补齐）：首次下载时 GitHub 资源站不可达（github.com 与 release-assets 均 TLS 超时，只下到 2.1MB / 5.0MB 就停滞），期间先用同一次 [CI 运行](https://github.com/SzuDesktopTeam/szudesktop/actions/runs/35577757052) 的构建产物交叉核对（内层 ZIP 哈希与线上 `.sha256` 声明值一致、包内 exe 与线上独立 exe 逐字节一致）。网络恢复后从发布页重新下载，完成完整核对：
     - `sha256sum -c` 通过（`.sha256` 为 LF）——这是上一轮 `newline="
 "` 修复后的第一个新版本，Linux / macOS 用户不会再遇到行尾 `` 导致的校验失败
     - 包内 `szudesktop.exe` 10,049,024 字节、SHA256 `4cdc5ca7…`，与线上独立 EXE **逐字节一致**，运行自报 `szuDesktop beta0.7.1`

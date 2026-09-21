@@ -56,7 +56,7 @@ README = """szuDesktop __VERSION__ · 荔枝庭院（Windows x64）
 
 这是学生自制的非官方测试版。庭院币没有真实货币价值，无充值、交易和提现。
 本版尚无数字签名，校园认证仍需在实际教学区 / 宿舍网络验证。
-源码与反馈：https://github.com/Alakazamc/szudesktop
+源码与反馈：https://github.com/SzuDesktopTeam/szudesktop
 """
 
 

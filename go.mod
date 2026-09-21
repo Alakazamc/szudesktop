@@ -1,4 +1,4 @@
-module github.com/Alakazamc/szudesktop
+module github.com/SzuDesktopTeam/szudesktop
 
 go 1.26.6
 

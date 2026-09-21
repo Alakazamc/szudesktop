@@ -23,7 +23,7 @@ import (
 const (
 	ehallHost      = "ehall.szu.edu.cn"
 	ehallBaseURL   = "https://" + ehallHost
-	ehallUserAgent = "szuDesktop/0.5 (+https://github.com/Alakazamc/szudesktop)"
+	ehallUserAgent = "szuDesktop/0.5 (+https://github.com/SzuDesktopTeam/szudesktop)"
 
 	// 单次请求超时。学校服务器偶尔很慢，但也不能无限挂着。
 	ehallTimeout = 20 * time.Second

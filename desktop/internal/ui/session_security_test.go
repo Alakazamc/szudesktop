@@ -3,7 +3,7 @@ package ui
 import (
 	"encoding/json"
 	"errors"
-	"github.com/Alakazamc/szudesktop/internal/credential"
+	"github.com/SzuDesktopTeam/szudesktop/internal/credential"
 	"io"
 	"net/http"
 	"net/http/httptest"

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/Alakazamc/szudesktop/internal/portal"
+	"github.com/SzuDesktopTeam/szudesktop/internal/portal"
 	"testing"
 )
 

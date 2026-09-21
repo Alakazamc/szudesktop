@@ -14,9 +14,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Alakazamc/szudesktop/desktop/internal/ui"
-	"github.com/Alakazamc/szudesktop/internal/portal"
-	"github.com/Alakazamc/szudesktop/internal/version"
+	"github.com/SzuDesktopTeam/szudesktop/desktop/internal/ui"
+	"github.com/SzuDesktopTeam/szudesktop/internal/portal"
+	"github.com/SzuDesktopTeam/szudesktop/internal/version"
 )
 
 func main() {

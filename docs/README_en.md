@@ -9,7 +9,7 @@ school services, study tools, and a little garden that keeps growing even offlin
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-4a6fa5?style=flat-square">
   <img alt="go" src="https://img.shields.io/badge/Go-1.26%2B-00ADD8?style=flat-square&logo=go&logoColor=white">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-2f7d32?style=flat-square">
-  <img alt="release" src="https://img.shields.io/github/v/release/Alakazamc/szudesktop?include_prereleases&style=flat-square&label=release&color=c9a227">
+  <img alt="release" src="https://img.shields.io/github/v/release/SzuDesktopTeam/szudesktop?include_prereleases&style=flat-square&label=release&color=c9a227">
   <img alt="runtime" src="https://img.shields.io/badge/runtime-no%20dependencies-6b7280?style=flat-square">
 </p>
 
@@ -62,14 +62,14 @@ protocol at an endpoint that isn't there.
 ## Download
 
 Grab `szudesktop-<version>-windows-amd64.zip` from the
-[Releases](https://github.com/Alakazamc/szudesktop/releases) page, unzip it anywhere,
+[Releases](https://github.com/SzuDesktopTeam/szudesktop/releases) page, unzip it anywhere,
 and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 
 | Item | Detail |
 | :--- | :----- |
 | Desktop app | Windows x64 (`szudesktop.exe`) |
 | Command line | Windows / macOS / Linux, single binary `szunet` |
-| Current version | [beta0.7.1](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.7.1) · public beta (pre-release); Windows download published |
+| Current version | [beta0.7.1](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.7.1) · public beta (pre-release); Windows download published |
 | Runtime | No dependencies to install; the window is provided by your browser (Edge / Chrome app window) |
 
 ### First run

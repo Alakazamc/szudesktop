@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Alakazamc/szudesktop/internal/autostart"
+	"github.com/SzuDesktopTeam/szudesktop/internal/autostart"
 )
 
 // autostart 子命令：管理开机自动登录。

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Alakazamc/szudesktop/internal/credential"
+	"github.com/SzuDesktopTeam/szudesktop/internal/credential"
 )
 
 func TestUndergradPreservesOfficialArrangement(t *testing.T) {

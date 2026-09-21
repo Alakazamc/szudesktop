@@ -236,7 +236,7 @@ func (s *Server) handleCampusNotices(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, 500, err)
 		return
 	}
-	req.Header.Set("User-Agent", "szuDesktop/0.5 (+https://github.com/Alakazamc/szudesktop)")
+	req.Header.Set("User-Agent", "szuDesktop/0.5 (+https://github.com/SzuDesktopTeam/szudesktop)")
 	res, err := noticeClient.Do(req)
 	var items []campusNotice
 	if err == nil {

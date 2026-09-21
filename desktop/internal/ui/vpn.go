@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Alakazamc/szudesktop/internal/sysproxy"
-	"github.com/Alakazamc/szudesktop/internal/vpn"
+	"github.com/SzuDesktopTeam/szudesktop/internal/sysproxy"
+	"github.com/SzuDesktopTeam/szudesktop/internal/vpn"
 )
 
 const (

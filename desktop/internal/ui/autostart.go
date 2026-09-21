@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Alakazamc/szudesktop/internal/autostart"
+	"github.com/SzuDesktopTeam/szudesktop/internal/autostart"
 )
 
 // autostartBackend 是可替换的开机自启操作。

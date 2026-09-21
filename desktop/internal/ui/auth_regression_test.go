@@ -2,7 +2,7 @@ package ui
 
 import (
 	"encoding/json"
-	"github.com/Alakazamc/szudesktop/internal/portal"
+	"github.com/SzuDesktopTeam/szudesktop/internal/portal"
 	"net/http"
 	"net/http/httptest"
 	"strings"

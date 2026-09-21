@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Alakazamc/szudesktop/internal/portal"
+	"github.com/SzuDesktopTeam/szudesktop/internal/portal"
 )
 
 // TestLoginStillAuthenticatesWhenAlreadyOnline 锁死一个真实故障。

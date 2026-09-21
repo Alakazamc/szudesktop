@@ -17,11 +17,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Alakazamc/szudesktop/internal/credential"
-	"github.com/Alakazamc/szudesktop/internal/diagnose"
-	"github.com/Alakazamc/szudesktop/internal/netpref"
-	"github.com/Alakazamc/szudesktop/internal/portal"
-	"github.com/Alakazamc/szudesktop/internal/version"
+	"github.com/SzuDesktopTeam/szudesktop/internal/credential"
+	"github.com/SzuDesktopTeam/szudesktop/internal/diagnose"
+	"github.com/SzuDesktopTeam/szudesktop/internal/netpref"
+	"github.com/SzuDesktopTeam/szudesktop/internal/portal"
+	"github.com/SzuDesktopTeam/szudesktop/internal/version"
 )
 
 // options 是所有子命令共用的参数。

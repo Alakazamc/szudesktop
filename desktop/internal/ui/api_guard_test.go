@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"github.com/Alakazamc/szudesktop/internal/credential"
+	"github.com/SzuDesktopTeam/szudesktop/internal/credential"
 	"net/http"
 	"net/http/httptest"
 	"strings"

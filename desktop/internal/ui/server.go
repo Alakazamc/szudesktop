@@ -23,11 +23,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Alakazamc/szudesktop/internal/credential"
-	"github.com/Alakazamc/szudesktop/internal/diagnose"
-	"github.com/Alakazamc/szudesktop/internal/netpref"
-	"github.com/Alakazamc/szudesktop/internal/portal"
-	"github.com/Alakazamc/szudesktop/internal/version"
+	"github.com/SzuDesktopTeam/szudesktop/internal/credential"
+	"github.com/SzuDesktopTeam/szudesktop/internal/diagnose"
+	"github.com/SzuDesktopTeam/szudesktop/internal/netpref"
+	"github.com/SzuDesktopTeam/szudesktop/internal/portal"
+	"github.com/SzuDesktopTeam/szudesktop/internal/version"
 )
 
 // 页面和字体全部嵌进来。embed 的路径相对本包目录，

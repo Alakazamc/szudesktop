@@ -9,7 +9,7 @@
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-4a6fa5?style=flat-square">
   <img alt="go" src="https://img.shields.io/badge/Go-1.26%2B-00ADD8?style=flat-square&logo=go&logoColor=white">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-2f7d32?style=flat-square">
-  <img alt="release" src="https://img.shields.io/github/v/release/Alakazamc/szudesktop?include_prereleases&style=flat-square&label=release&color=c9a227">
+  <img alt="release" src="https://img.shields.io/github/v/release/SzuDesktopTeam/szudesktop?include_prereleases&style=flat-square&label=release&color=c9a227">
   <img alt="runtime" src="https://img.shields.io/badge/runtime-%E6%97%A0%E4%BE%9D%E8%B5%96-6b7280?style=flat-square">
 </p>
 
@@ -64,7 +64,7 @@ szuDesktop 同时对付这两件事：**一个按钮完成认证，一个按钮�
 | :-- | :---- |
 | 桌面端 | Windows x64（`szudesktop.exe`） |
 | 命令行 | Windows / macOS / Linux，单文件 `szunet` |
-| 当前版本 | [beta0.7.1](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.7.1) · 公开测试版（预发布），Windows 下载包已发布 |
+| 当前版本 | [beta0.7.1](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.7.1) · 公开测试版（预发布），Windows 下载包已发布 |
 | 运行环境 | 无需安装依赖；窗口由本机浏览器提供（Edge / Chrome 应用窗口） |
 
 ### 首次使用

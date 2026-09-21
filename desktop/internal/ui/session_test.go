@@ -11,7 +11,7 @@ import (
 	"testing/fstest"
 	"time"
 
-	"github.com/Alakazamc/szudesktop/internal/credential"
+	"github.com/SzuDesktopTeam/szudesktop/internal/credential"
 )
 
 /* ---------- 会话存取 ---------- */

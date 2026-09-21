@@ -9,7 +9,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/Alakazamc/szudesktop/internal/autostart"
+	"github.com/SzuDesktopTeam/szudesktop/internal/autostart"
 )
 
 // 这些测试一律注入替身，绝不碰真实注册表：

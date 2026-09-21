@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Alakazamc/szudesktop/internal/credential"
-	"github.com/Alakazamc/szudesktop/internal/portal"
+	"github.com/SzuDesktopTeam/szudesktop/internal/credential"
+	"github.com/SzuDesktopTeam/szudesktop/internal/portal"
 )
 
 type statusTestStore struct {
