@@ -9,6 +9,15 @@ async function check(name,f){await f();count++;console.log('PASS',name)}
 await check('official periods, weeks and unarranged courses are preserved and escaped',()=>{
  const text=timetableHTML(sample);assert.match(text,/&lt;img src=x&gt;/);assert.doesNotMatch(text,/<img src=x>/);assert.match(text,/第 3–4 节/);assert.match(text,/1–16周（单）/);assert.match(text,/待排课程/);
 });
+await check('login and timetable are two separate cards',()=>{
+ const L=ui.loginCard(),T=ui.timetableCard();
+ // 登录卡只放认证：学号/密码/验证码/清除登录
+ for(const need of [/学号/,/教务密码/,/school-captcha/,/清除本次登录/])assert.match(L,need);
+ // 课表卡只放读取与展示，不再混进密码框
+ assert.doesNotMatch(L,/读取我的课表/);assert.doesNotMatch(L,/id="school-timetable"/);
+ assert.match(T,/读取我的课表/);assert.match(T,/id="school-timetable"/);assert.match(T,/本科 · 我的课表/);
+ assert.doesNotMatch(T,/教务密码/);assert.doesNotMatch(T,/清除本次登录/);
+});
 await check('official empty timetable is distinct from not queried',()=>{
  assert.match(timetableHTML(null),/登录后点击/);assert.match(timetableHTML({...sample,entries:[],unscheduled:[]}),/学校当前学期没有返回已排定/);
 });
