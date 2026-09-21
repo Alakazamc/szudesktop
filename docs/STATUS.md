@@ -1011,3 +1011,16 @@ Linux 早已改成只经标准输入，只有 macOS 这条漏着，而 `szunet-d
 - **未验证**：真实 macOS 上 `security` 的提示输入是否确实读标准输入（`readpassphrase` 的退回行为）。
   若不成立，`szunet config set` 在 macOS 上会**明确报错**而不是静默泄漏——这是有意的取舍：
   宁可失败并让用户知道，也不要偷偷退回会被 `ps` 看到的写法。真机验收前不要把这条记成「已现场验证」。
+
+## 34. beta0.7.1 发布：macOS 凭据暴露修复（2026-09-21）
+
+只有一个安全修复，按 beta0.5.1 的习惯用修复版号而不是 beta0.8。
+
+- 标签 `beta0.7.1` 触发 [CI 35577757052](https://github.com/Alakazamc/szudesktop/actions/runs/35577757052)：test、5 个平台 CLI、Windows 桌面构建、release 全部成功。公开 [beta0.7.1](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.7.1) 为预发布，8 个附件。
+- 发布说明这次是手工补的：CI 用 `generate_release_notes` 只会生成一行 compare 链接（本项目是直接提交、没有 PR），所以用 `gh release edit --notes` 写清了「相对 beta0.7 的变化」「macOS 未真机验证的边界」「下载项说明」。
+- 附件核对：
+  - `.sha256` 附件行尾为 LF（`cat -A` 无 `^M`），值 `aa2cc634faa938a3e7a3582bb2e9bed792bb5a43431ce0f9a50835f0253b754b`；上一版修复的 `newline="\n"` 生效。
+  - 独立 EXE 10,049,024 字节，SHA256 `4cdc5ca78d538597564ba96abf454c0151093eded61e587ad56fb5fd7fbdee9d`，运行后自报 `szuDesktop beta0.7.1`。
+  - `szunet-darwin-amd64`：本地用同一提交交叉编译（`-trimpath -ldflags "-s -w"`）得到 6,815,600 字节，与线上附件**大小完全一致**；未 strip 的同一构建里能查到 `keychainSave`／`promptWrite`／`promptRead`／`ensurePromptWriteWorks` 符号，二进制内含 `beta0.7.1` 与 `szunet-selftest-` 字符串，确认 F21 的修复确实进了 macOS 命令行版。
+  - **ZIP 改走 CI 产物核对**：本次网络到 GitHub 资源站（release-assets）长时间不通（github.com 与 release-assets 均 TLS 超时，api.github.com 正常），ZIP 与 `.sha256` 都无法从发布页直接下载（只下到 2.1MB/5.0MB 就停滞）。改从该次 [CI 运行](https://github.com/Alakazamc/szudesktop/actions/runs/35577757052) 的构建产物取同一份文件核对：内层 ZIP 5,003,244 字节，SHA256 `aa2cc634…` 与线上 `.sha256` 声明的值**完全一致**；包内 `szudesktop.exe` 10,049,024 字节、SHA256 `4cdc5ca7…`，与线上独立 EXE **逐字节一致**；包内文件为 exe + 快速开始 + 两份许可证。
+  - 仍需说明：这条链证明的是「发布件的哈希自洽、ZIP 与 EXE 同源」，**没有**做「从发布页下载 ZIP」这一步（当时网络不可达）。beta0.7 的同名检查是完整走完的，流水线未变。
