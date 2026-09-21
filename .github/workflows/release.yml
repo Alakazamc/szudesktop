@@ -81,28 +81,33 @@ jobs:
         timeout-minutes: 5
         run: |
           set -e
+          sw_vers || true
           KC="$RUNNER_TEMP/szunet-probe.keychain-db"
           security create-keychain -p probe "$KC"
           security unlock-keychain -p probe "$KC"
           security list-keychains -d user -s "$KC"
           cleanup() {
-            security delete-generic-password -a probe -s szunet-selftest-probe >/dev/null 2>&1 || true
+            security delete-generic-password -a probe -s szunet-probe-one >/dev/null 2>&1 || true
+            security delete-generic-password -a probe -s szunet-probe-two >/dev/null 2>&1 || true
             security delete-keychain "$KC" >/dev/null 2>&1 || true
           }
           trap cleanup EXIT
 
-          # 1) 只喂一行必须失败——真实 security 要求确认，这正是 F26 的成因。
-          if printf 'szunet-probe-value\n' | security add-generic-password -a probe -s szunet-selftest-probe -U -w >/dev/null 2>&1; then
-            echo "意外：只喂一行竟然成功了。security 的行为变了，请复核 secretInput 的两行写法是否还必要。"
-            exit 1
+          # 只作记录、不作断言：`security -w` 问几遍并不稳定。同一镜像
+          # （macos-26-arm64）的两次运行里，一次要求确认（只喂一行报
+          # passwords don't match、退出码 44，这就是 F26），另一次只问一遍就收下了。
+          if printf 'v1\n' | security add-generic-password -a probe -s szunet-probe-one -U -w >/dev/null 2>&1; then
+            echo "记录：本次 runner 上只喂一行也能写入（没有要求确认）"
+          else
+            echo "记录：本次 runner 上只喂一行失败（要求输入两遍确认）——F26 就是这种情况"
           fi
-          echo "确认：只喂一行会失败（security 要求输入两遍）"
 
-          # 2) 喂两行必须成功，且读回的值一致。
-          printf 'szunet-probe-value\nszunet-probe-value\n' | security add-generic-password -a probe -s szunet-selftest-probe -U -w
-          got=$(security find-generic-password -a probe -s szunet-selftest-probe -w)
-          test "$got" = "szunet-probe-value"
-          echo "F21 / F26 假设成立：security -w 在无控制终端时从标准输入读取，且需要密码 + 确认两行"
+          # 必须成立的是这一条：程序实际采用的「密码 + 确认」两行喂法能写入并读回一致。
+          # 只问一遍的版本上，多出的第二行只是没人读的剩余输入，不影响结果。
+          printf 'v2\nv2\n' | security add-generic-password -a probe -s szunet-probe-two -U -w
+          got=$(security find-generic-password -a probe -s szunet-probe-two -w)
+          test "$got" = "v2"
+          echo "F21 / F26 成立：无控制终端下 security -w 从标准输入读取，两行喂法可写入并读回一致"
 
   build-cli:
     needs: test
