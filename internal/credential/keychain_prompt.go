@@ -59,11 +59,19 @@ func briefStderr(s string) string {
 	return "（" + s + "）"
 }
 
-// secretInput 把机密拼成「一行 + 换行」，喂给 security 的提示输入。
+// secretInput 把机密拼成 security 的提示输入所需要的形式：密码一行、确认一行。
+//
+// 真实的 `security add-generic-password -w` 会问两遍（password data for new item /
+// retype password for new item）。只喂一行会得到 "passwords don't match"、退出码 44，
+// 条目根本建不起来——这是 CI 的 macOS 探针在真机上实测到的行为，beta0.7.1 与
+// beta0.7.2 都因此存不了凭据（F26）。多喂的那一行在只问一遍的旧版本上只是
+// 没人读的剩余输入，不影响结果。
 //
 // 必须复制一份：直接 append 到调用方的切片上，容量够时会改掉它身后的数组。
 func secretInput(secret []byte) []byte {
-	buf := make([]byte, 0, len(secret)+1)
+	buf := make([]byte, 0, 2*len(secret)+2)
+	buf = append(buf, secret...)
+	buf = append(buf, '\n')
 	buf = append(buf, secret...)
 	buf = append(buf, '\n')
 	return buf

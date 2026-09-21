@@ -24,8 +24,15 @@ func TestKeychainSaveThroughRealCommandKeepsSecretOutOfArgv(t *testing.T) {
 printf '%s\n' "$*" >> ` + argvLog + `
 case "$1" in
   add-generic-password)
-    IFS= read -r line || true
-    printf '%s' "$line" > ` + store + `
+    # 真实 security 会问两遍：密码，然后是确认。两行不一致就报
+    # "passwords don't match"、退出码 44，条目根本建不起来。
+    IFS= read -r first || true
+    IFS= read -r second || true
+    if [ -z "$first" ] || [ "$first" != "$second" ]; then
+      echo "passwords don't match" >&2
+      exit 44
+    fi
+    printf '%s' "$first" > ` + store + `
     ;;
   find-generic-password)
     if [ -f ` + store + ` ]; then cat ` + store + `; echo; else echo "could not be found (-25300)" >&2; exit 44; fi

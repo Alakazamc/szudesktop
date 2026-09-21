@@ -26,6 +26,16 @@ type fakeCall struct {
 
 func itemKey(service, account string) string { return service + "/" + account }
 
+// twoLines 把喂给 security 的标准输入拆成「密码」与「确认」两行。
+func twoLines(stdin []byte) (string, string) {
+	lines := strings.Split(strings.ReplaceAll(string(stdin), "\r\n", "\n"), "\n")
+	second := ""
+	if len(lines) > 1 {
+		second = lines[1]
+	}
+	return lines[0], second
+}
+
 func newFakeKeychain(t *testing.T) *fakeKeychain {
 	t.Helper()
 	f := &fakeKeychain{items: map[string]string{}}
@@ -64,7 +74,14 @@ func (f *fakeKeychain) run(args []string, stdin []byte) ([]byte, error) {
 		if args[len(args)-1] != "-w" {
 			return nil, errors.New("测试替身只接受 -w 放最后的写法，收到: " + strings.Join(args, " "))
 		}
-		stored := strings.TrimRight(string(stdin), "\r\n")
+		// 真实的 security 会问两遍（password data for new item / retype password
+		// for new item），只喂一行就得到 "passwords don't match"、条目根本建不起来。
+		// 这是 CI 的 macOS 探针在真机上实测到的行为，替身照它建模。
+		first, second := twoLines(stdin)
+		if first == "" || first != second {
+			return nil, errors.New("security add-generic-password 失败: exit status 44（passwords don't match）")
+		}
+		stored := first
 		if f.storeHalf && len(stored) > 4 {
 			stored = stored[:len(stored)/2]
 		}
@@ -141,6 +158,35 @@ func TestKeychainSaveKeepsSecretOutOfArgv(t *testing.T) {
 	}
 	if left := f.countService("szunet-selftest-"); left != 0 {
 		t.Fatalf("自检条目用完了没清掉，会一直留在用户钥匙串里（剩 %d 个）", left)
+	}
+}
+
+// 真实 macOS 的 `security -w` 会要求输入两遍（第二遍是确认）。只喂一遍会得到
+// "passwords don't match"，条目根本建不起来——这是 CI 的 macOS 探针在真机上
+// 实测到的行为，beta0.7.1 与 beta0.7.2 都因此存不了凭据。
+func TestKeychainWriteFeedsSecretTwiceForConfirmation(t *testing.T) {
+	f := newFakeKeychain(t)
+	secret := []byte(`{"password":"test-only-secret"}`)
+	if err := keychainSave(realService, realAccount, secret); err != nil {
+		t.Fatalf("保存失败: %v", err)
+	}
+
+	var stdin []byte
+	for _, c := range f.calls {
+		if c.args[0] == "add-generic-password" && strings.Contains(strings.Join(c.args, " "), realService) {
+			stdin = c.stdin
+			break
+		}
+	}
+	if stdin == nil {
+		t.Fatal("没有对真实条目调用 add-generic-password")
+	}
+	first, second := twoLines(stdin)
+	if first != string(secret) || second != string(secret) {
+		t.Fatalf("标准输入必须是「密码 + 确认」两行且一致，实际是 %q 与 %q", first, second)
+	}
+	if f.argvContains("test-only-secret") {
+		t.Fatal("密码出现在了命令行参数里，F21 又回来了")
 	}
 }
 

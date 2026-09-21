@@ -8,7 +8,8 @@
 ## 1. 当前状态
 
 - 当前公开 Release 为 **beta0.7.1**（2026-09-21，macOS 凭据暴露修复），交付记录见第 34 节；beta0.7 见第 31 节，beta0.6.1 见第 28 节。
-- **本次以 beta0.7.2 发布**：F22（CLI 无账号时也查在线状态）、U16（教务登录与我的课表拆成两张卡），以及第 37 节的 F23 / F24 / F11 / F25、第 38 节的发布说明机制、新增的 SECURITY.md 与 CONTRIBUTING.md。
+- **本次以 beta0.7.2 发布**：F22（CLI 无账号时也查在线状态）、U16（教务登录与我的课表拆成两张卡），以及第 37 节的 F23 / F24 / F11 / F25、第 38 节的发布说明机制、新增的 SECURITY.md 与 CONTRIBUTING.md。发布结果与附件核对见第 39 节。
+- **beta0.7.2 发布后立刻发现 F26（P0）**：新加的 macOS 探针在真机上跑出 `passwords don't match`——`security -w` 会问两遍，我们只喂一行，**macOS 用户根本存不了凭据**。beta0.7.1 与 beta0.7.2 都带着这个缺陷。已修（第 39.4 节），修复**尚未发布**。
 - 发布归属已核对并更正：工程债清理（第 29 节）与仓库瘦身、背景修复（第 30 节）随 **beta0.7** 发布；F21 修复（第 33 节）随 **beta0.7.1** 发布；学院公告筛选与预约回归官方页（第 26.3 / 27 节）随 **beta0.6.1** 发布。这些节标题上早先写的「未发布」是当时的状态，现已按实际发布更正。
 - 2026-09-21 做了一轮**全项目严重问题复核**：新发现 F23 / F24 / F25，F11 的完成度下调，同时排除了一处会被误判成漏洞的探测代码。证据、影响面与验收标准见第 36 节。
 - 2026-09-21 同日按第 36.7 节的顺序**动手修完**：F23（删掉预约的服务端写端点）、F24（凭据不再退回明文文件）、F11（撤掉未核实的来源保证）、F25（CI 加 macOS job），并补上 SECURITY.md 与 CONTRIBUTING.md。全部改动与验证证据见第 37 节，**均未发布**。
@@ -67,7 +68,8 @@
 | F22 | CLI `status` 在没有保存账号时跳过在线查询，只报「没查到」 | P1 | S | 已完成（真实网络验证，见第 35 节） | 原先写的是 `if credErr == nil { 查 }`，而门户查询按出口 IP 回答、与账号无关；同一时刻桌面端报「已在线」、CLI 报「没查到」。去掉短路，与桌面端共用同一查询入口，并补 `online_known` 与登录提示 |
 | F23 | 预约的**服务端写操作端点仍在发布包里活着**，而 README 与本文都写着「已撤下本地提交表单」「不代提交」 | P0 | S | 已完成（真机成品验证，见第 37.1 节） | 删掉 `/api/booking/{session,history,prepare,commit}` 四个端点及其专属代码（`bookingInput`/`bookingPending`/`bookingRecord`/`bookingHistory`/`validateBooking`/`history()`），`request()` 收敛成只发 GET、不再接受任何写载荷，`bookingSecure` 与 Cookie 字段一并移除。只读的 rooms / availability 保留。验收：新增 404 断言测试（先看它红）、前端回归、74 项冒烟、以及**真实成品**上 12 种方法组合全部 404 且 rooms 仍返回真实场地 |
 | F24 | Linux 上校园网密码可能**明文落盘且静默报成功**，文档只承诺 DPAPI/钥匙串 | P1 | S | 已完成（本机测试 + Linux 编译验证，见第 37.2 节） | 范围比复核时判断的更大：Windows 在拿不到用户目录时也会写明文相对路径。做法是删掉 `fileStore`，新增 `unavailableStore` 与 `ErrStorageUnavailable`——没有系统密钥环就明确报错、绝不落明文，与会话存储同一标准；`Delete()` 仍会清掉老版本可能留下的明文文件。两份 README 与排查指南已补实情 |
-| F25 | macOS 凭据路径**没有任何自动化覆盖**：CI 只在 ubuntu 跑测试，darwin 仅交叉编译不执行 | P1 | M | 部分完成（CI 已加 macOS job，**尚未运行验证**，见第 37.4 节） | 新增 `test-macos` job：darwin 上跑 `go vet` 与 `go test ./internal/credential/...`，外加一个用一次性钥匙串、直接对真实 `security` 命令验证「`-w` 放末尾会退回读 stdin」的探针步骤。该 job 不在任何 `needs` 里且探针 `continue-on-error`，不会卡发布。真机验收仍待做 |
+| F25 | macOS 凭据路径**没有任何自动化覆盖**：CI 只在 ubuntu 跑测试，darwin 仅交叉编译不执行 | P1 | M | 部分完成（CI 已加 macOS job，见第 37.4 / 39.3 节） | 新增 `test-macos` job：darwin 上跑 `go vet` 与 `go test ./internal/credential/...`，外加一个用一次性钥匙串、直接对真实 `security` 命令验证 stdin 假设的探针。首跑就抓出了 F26；现已进入 release 的 `needs`，失败即阻断发布 |
+| F26 | macOS 上 `security -w` 会**问两遍**（密码 + 确认），我们只喂一行，于是 `passwords don't match`、退出码 44，条目根本建不起来——**macOS 用户完全存不了凭据** | P0 | S | 已修复（CI 真机探针验证，见第 39.4 节）；beta0.7.1 与 beta0.7.2 **都带着这个缺陷发出去了** | F21 改成 stdin 喂入时假设只问一遍。`secretInput` 现在喂「密码 + 确认」两行；旧版本只问一遍时多出的那行只是没人读的剩余输入，不影响结果。两个测试替身（可移植版与 unix 真 exec 版）都改成如实模拟两次提问，因此本地与 Linux CI 也能守住这条；CI 探针去掉 `continue-on-error` 并进入 release 的 `needs` |
 
 ### 3.2 排版、外观与交互
 
@@ -1321,3 +1323,93 @@ Linux 早已改成只经标准输入，只有 macOS 这条漏着，而 `szunet-d
 release job 是否真按预期把 CHANGELOG 正文放前面、compare 链接接在后面，**要等下一次打 tag 才知道**。
 「抽取失败会阻断发布」这一点是靠脚本退出码保证的，已在本地验证。
 `test-macos` job 同样还没运行过（见第 37.4 节）。
+
+> **后续更正**：本节写完当天就打了 beta0.7.2 标签，`test-macos` 与 release 的 `body_path`
+> 拼接都真跑过了，结果见第 39 节——拼接符合预期，`test-macos` 则连抓出两个问题。
+
+## 39. beta0.7.2 发布：新机制首次生效，macOS 探针当场抓出一个 P0（2026-09-22）
+
+### 39.1 发布结果与附件核对
+
+- 标签 `beta0.7.2` 指向 `f5ae2cb`，触发 [CI 35626817861](https://github.com/SzuDesktopTeam/szudesktop/actions/runs/35626817861)。
+  `test`（含新加的「发布说明抽取回归」）、5 个平台 CLI、`build-desktop-windows`、`release` **全部成功**；
+  `test-macos` 失败，但它当时不在 `needs` 里，没有阻断发布（见 39.3）。
+- 公开 [beta0.7.2](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.7.2) 为预发布，8 个附件。从发布页下载核对：
+  - `.sha256` 行尾为 LF（`cat -A` 无 `^M`），值 `666a555f1ead155db41c7996c0403d14ff5e30dfc4ddc2b3d08b09c8b5e18586`；`sha256sum -c` **通过**
+  - ZIP 4,994,833 字节；包内 `szudesktop.exe` 10,021,888 字节、SHA256 `036170f9feed70ecbcca031a6ea56619d7a6d48fde1f083b3cb02ce1e4871b44`，
+    与线上独立 EXE **逐字节一致**；包内为 exe + 快速开始 + 字体许可 + 项目许可
+  - **把线上成品跑起来实测**：自报 `szuDesktop beta0.7.2（内嵌 szunet 内核）`，`/api/status` 的
+    `app_version` 为 `beta0.7.2`、`store_desc` 为 Windows DPAPI；
+    4 个已删预约端点 × GET/POST/DELETE **12 组合全部 404**（F23 确实进了发布包）；
+    `/api/booking/rooms` 仍返回真实场地；隔离配置目录内**没有**生成 `credentials.json`
+  - 本地 `dist/` 的同名 ZIP 是打包脚本另跑一次的产物，与线上附件哈希不同属正常（CI 工具链与路径不同）
+
+### 39.2 发布说明机制首次生效
+
+- Release 正文 **2332 字节**，内容就是 `CHANGELOG.md` 的 `## beta0.7.2` 那一节；
+  GitHub 自动生成的 compare 链接**追加在正文之后**，且指向转移后的新组织
+  （`compare/beta0.7.1...beta0.7.2`）。与 `softprops/action-gh-release` 文档写的
+  「提供了 body 时，body 在前、自动生成内容追加在后」一致。
+- release job 的「从 CHANGELOG.md 抽取发布说明」这一步成功——第 38 节那两处
+  「未验证」现在有了真机结论。beta0.7 那种「正文只有一行 compare 链接」不会再出现。
+
+### 39.3 `test-macos` 首跑失败，暴露两个问题
+
+1. **我漏了一步**：该 job 没跑 `sync-assets.py`，而 `desktop/internal/ui/assets/` 是生成物、不进仓库，
+   于是 `go vet` 直接报 `pattern all:assets: no matching files found`，
+   后面的凭据测试与探针**全被跳过**。已在 `7ef9627` 修掉（vet 之前补同步资源）。
+2. **更严重的：`continue-on-error: true` 把真实失败显示成了 success**。
+   步骤日志里明明白白是 `##[error]Process completed with exit code 44.`，
+   但 job 的步骤结论显示 success。我据此对用户说了「success 意味着真的通过了」——
+   **这句是错的**，正好踩了本项目「不许谎报成功」的红线。
+   现已去掉 `continue-on-error`，并把 `test-macos` 加进 release 的 `needs`：
+   macOS 凭据这条路坏掉时，发布必须停下来。
+
+### 39.4 F26：macOS 上凭据根本存不进去（P0，真机才抓得到）
+
+探针日志（真实 macOS runner，arm64）：
+
+```
++ security add-generic-password -a probe -s szunet-selftest-probe -U -w
+password data for new item: retype password for new item: passwords don't match
++ security find-generic-password -a probe -s szunet-selftest-probe -w
+security: SecKeychainSearchCopyNext: The specified item could not be found in the keychain.
+##[error]Process completed with exit code 44.
+```
+
+- **成因**：`security -w` 放末尾时会**问两遍**（`password data for new item` 与
+  `retype password for new item`），而 F21 的 `secretInput` 只喂了一行。
+  第二行读到空 → 两次不一致 → 条目根本没建起来。
+- **影响**：`keychainSave` 的写前自检必然失败，于是 macOS 上 `szunet config set`
+  与桌面端保存凭据/会话**全部报错**。设计上的「宁可失败也不退回 argv」生效了，
+  所以**没有泄漏、也没有明文落盘**，但功能是坏的。
+  **beta0.7.1 与 beta0.7.2 都带着这个缺陷**，也就是说 F21 那个安全修复在 macOS 上
+  从来没真正可用过。
+- **修复**：`secretInput` 改为喂「密码 + 确认」两行。只问一遍的旧版本上，
+  多出的那行只是没人读的剩余输入，不影响结果。
+- **TDD 记录**：先把两个测试替身改成如实模拟两次提问（可移植的 `fakeKeychain`
+  与 unix 版真 exec 的假脚本），5 个既有测试立刻变红，错误信息与真机日志**一字不差**
+  （`exit status 44（passwords don't match）`）；再改 `secretInput` 转绿。
+  新增 `TestKeychainWriteFeedsSecretTwiceForConfirmation` 直接断言 stdin 是两行且一致。
+  这意味着**这条性质现在本地和 Linux CI 都守得住**，不必依赖 macOS。
+- **CI 探针也升级了**：现在先断言「只喂一行必须失败」（把 F26 的成因钉住），
+  再断言「喂两行成功且读回一致」。
+
+### 39.5 验证
+
+| 验证项 | 结果 |
+|---|---|
+| `go test ./internal/credential/ -run TestKeychain` | 6 项全过（含新增的两行断言） |
+| `go test ./...` | 全绿 |
+| `go vet`（windows / linux / darwin） | 三平台通过 |
+| beta0.7.2 线上附件 | `sha256sum -c` 通过、包内外 exe 逐字节一致、自报 beta0.7.2、12 组合 404 |
+| Release 正文 | CHANGELOG 正文在前、compare 链接在后，共 2332 字节 |
+| F26 修复的真机验证 | **待做**：要等带修复的提交跑一次 CI，看探针两段断言都通过 |
+
+### 39.6 仍未完成
+
+- **F26 的修复尚未发布**：线上 beta0.7.2 的 macOS 命令行版存不了凭据。
+- 探针升级后的 `test-macos` 还没跑过；它现在是 release 的 `needs`，跑不通就发不了版。
+- 真机 macOS 上跑一次 `szunet config set` → `config get` 往返仍未做（探针只验证了 `security` 的行为，
+  没有验证我们整条保存链路在真实钥匙串上的表现）。
+- F11 来源核实、F06/F07/F08、F15、D5、R05、真实账号验收（第 35.3 节）都没动。

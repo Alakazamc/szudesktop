@@ -48,8 +48,8 @@ jobs:
         run: go test ./...
 
   # F25：darwin 此前只被交叉编译、从不执行，而 szunet-darwin-* 是随发布分发的。
-  # 这个 job 不进入任何 needs 列表，所以它失败不会卡住发布——先拿到证据，
-  # 稳定之后再考虑改成必须通过。
+  # 这个 job 在 macOS 上真跑一遍凭据相关的代码，并已进入 release 的 needs——
+  # 它第一次运行就抓出了 F26（security 要求输入两遍，导致 macOS 存不了凭据）。
   test-macos:
     runs-on: macos-latest
     timeout-minutes: 20
@@ -70,25 +70,39 @@ jobs:
       - name: 凭据包测试（darwin 构建）
         run: go test ./internal/credential/... -v
 
-      # F21 的核心假设：`security add-generic-password -w`（-w 放末尾、不带值）
-      # 在打不开 /dev/tty 时会退回读标准输入。CI 里的进程本来就没有控制终端，
-      # 正好复现这个条件，所以这一步能在没有真机的情况下验证假设本身。
-      # 用一次性钥匙串，不碰 runner 的默认钥匙串；设了超时，挂住也不会拖垮 job。
+      # F21 / F26 的核心假设：`security add-generic-password -w`（-w 放末尾、不带值）
+      # 在打不开 /dev/tty 时会退回读标准输入，而且会**问两遍**（密码 + 确认）。
+      # CI 进程本来就没有控制终端，正好复现这个条件。
+      #
+      # 这一步曾经带 continue-on-error，把真实的失败显示成 success，于是
+      # beta0.7.1 / beta0.7.2 带着「macOS 上根本存不了凭据」发出去了（F26）。
+      # 现在它必须如实报红，release job 也依赖它（见下面的 needs）。
       - name: 真实 security 命令的 stdin 假设探针
         timeout-minutes: 5
-        continue-on-error: true
         run: |
-          set -x
+          set -e
           KC="$RUNNER_TEMP/szunet-probe.keychain-db"
           security create-keychain -p probe "$KC"
           security unlock-keychain -p probe "$KC"
           security list-keychains -d user -s "$KC"
-          printf 'szunet-probe-value\n' | security add-generic-password -a probe -s szunet-selftest-probe -U -w
+          cleanup() {
+            security delete-generic-password -a probe -s szunet-selftest-probe >/dev/null 2>&1 || true
+            security delete-keychain "$KC" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          # 1) 只喂一行必须失败——真实 security 要求确认，这正是 F26 的成因。
+          if printf 'szunet-probe-value\n' | security add-generic-password -a probe -s szunet-selftest-probe -U -w >/dev/null 2>&1; then
+            echo "意外：只喂一行竟然成功了。security 的行为变了，请复核 secretInput 的两行写法是否还必要。"
+            exit 1
+          fi
+          echo "确认：只喂一行会失败（security 要求输入两遍）"
+
+          # 2) 喂两行必须成功，且读回的值一致。
+          printf 'szunet-probe-value\nszunet-probe-value\n' | security add-generic-password -a probe -s szunet-selftest-probe -U -w
           got=$(security find-generic-password -a probe -s szunet-selftest-probe -w)
-          security delete-generic-password -a probe -s szunet-selftest-probe >/dev/null || true
-          security delete-keychain "$KC" || true
           test "$got" = "szunet-probe-value"
-          echo "F21 假设成立：security -w 在无控制终端时确实从标准输入读取密码"
+          echo "F21 / F26 假设成立：security -w 在无控制终端时从标准输入读取，且需要密码 + 确认两行"
 
   build-cli:
     needs: test
@@ -148,7 +162,9 @@ jobs:
           if-no-files-found: error
 
   release:
-    needs: [build-cli, build-desktop-windows]
+    # test-macos 也在里面：它守着 macOS 凭据这条路。beta0.7.1 / beta0.7.2 之所以
+    # 带着「macOS 存不了凭据」发出去，就是因为当时这个 job 失败不阻断发布（F26）。
+    needs: [build-cli, build-desktop-windows, test-macos]
     if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/beta')
     runs-on: ubuntu-latest
     steps:
