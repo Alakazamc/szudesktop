@@ -38,6 +38,8 @@ jobs:
         run: |
           node desktop/check-network-ui.mjs
           node desktop/check-workspace-ui.mjs
+      - name: Settings autostart UI regression
+        run: node desktop/check-autostart-ui.mjs
       - name: 静态检查
         run: go vet ./...
       - name: 单元测试

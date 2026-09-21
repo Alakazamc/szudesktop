@@ -30,6 +30,12 @@ func platformSessionStore() SessionStore { return &darwinSessionStore{} }
 
 type darwinSessionStore struct{}
 
+// runSecurity 调用系统 security 命令。做成变量是为了在 macOS 上能替换成假命令做测试，
+// 否则单元测试会去动用户真实钥匙串。
+var runSecurity = func(args ...string) ([]byte, error) {
+	return exec.Command("security", args...).Output()
+}
+
 func (s *darwinSessionStore) Save(v Session) error {
 	data, err := json.Marshal(v)
 	if err != nil {
@@ -48,14 +54,18 @@ func (s *darwinSessionStore) Save(v Session) error {
 }
 
 func (s *darwinSessionStore) Load() (Session, error) {
-	cmd := exec.Command("security", "find-generic-password",
+	out, err := runSecurity("find-generic-password",
 		"-a", sessionAccount,
 		"-s", sessionService,
 		"-w",
 	)
-	out, err := cmd.Output()
 	if err != nil {
-		return Session{}, ErrSessionNotFound
+		if securityItemNotFound(err) {
+			return Session{}, ErrSessionNotFound
+		}
+		// 钥匙串被锁、授权被拒、security 命令不存在都是真故障。
+		// 说成「没保存过」会让用户以为登录状态丢了，重存一遍还是读不出来。
+		return Session{}, fmt.Errorf("%w（%v）", ErrSessionStorageUnavailable, err)
 	}
 	var v Session
 	if err := json.Unmarshal([]byte(strings.TrimSpace(string(out))), &v); err != nil {
@@ -65,10 +75,16 @@ func (s *darwinSessionStore) Load() (Session, error) {
 }
 
 func (s *darwinSessionStore) Delete() error {
-	_ = exec.Command("security", "delete-generic-password",
+	if _, err := runSecurity("delete-generic-password",
 		"-a", sessionAccount,
 		"-s", sessionService,
-	).Run()
+	); err != nil {
+		if securityItemNotFound(err) {
+			return nil // 本来就没有，等于已经删掉
+		}
+		// 删不掉就不能报成功：用户以为清干净了，会话其实还留在钥匙串里。
+		return fmt.Errorf("删除钥匙串里的登录状态失败: %v", err)
+	}
 	return nil
 }
 
@@ -96,14 +112,18 @@ func (s *darwinStore) Save(c Credentials) error {
 }
 
 func (s *darwinStore) Load() (Credentials, error) {
-	cmd := exec.Command("security", "find-generic-password",
+	out, err := runSecurity("find-generic-password",
 		"-a", keychainAccount,
 		"-s", keychainService,
 		"-w",
 	)
-	out, err := cmd.Output()
 	if err != nil {
-		return Credentials{}, ErrNotFound
+		if securityItemNotFound(err) {
+			return Credentials{}, ErrNotFound
+		}
+		// 读不到不等于没保存。界面据此提示「暂时无法读取已保存的账号」，
+		// 而不是显示成没存过、让用户重新填一遍密码。
+		return Credentials{}, fmt.Errorf("读不到钥匙串里的校园网账号: %v", err)
 	}
 
 	var c Credentials
@@ -114,11 +134,16 @@ func (s *darwinStore) Load() (Credentials, error) {
 }
 
 func (s *darwinStore) Delete() error {
-	// 本来就不存在也算删除成功，所以忽略返回值。
-	_ = exec.Command("security", "delete-generic-password",
+	if _, err := runSecurity("delete-generic-password",
 		"-a", keychainAccount,
 		"-s", keychainService,
-	).Run()
+	); err != nil {
+		if securityItemNotFound(err) {
+			return nil // 本来就没有，等于已经删掉
+		}
+		// 删不掉就不能报成功，否则用户以为「忘掉账号」生效了，凭据其实还在。
+		return fmt.Errorf("删除钥匙串里的校园网账号失败: %v", err)
+	}
 	return nil
 }
 

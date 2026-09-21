@@ -16,9 +16,8 @@ import (
 
 	"github.com/Alakazamc/szudesktop/desktop/internal/ui"
 	"github.com/Alakazamc/szudesktop/internal/portal"
+	"github.com/Alakazamc/szudesktop/internal/version"
 )
-
-const version = "beta0.6.1"
 
 func main() {
 	fs := flag.NewFlagSet("szudesktop", flag.ExitOnError)
@@ -37,7 +36,7 @@ func main() {
 	_ = fs.Parse(os.Args[1:])
 
 	if *showVer {
-		fmt.Printf("szuDesktop %s（内嵌 szunet 内核）\n", version)
+		fmt.Printf("szuDesktop %s（内嵌 szunet 内核）\n", version.Current)
 		return
 	}
 

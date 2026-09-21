@@ -30,6 +30,11 @@ def check(name,ok):
     print('PASS',name)
 raw=EXE.read_bytes();pe=struct.unpack_from('<I',raw,0x3c)[0]
 check('Windows GUI subsystem: no console',struct.unpack_from('<H',raw,pe+24+68)[0]==2)
+# 版本号只有一个来源；exe 自报的必须和它一致，否则发布包会写错版本。
+VERSION=(ROOT/'internal/version/VERSION').read_text(encoding='utf-8').strip()
+# 不用 text=True：exe 输出 UTF-8，而 Windows 控制台默认 GBK，会让 stdout 变成 None。
+version_out=subprocess.run([str(EXE),'--version'],capture_output=True,timeout=60)
+check('exe reports the version from internal/version/VERSION',VERSION in version_out.stdout.decode('utf-8','replace'))
 with tempfile.TemporaryDirectory(prefix='szudesktop-smoke-') as cfg:
     proc=subprocess.Popen([str(EXE),'--no-open','--no-auto-login','--addr',f'127.0.0.1:{port}'],env=dict(os.environ,SZUNET_CONFIG_DIR=cfg),stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     try:
@@ -66,6 +71,15 @@ with tempfile.TemporaryDirectory(prefix='szudesktop-smoke-') as cfg:
         check('academic login requires complete fields',request('/api/academic/login',{})[0]==400)
         check('default VPN unavailable',get('/api/vpn/status')['state']=='unavailable')
         check('no account exposed in status',get('/api/status')['username']=='')
+        check('status reports the same version as the exe',get('/api/status')['app_version']==VERSION)
+        check('page carries no hardcoded version string',b'beta0' not in request('/')[1] and b'beta0' not in request('/assets/garden/app.mjs')[1])
+        # 只读状态和拒绝路径：冒烟测试绝不 POST 打开/关掉开关，那会真的改掉这台机器的启动项。
+        autostart=get('/api/autostart')
+        check('autostart status readable',isinstance(autostart,dict) and 'detail' in autostart and 'supported' in autostart)
+        check('autostart never reports unknown state as disabled',not autostart.get('error') or '未开启'!=autostart.get('detail'))
+        check('autostart rejects cross origin',request('/api/autostart',{'enabled':True},headers={'Origin':'https://example.com'})[0]==403)
+        check('autostart rejects PUT',request('/api/autostart',method='PUT')[0]==405)
+        check('autostart rejects malformed body',request('/api/autostart',{},headers={'Content-Type':'application/json'})[0]==400)
         for path,file in [('/',ROOT/'desktop/index.html'),('/assets/garden/app.mjs',ROOT/'desktop/assets/garden/app.mjs'),('/assets/garden/style.css',ROOT/'desktop/assets/garden/style.css'),('/assets/garden/engine.mjs',ROOT/'desktop/assets/garden/engine.mjs'),('/assets/garden/campus.mjs',ROOT/'desktop/assets/garden/campus.mjs'),('/assets/garden/campus-ui.mjs',ROOT/'desktop/assets/garden/campus-ui.mjs'),('/assets/garden/academic.mjs',ROOT/'desktop/assets/garden/academic.mjs'),('/assets/garden/school.mjs',ROOT/'desktop/assets/garden/school.mjs'),('/assets/garden/network-status.mjs',ROOT/'desktop/assets/garden/network-status.mjs'),('/assets/garden/campus.png',ROOT/'desktop/assets/garden/campus.png'),('/assets/szudesktop.ico',ROOT/'desktop/assets/szudesktop.ico')]:
             code,body,_=request(path);check('embedded '+path,code==200 and body==file.read_bytes())
         code,css,_=request('/assets/fonts/fusion-pixel.css')

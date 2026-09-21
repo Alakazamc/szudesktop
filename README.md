@@ -79,6 +79,7 @@ szuDesktop 同时对付这两件事：**一个按钮完成认证，一个按钮�
 - 同一份存档重复启动会复用本机服务，不会开出第二个程序
 - 关闭所有应用窗口约 10 秒后自动退出；想立即退出走「设置 → 退出应用」
 - 刷新页面不会结束服务
+- 当前源码新增、尚未随 beta0.6.1 发布：首次打开给一张可跳过的短引导；开机自启可在「设置」里开关（命令行对应 `szunet autostart`），状态读不到时会明说「状态未知」而不是显示成未开启
 
 ### 我的数据存在哪
 
@@ -223,6 +224,7 @@ Windows 下由 DPAPI 加密，只有这台机器的当前账户能解开，不�
 python desktop/sync-assets.py      # 同步界面资源
 node   desktop/check-ui.mjs        # 界面规则回归
 node   desktop/check-campus.mjs    # 校园服务与成绩导入回归
+node   desktop/check-autostart-ui.mjs # 设置页开机自启回归
 go vet ./... && go test ./...      # 静态检查与单元测试
 python desktop/build-windows.py    # 构建 Windows 桌面版
 python desktop/smoke_windows.py    # 整机冒烟

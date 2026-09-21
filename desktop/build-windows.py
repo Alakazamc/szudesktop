@@ -28,7 +28,6 @@ ASSETS = os.path.join(DESKTOP, "assets")               # 浏览器直接打开�
 UI_ASSETS = os.path.join(DESKTOP, "internal", "ui", "assets")  # go:embed 能看见的那份
 OUT = os.path.join(ROOT, "dist", "szudesktop-windows-amd64.exe")
 ICON = os.path.join(ASSETS, "szudesktop.ico")
-MAIN_GO = os.path.join(DESKTOP, "cmd", "szudesktop", "main.go")
 
 
 def md5(path):
@@ -44,13 +43,17 @@ def step(msg):
 
 
 def read_version():
-    """从 main.go 里抠出版本号，省得两处各写一份、改一处忘一处。"""
-    m = re.search(r'const\s+version\s*=\s*"([^"]+)"',
-                  open(MAIN_GO, encoding="utf-8").read())
-    if not m:
-        print("!! 在 main.go 里找不到 const version")
+    """版本号只有一个来源：internal/version/VERSION。
+
+    Go 二进制用 go:embed 嵌入同一个文件，所以这里读到的值一定和 exe 自报的一致；
+    以前是从 main.go 里正则抠 const，页面和发布包又各写一份，改一处忘一处。
+    """
+    path = os.path.join(ROOT, "internal", "version", "VERSION")
+    ver = open(path, encoding="utf-8").read().strip()
+    if not ver:
+        print("!! %s 是空的，编出来的 exe 版本号会不对" % path)
         sys.exit(1)
-    return m.group(1)
+    return ver
 
 
 # 1. 主副本 → assets/

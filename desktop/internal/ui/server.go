@@ -27,6 +27,7 @@ import (
 	"github.com/Alakazamc/szudesktop/internal/diagnose"
 	"github.com/Alakazamc/szudesktop/internal/netpref"
 	"github.com/Alakazamc/szudesktop/internal/portal"
+	"github.com/Alakazamc/szudesktop/internal/version"
 )
 
 // 页面和字体全部嵌进来。embed 的路径相对本包目录，
@@ -55,18 +56,20 @@ type Server struct {
 	opts         Options
 	store        credential.Store
 	ehallFactory func(string) *ehallClient // test injection; nil in production
-	session      credential.SessionStore   // 学校系统（ehall）登录状态；与校园网凭据分开存
-	vpn          *vpnManager
-	campus       *campusGateway
-	calendar     *calendarService
-	academic     *academicService
-	booking      *bookingService
-	probe        func() *portal.DetectResult
-	detect       func() *portal.DetectResult
-	workspace    *workspaceStore
-	shutdown     func()
-	instance     *desktopInstance
-	windows      *windowSessions
+	// 开机自启的真实实现会改注册表，测试必须注入替身，见 autostart.go。
+	autostartTest *autostartBackend
+	session       credential.SessionStore // 学校系统（ehall）登录状态；与校园网凭据分开存
+	vpn           *vpnManager
+	campus        *campusGateway
+	calendar      *calendarService
+	academic      *academicService
+	booking       *bookingService
+	probe         func() *portal.DetectResult
+	detect        func() *portal.DetectResult
+	workspace     *workspaceStore
+	shutdown      func()
+	instance      *desktopInstance
+	windows       *windowSessions
 
 	mu       sync.Mutex
 	lastErr  string
@@ -283,6 +286,7 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 	mux.HandleFunc("/api/logout", protectAPI(s.handleLogout, http.MethodPost))
 	mux.HandleFunc("/api/diag", protectAPI(s.handleDiag, http.MethodGet))
 	mux.HandleFunc("/api/credential", protectAPI(s.handleCredential, http.MethodGet, http.MethodPost, http.MethodDelete))
+	mux.HandleFunc("/api/autostart", protectAPI(s.handleAutostart, http.MethodGet, http.MethodPost))
 	mux.HandleFunc("/api/vpn/status", protectAPI(s.handleVPNStatus, http.MethodGet))
 	mux.HandleFunc("/api/vpn/connect", protectAPI(s.handleVPNConnect, http.MethodPost))
 	mux.HandleFunc("/api/vpn/auth", protectAPI(s.handleVPNAuth, http.MethodPost))
@@ -314,6 +318,7 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 /* ---------- 接口 ---------- */
 
 type statusResp struct {
+	AppVersion  string   `json:"app_version"` // 页面顶栏与关于页的版本号来自这里，不再各写一份
 	Zone        string   `json:"zone"`
 	ZoneLabel   string   `json:"zone_label"`
 	InternetOK  bool     `json:"internet_ok"`
@@ -334,6 +339,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	det := s.detect()
 	zone := s.selectedZone(det.Zone)
 	out := statusResp{
+		AppVersion: version.Current,
 		Zone:       string(zone),
 		ZoneLabel:  zone.Label(),
 		InternetOK: det.InternetOK,

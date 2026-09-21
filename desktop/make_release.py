@@ -13,7 +13,6 @@
 """
 import hashlib
 import os
-import re
 import sys
 import zipfile
 from pathlib import Path
@@ -27,9 +26,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 项目根�
 DESKTOP = os.path.join(ROOT, "desktop")
 DIST = os.path.join(ROOT, "dist")
 EXE = os.path.join(DIST, "szudesktop-windows-amd64.exe")
-MAIN_GO = os.path.join(DESKTOP, "cmd", "szudesktop", "main.go")
+VERSION_FILE = os.path.join(ROOT, "internal", "version", "VERSION")
 
-README = """szuDesktop beta0.6.1 · 荔枝庭院（Windows x64）
+README = """szuDesktop __VERSION__ · 荔枝庭院（Windows x64）
 
 1. 解压后双击 szudesktop.exe，不需要安装，不会弹出命令行窗口。
 2. 校园网账号与密码默认留空；填写后点击登录。勾选记住，仅在认证成功后保存。
@@ -62,9 +61,12 @@ README = """szuDesktop beta0.6.1 · 荔枝庭院（Windows x64）
 
 
 def read_version():
-    m = re.search(r'const\s+version\s*=\s*"([^"]+)"',
-                  open(MAIN_GO, encoding="utf-8").read())
-    return m.group(1) if m else "0.0.0"
+    """版本号只有一个来源：internal/version/VERSION（Go 二进制也嵌入同一个文件）。"""
+    ver = open(VERSION_FILE, encoding="utf-8").read().strip()
+    if not ver:
+        print("!! %s 是空的，包名和快速开始都会写错版本" % VERSION_FILE)
+        sys.exit(1)
+    return ver
 
 
 def main():
@@ -82,7 +84,7 @@ def main():
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         # 包里的文件名用 ascii，避免某些解压工具处理中文名出问题
         z.writestr("szudesktop.exe", exe_bytes)
-        z.writestr("README-快速开始.txt", README)
+        z.writestr("README-快速开始.txt", README.replace("__VERSION__", ver))
         z.writestr("FONT-LICENSE-OFL.txt", Path(DESKTOP, "assets", "fonts", "LICENSE-OFL.txt").read_bytes())
         lic = os.path.join(ROOT, "LICENSE")
         if os.path.exists(lic):

@@ -10,7 +10,7 @@ export const QUESTS={care:{name:'陪伴伙伴 3 次',target:3,reward:15},plant:{
 export const dayKey=t=>{const d=new Date(t);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 export const level=g=>Math.min(20,1+Math.floor(g.pet.xp/50));
 export function createState(now=Date.now()){
- return {schema:2,profile:{name:'',college:''},preferences:{theme:'day',motion:true},todos:[],courses:[],reminders:[],semester:'',
+ return {schema:2,profile:{name:'',college:''},preferences:{theme:'day',motion:true,onboarded:false},todos:[],courses:[],reminders:[],semester:'',
  game:{created:now,last:now,coins:40,food:3,seeds:{radish:4,strawberry:2,blueberry:0,lychee:0},stock:{radish:0,strawberry:0,blueberry:0,lychee:0},
  plots:[{crop:'radish',planted:now,ready:now+60000,watered:false},null,null,'locked','locked','locked'],pet:{name:'栗栗',xp:0,bond:10,hunger:80,energy:85,mood:85,sleeping:false,lastPat:0,lastPlay:0},
  daily:{day:dayKey(now),gift:false,care:0,plant:0,harvest:0,focus:0,claimed:[]},stats:{harvest:0,focus:0,minutes:0,planted:1,tasks:0},discovered:[],decor:[],equipped:[],achievements:[],focus:null,log:[{time:now,text:'欢迎来到荔枝庭院。第一块萝卜地已经种好，记得来收获。'}]}};
@@ -38,7 +38,7 @@ export function normalize(input,now=Date.now()){
  g.pet.name=String(g.pet.name||'栗栗').slice(0,12);
  for(const k of ['lastPat','lastPlay'])check(Number.isFinite(g.pet[k])&&g.pet[k]>=0,'互动时间格式错误');g.pet.sleeping=!!g.pet.sleeping;
  s.profile={name:String(s.profile?.name||'').slice(0,20),college:String(s.profile?.college||'').slice(0,40)};
- s.preferences={theme:s.preferences?.theme==='night'?'night':'day',motion:s.preferences?.motion!==false};
+ s.preferences={theme:s.preferences?.theme==='night'?'night':'day',motion:s.preferences?.motion!==false,onboarded:s.preferences?.onboarded===true};
  s.todos=(Array.isArray(s.todos)?s.todos:[]).slice(0,100).filter(x=>x&&typeof x.id==='string'&&typeof x.text==='string').map(x=>({id:x.id.slice(0,60),text:x.text.slice(0,120),done:!!x.done,rewarded:!!x.rewarded}));
  s.courses=(Array.isArray(s.courses)?s.courses:[]).slice(0,300).filter(x=>x&&Number.isFinite(x.credit)&&Number.isFinite(x.point)&&x.credit>0&&x.credit<=100&&x.point>=0&&x.point<=5).map(x=>({name:String(x.name||'课程').slice(0,100),credit:x.credit,point:x.point,term:String(x.term||'').slice(0,40),code:String(x.code||'').slice(0,40),level:['undergrad','graduate'].includes(x.level)?x.level:'',grade:String(x.grade||'').slice(0,20),source:String(x.source||'手动录入').slice(0,30),included:x.included!==false}));
  s.reminders=(Array.isArray(s.reminders)?s.reminders:[]).filter(x=>x&&typeof x.id==='string'&&typeof x.place==='string'&&Number.isFinite(x.start)&&Number.isFinite(x.end)&&x.end>x.start&&x.end-x.start<=86400000).slice(0,50).map(x=>({id:x.id.slice(0,80),place:x.place.slice(0,80),start:x.start,end:x.end}));

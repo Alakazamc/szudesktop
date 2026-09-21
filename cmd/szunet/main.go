@@ -21,9 +21,8 @@ import (
 	"github.com/Alakazamc/szudesktop/internal/diagnose"
 	"github.com/Alakazamc/szudesktop/internal/netpref"
 	"github.com/Alakazamc/szudesktop/internal/portal"
+	"github.com/Alakazamc/szudesktop/internal/version"
 )
-
-const version = "beta0.6.1"
 
 // options 是所有子命令共用的参数。
 type options struct {
@@ -65,7 +64,7 @@ func main() {
 	case "config":
 		cmdConfig(args)
 	case "version", "-v", "--version":
-		fmt.Printf("szunet %s\n", version)
+		fmt.Printf("szunet %s\n", version.Current)
 	case "help", "-h", "--help":
 		usage()
 	default:
