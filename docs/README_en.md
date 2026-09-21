@@ -69,7 +69,7 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | :--- | :----- |
 | Desktop app | Windows x64 (`szudesktop.exe`) |
 | Command line | Windows / macOS / Linux, single binary `szunet` |
-| Current version | [beta0.7](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.7) · public beta (pre-release); Windows download published |
+| Current version | [beta0.7.1](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.7.1) · public beta (pre-release); Windows download published |
 | Runtime | No dependencies to install; the window is provided by your browser (Edge / Chrome app window) |
 
 ### First run
@@ -124,7 +124,7 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | Lychee Garden | ✅ | Companion care and growth, crops, plots, watering, harvest, decorations, daily goals, achievements and a field guide. No purchases, no real-money trading |
 | Save file | ✅ | Fixed local file, survives restarts and port changes, supports export / import and multi-window conflict protection |
 
-beta0.7 is a public prerelease. Score reading remains limited to the first page; balance is not integrated. Timetables require manual queries and still await full live account validation. In the current source, reservations are completed on the official school page; embedding that page inside the app is not yet implemented. See [STATUS.md](STATUS.md).
+beta0.7.1 is a public prerelease. Score reading remains limited to the first page; balance is not integrated. Timetables require manual queries and still await full live account validation. In the current source, reservations are completed on the official school page; embedding that page inside the app is not yet implemented. See [STATUS.md](STATUS.md).
 
 **College notice filtering:** selecting a college automatically reads its public column. Unsupported units have an official-site link; authenticated internal notices are not included. This update is included in beta0.6.1.
 
@@ -156,6 +156,11 @@ szunet diag                         # run this first when the network is down
 ```
 
 Run `--help` for all flags. **Never put real credentials in shared scripts or logs.**
+
+On macOS, credentials saved with `config set` go into the system keychain. Before writing, the
+CLI self-checks that the write path works using a throwaway item; if it does not, it fails with a
+clear error instead of falling back to putting the password on the command line (where other
+processes on the same machine could see it).
 
 ---
 

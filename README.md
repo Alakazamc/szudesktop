@@ -64,7 +64,7 @@ szuDesktop 同时对付这两件事：**一个按钮完成认证，一个按钮�
 | :-- | :---- |
 | 桌面端 | Windows x64（`szudesktop.exe`） |
 | 命令行 | Windows / macOS / Linux，单文件 `szunet` |
-| 当前版本 | [beta0.7](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.7) · 公开测试版（预发布），Windows 下载包已发布 |
+| 当前版本 | [beta0.7.1](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.7.1) · 公开测试版（预发布），Windows 下载包已发布 |
 | 运行环境 | 无需安装依赖；窗口由本机浏览器提供（Edge / Chrome 应用窗口） |
 
 ### 首次使用
@@ -93,7 +93,7 @@ szuDesktop 同时对付这两件事：**一个按钮完成认证，一个按钮�
 
 ## 功能
 
-beta0.7 为公开测试版。已验证的查询与待验收的账号业务分别标明，详细状态统一见 STATUS.md。
+beta0.7.1 为公开测试版。已验证的查询与待验收的账号业务分别标明，详细状态统一见 STATUS.md。
 
 | 能力 | 状态 | 说明 |
 | :--- | :--- | :---- |
@@ -151,6 +151,8 @@ szunet diag                         # 连不上时先跑它，再按结论排查
 ```
 
 `--help` 看全部参数。**不要把真实账号密码写进共享脚本或日志。**
+
+macOS 上保存凭据（`config set`）走系统钥匙串：写入前会先用一次性条目自检这条路可用，失败时明确报错，不会退回把密码写进命令行参数（那样同机其他进程能看到）。
 
 ---
 
