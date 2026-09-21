@@ -69,7 +69,7 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | :--- | :----- |
 | Desktop app | Windows x64 (`szudesktop.exe`) |
 | Command line | Windows / macOS / Linux, single binary `szunet` |
-| Current version | [beta0.7.2](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.7.2) · public beta (pre-release); Windows download published |
+| Current version | [beta0.7.3](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.7.3) · public beta (pre-release); Windows download published |
 | Runtime | No dependencies to install; the window is provided by your browser (Edge / Chrome app window) |
 
 ### First run
@@ -128,7 +128,7 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | Save file | ✅ | Fixed local file, survives restarts and port changes, supports export / import and multi-window conflict protection |
 | Launch at login | ✅ (Windows only) | Starts the service silently after Windows login and connects once, without opening a window; toggle and real registered state in Settings. macOS / Linux are unsupported and say so instead of failing silently |
 
-beta0.7.2 is a public prerelease. Score reading remains limited to the first page; balance is not integrated. Timetables require manual queries and still await full live account validation. In the current source, reservations are completed on the official school page; embedding that page inside the app is not yet implemented. See [STATUS.md](STATUS.md).
+beta0.7.3 is a public prerelease. Score reading remains limited to the first page; balance is not integrated. Timetables require manual queries and still await full live account validation. In the current source, reservations are completed on the official school page; embedding that page inside the app is not yet implemented. See [STATUS.md](STATUS.md).
 
 **College notice filtering:** selecting a college automatically reads its public column. Unsupported units have an official-site link; authenticated internal notices are not included. This update is included in beta0.6.1.
 
@@ -179,7 +179,7 @@ and beta0.7.2 fed it a single line. On such machines the macOS CLI **could not s
 all**: it failed with a clear error, leaked nothing and wrote no plaintext, but the feature did not
 work. The behaviour is not stable — the four later runs on the same image (macOS 26.6.2) asked only
 once. It now feeds the password plus a confirmation line, which works in both cases (the "asks once"
-case is verified on real hardware). **The fix is not released yet.** That probe no longer swallows
+case is verified on real hardware). **The fix ships in beta0.7.3.** That probe no longer swallows
 failures and now gates the release job. See F21 / F25 / F26 in STATUS.md.
 
 ---
