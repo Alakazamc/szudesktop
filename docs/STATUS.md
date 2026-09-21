@@ -7,7 +7,7 @@
 
 ## 1. 当前状态
 
-- 当前公开 Release 为 **beta0.7.2**（2026-09-22，交付记录见第 39 节）；beta0.7.1 见第 34 节，beta0.7 见第 31 节，beta0.6.1 见第 28 节。本次准备发布 **beta0.7.3**，只含 F26 修复与 CI 探针修正。
+- 当前公开 Release 为 **beta0.7.3**（2026-09-22，macOS 凭据保存修复 F26），交付记录见第 40 节；beta0.7.2 见第 39 节，beta0.7.1 见第 34 节，beta0.7 见第 31 节，beta0.6.1 见第 28 节。
 - **本次以 beta0.7.2 发布**：F22（CLI 无账号时也查在线状态）、U16（教务登录与我的课表拆成两张卡），以及第 37 节的 F23 / F24 / F11 / F25、第 38 节的发布说明机制、新增的 SECURITY.md 与 CONTRIBUTING.md。发布结果与附件核对见第 39 节。
 - **beta0.7.2 发布后立刻发现 F26（P0）**：新加的 macOS 探针在真机上跑出过一次 `passwords don't match`——`security -w` 在某些机器上会要求输入两遍（密码 + 确认），而我们只喂一行，那种机器上 **macOS 存不了凭据**（明确报错，不泄漏、不落明文）。该行为不稳定，同一镜像后续 4 次运行都只问一遍。beta0.7.1 与 beta0.7.2 都带着这个缺陷。已改为喂两行并在真机验证（第 39.4 / 39.5 节），随 **beta0.7.3** 发布。
 - 发布归属已核对并更正：工程债清理（第 29 节）与仓库瘦身、背景修复（第 30 节）随 **beta0.7** 发布；F21 修复（第 33 节）随 **beta0.7.1** 发布；学院公告筛选与预约回归官方页（第 26.3 / 27 节）随 **beta0.6.1** 发布。这些节标题上早先写的「未发布」是当时的状态，现已按实际发布更正。
@@ -985,8 +985,8 @@ Use case: style-transfer. Asset: final full-bleed desktop app background, wide 1
 - **本轮复核新增**：~~F23 撤掉预约的服务端写端点、F11 撤掉未核实的来源保证、F24 Linux 明文兜底不再静默成功~~ 已于同日完成（第 37 节）；F25 已加 CI 探针但**真机验收仍待做**。
 - **必须现场做的**：本科 / 研究生真实账号验收（成绩、课表、教务登录）、教学区与宿舍校园网真机认证、预约登录衔接与提交（现在一律在学校官方页面办理）。
 - **代码侧**：F06/F07/F08 实验 VPN、F15 余额 / 流量数据层、D5 白名单转发、R05 图书馆座位系统。
-- **发布**：F22、U16 与第 37 / 38 节的全部修复都已就绪但**未发布**，下一个版本必须带上。发版流程已改：升 `internal/version/VERSION` 的同时，把 `CHANGELOG.md` 的 `## 未发布` 改成新版本号并补齐内容，否则 `make_release.py` 与 CI 的 release job 都会失败（第 38 节）。
-- **待 CI 首次运行确认**：`test-macos` job（含真实 `security` 命令的 stdin 探针）与 release job 的 `body_path` 拼接效果，都只能在下一次推送 / 打 tag 后才知道结果。
+- **发布**：F22、U16 与第 37 / 38 节的修复已随 **beta0.7.2** 发布（第 39 节），F26 修复已随 **beta0.7.3** 发布（第 40 节）。发版流程已改：升 `internal/version/VERSION` 的同时，把 `CHANGELOG.md` 的 `## 未发布` 改成新版本号并补齐内容，否则 `make_release.py` 与 CI 的 release job 都会失败（第 38 节）。
+- **CI 已确认**：`test-macos`（含真实 `security` 命令的 stdin 探针）与 release job 的 `body_path` 拼接都已真跑通过（第 39.5 / 40 节）。`test-macos` 现在是 release 的前置条件。
 - **协作面**：SECURITY.md 与 CONTRIBUTING.md 已补；issue 模板仍缺；本文已超过 1150 行，建议拆分或加目录锚点。GitHub 的私有漏洞报告入口需要仓库管理员在设置里启用（SECURITY.md 已写明）。
 - **例行维护**：`ubuntu-latest` 将于 2026-10-19 迁移到 Ubuntu 26，届时核对各 action；同时确认新加的 `test-macos` job 是否稳定，稳定后考虑纳入 `needs`。
 
@@ -1272,6 +1272,7 @@ Linux 早已改成只经标准输入，只有 macOS 这条漏着，而 `szunet-d
 ### 37.7 仍未解决
 
 - **以上全部未发布**：F22、U16、F23、F24、F11 的注释修正、F25 的 CI job、两份新文档都还在本地。
+  **后续更正**：已随 beta0.7.2 发布，见第 39 节。
 - F25 需要下一次 CI 运行才能确认；macOS 真机验收仍待做。
 - F24 的 Linux 专属测试要在 CI 的 ubuntu 上跑过一次才算数。
 - F11 的来源核实、F06/F07/F08、F15、D5、R05 都还没动。
@@ -1421,8 +1422,35 @@ security: SecKeychainSearchCopyNext: The specified item could not be found in th
 ### 39.6 仍未完成
 
 - **F26 的修复尚未发布**：线上 beta0.7.2 在会要求确认的 macOS 上存不了凭据。
+  **后续更正**：已随 beta0.7.3 发布，见第 40 节。
 - 真机 macOS 上跑一次 `szunet config set` → `config get` 往返仍未做
   （探针验证的是 `security` 的行为与我们喂入方式的可行性，不是整条 Go 保存链路）。
 - 「会要求确认」状态下的两行喂法尚未直接观测到（见 39.5）。
 - `keyring_linux_test.go` 是否真的在 CI 上执行过（而非 skip）待确认。
 - F11 来源核实、F06/F07/F08、F15、D5、R05、真实账号验收（第 35.3 节）都没动。
+
+## 40. beta0.7.3 发布：F26 修复上线，发布链路第一次全绿（2026-09-22）
+
+- 标签 `beta0.7.3` 指向 `57e96c3`，触发 [CI 35631956064](https://github.com/SzuDesktopTeam/szudesktop/actions/runs/35631956064)：
+  **run 总体 completed / success**。这是 `test-macos` 进入 release 的 `needs` 之后第一次全绿的发布——
+  test、test-macos、5 个平台 CLI、build-desktop-windows、release 全部 success，
+  release job 的「从 CHANGELOG.md 抽取发布说明」步骤也 success。
+- 发布范围只有 F26 修复与 CI 探针修正；**Windows / Linux 的行为与 beta0.7.2 相同**。
+- 公开 [beta0.7.3](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.7.3) 为预发布，8 个附件。核对结果：
+  - `.sha256` 行尾为 LF，值 `813ef647f6dedcf51d3f2a7d2fc8ddc4dda532b60aff1e306a44cf45ba672ed1`；`sha256sum -c` **通过**
+  - ZIP 4,994,825 字节；包内 `szudesktop.exe` 与线上独立 EXE **逐字节一致**，
+    10,021,888 字节、SHA256 `9516d85a5412b742…`；包内为 exe + 快速开始 + 字体许可 + 项目许可
+  - Release 正文 1398 字符 = CHANGELOG 的 `## beta0.7.3` 一节，末尾追加自动生成的
+    compare 链接（`beta0.7.2...beta0.7.3`）
+  - `szunet-darwin-arm64` 6,340,114 字节（beta0.7.2 为 6,323,602），差异来自 F26 的改动
+- **把线上成品跑起来实测**：自报 `szuDesktop beta0.7.3（内嵌 szunet 内核）`；
+  `/api/status` 的 `app_version` = `beta0.7.3`、`store_desc` = Windows DPAPI；
+  4 个已删预约端点 × GET/POST/DELETE = **12 组合全 404**；`/api/booking/rooms` 返回真实场地；
+  隔离配置目录内**没有**生成 `credentials.json`。
+- **本次 macOS 探针记录**：macOS 26.6.2 (25G83)，状态为「只喂一行也能写入（没有要求确认）」，
+  两行喂法写入并读回一致 → test-macos success。这是第 5 次采样落在「只问一遍」状态；
+  「会要求确认」那种状态自 run 35627181165 之后未再采到，所以 F26 修复在那种状态下的
+  **直接观测仍然缺**。探针每次运行都会记录所处状态，采到即自动闭合。
+- **仍未验证**：真机 macOS 上完整跑一遍 `szunet config set` → `config get` 往返。
+  探针验证的是 `security` 的行为与我们喂入方式的可行性，不是整条 Go 保存链路。
+- 本地 `dist/` 里同时留着 beta0.7.2 与 beta0.7.3 两个 ZIP，前者未被覆盖。
