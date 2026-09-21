@@ -3,30 +3,38 @@ package ui
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 )
 
-func bookingFixture(t *testing.T) (*Server, *int, *bool) {
+// bookingFixture 造一个只读的预约服务，学校的公开接口由替身应答。
+//
+// 替身对三件事零容忍：请求带 Cookie、请求不是 GET、目标不是学校的公开地址。
+// 预约的办理在学校官方页面完成，本应用不留写操作通路，也不保存用户粘贴的
+// 预约 Cookie（STATUS.md F23）。`/venue-api/boothReservation/*` 没有列进
+// switch，任何代码走到那里都会撞上 default 分支而失败。
+func bookingFixture(t *testing.T) *Server {
 	t.Helper()
 	b := newBookingService()
-	writes := 0
-	occupied := false
 	b.client.Transport = calendarTransport(func(r *http.Request) (*http.Response, error) {
-		if r.URL.Scheme == "http" && r.Header.Get("Cookie") != "" {
-			t.Fatal("cookie leaked onto public HTTP request")
+		if r.Header.Get("Cookie") != "" {
+			t.Fatal("只读查询携带了 Cookie")
 		}
-		if r.Header.Get("Cookie") != "" && (r.URL.Scheme != "https" || r.URL.Host != "swzx.webvpn.szu.edu.cn") {
-			t.Fatal("private destination changed")
+		if r.Method != http.MethodGet {
+			t.Fatal("预约查询发出了非 GET 请求：" + r.Method)
+		}
+		if r.URL.Scheme != "http" || r.URL.Host != "swzx.szu.edu.cn" {
+			t.Fatal("公开查询的目标被改成了 " + r.URL.Scheme + "://" + r.URL.Host)
 		}
 		var data any
 		switch r.URL.Path {
+		case "/venue-api/booth/list":
+			data = map[string]any{"list": []any{map[string]any{"id": 1, "typeId": 1, "name": "测试会议室", "status": true}}, "total": 1}
 		case "/venue-api/booth/info/1":
 			data = map[string]any{"id": 1, "typeId": 1, "name": "测试会议室", "status": true}
 		case "/venue-api/boothType/info/1":
@@ -36,35 +44,20 @@ func bookingFixture(t *testing.T) (*Server, *int, *bool) {
 			times[28] = 1
 			times[29] = -1
 			times[31] = 7
-			if occupied {
-				times[28] = 0
-			}
 			data = []any{map[string]any{"date": r.URL.Query().Get("startDate"), "times": times}}
-		case "/venue-api/boothReservation/my":
-			data = map[string]any{"list": []any{}, "total": 0}
-		case "/venue-api/boothReservation/add":
-			writes++
-			data = true
 		default:
 			t.Fatalf("unexpected path %s", r.URL.Path)
 		}
 		body, _ := json.Marshal(map[string]any{"status": 200, "data": data})
 		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(string(body))), Request: r}, nil
 	})
-	return &Server{booking: b}, &writes, &occupied
+	return &Server{booking: b}
 }
-func bookingCall(handler http.HandlerFunc, method, body string) *httptest.ResponseRecorder {
-	r := httptest.NewRequest(method, "http://127.0.0.1/api/booking", strings.NewReader(body))
-	r.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	protectAPI(handler, method)(w, r)
-	return w
-}
-func TestBookingPublicSlotsAndPrivateIsolation(t *testing.T) {
-	s, _, _ := bookingFixture(t)
-	s.booking.cookie = "test=secret"
+
+func TestBookingPublicSlotsAreReadOnly(t *testing.T) {
+	s := bookingFixture(t)
 	now := time.Date(2026, 9, 20, 0, 0, 0, 0, time.UTC)
-	day, err := s.booking.availability(context.Background(), 1, "2026-09-21", now, false)
+	day, err := s.booking.availability(context.Background(), 1, "2026-09-21", now)
 	if err != nil || len(day.Slots) != 4 {
 		t.Fatal("slot parse", err)
 	}
@@ -76,90 +69,79 @@ func TestBookingPublicSlotsAndPrivateIsolation(t *testing.T) {
 	if day.Slots[0].Start != "14:00" || day.Slots[0].End != "14:30" {
 		t.Fatal("half-hour index mapping")
 	}
-	if _, err = s.booking.availability(context.Background(), 1, "2026-09-23", now, false); err == nil {
+	if _, err = s.booking.availability(context.Background(), 1, "2026-09-23", now); err == nil {
 		t.Fatal("beyond booking window accepted")
 	}
 	if bookingToday(time.Date(2026, 9, 19, 17, 0, 0, 0, time.UTC)).Format("2006-01-02") != "2026-09-20" {
 		t.Fatal("not Shenzhen date")
 	}
 }
-func TestBookingPrepareCommitOnceAndAvailabilityRace(t *testing.T) {
-	for _, race := range []bool{false, true} {
-		t.Run(fmt.Sprint(race), func(t *testing.T) {
-			s, writes, occupied := bookingFixture(t)
-			login := bookingCall(s.handleBookingSession, "POST", `{"cookie":"test=secret"}`)
-			if login.Code != 200 || strings.Contains(login.Body.String(), "secret") {
-				t.Fatal("session not validated safely")
-			}
-			date := bookingToday(time.Now()).AddDate(0, 0, 1).Format("2006-01-02")
-			p := bookingCall(s.handleBookingPrepare, "POST", fmt.Sprintf(`{"boothId":1,"phone":"13800000000","grade":"2025","date":%q,"timeList":[28],"agree":true}`, date))
-			if p.Code != 200 || *writes != 0 {
-				t.Fatal("prepare must never write", p.Code, p.Body.String())
-			}
-			var reply struct {
-				Token string `json:"token"`
-			}
-			json.Unmarshal(p.Body.Bytes(), &reply)
-			*occupied = race
-			payload := fmt.Sprintf(`{"token":%q}`, reply.Token)
-			c := bookingCall(s.handleBookingCommit, "POST", payload)
-			if race {
-				if c.Code != 409 || *writes != 0 {
-					t.Fatal("occupied slot submitted")
-				}
-			} else if c.Code != 200 || *writes != 1 {
-				t.Fatal("explicit commit failed", c.Code)
-			}
-			if bookingCall(s.handleBookingCommit, "POST", payload).Code != 409 || *writes > 1 {
-				t.Fatal("commit replay sent to school")
-			}
-			bookingCall(s.handleBookingSession, "DELETE", "")
-			if s.booking.cookie != "" || s.booking.pending != nil {
-				t.Fatal("clear retained personal state")
-			}
-		})
-	}
-}
+
 func TestBookingFailuresNeverBecomeEmptyOrSuccessful(t *testing.T) {
 	for _, body := range []string{`<html>登录</html>`, `{"status":200,"data":null}`, `{"status":200,"data":{"list":[],"total":null}}`, `{"status":200,"encoding":1,"data":"opaque"}`} {
-		s, _, _ := bookingFixture(t)
-		s.booking.cookie = "test=secret"
+		s := bookingFixture(t)
 		s.booking.client.Transport = calendarTransport(func(r *http.Request) (*http.Response, error) {
 			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Request: r}, nil
 		})
-		if _, err := s.booking.history(context.Background(), 1); err == nil {
+		if _, err := s.booking.availability(context.Background(), 1, "2026-09-22", time.Now()); err == nil {
 			t.Fatal("unrecognized response accepted", body)
 		}
 	}
-	s, _, _ := bookingFixture(t)
-	s.booking.cookie = "test=secret"
-	s.booking.pending = &bookingPending{Token: "once", Expires: time.Now().Add(time.Minute), Input: bookingInput{RoomID: 1, Date: bookingToday(time.Now()).AddDate(0, 0, 1).Format("2006-01-02"), Times: []int{28}, Phone: "13800000000", Grade: "2025", Agree: true}}
-	base := s.booking.client.Transport
-	writes := 0
+}
+
+// 被网关拦下、重定向到登录页时，不能显示成「这天没有空位」。
+func TestBookingRedirectIsNotReportedAsNoAvailability(t *testing.T) {
+	s := bookingFixture(t)
 	s.booking.client.Transport = calendarTransport(func(r *http.Request) (*http.Response, error) {
-		if r.Method == http.MethodPost {
-			writes++
-			return nil, errors.New("test network timeout")
-		}
-		return base.RoundTrip(r)
+		return &http.Response{
+			StatusCode: 302,
+			Header:     http.Header{"Location": {"https://auth.szu.edu.cn/login"}},
+			Body:       io.NopCloser(strings.NewReader("")),
+			Request:    r,
+		}, nil
 	})
-	w := bookingCall(s.handleBookingCommit, "POST", `{"token":"once"}`)
-	if w.Code != 502 || !strings.Contains(w.Body.String(), "不要直接重复提交") || writes != 1 {
-		t.Fatal("uncertain write falsely succeeded")
+	_, err := s.booking.availability(context.Background(), 1, "2026-09-22", time.Now())
+	if err == nil {
+		t.Fatal("被重定向到登录页却报成查询成功")
 	}
-	if bookingCall(s.handleBookingCommit, "POST", `{"token":"once"}`).Code != 409 || writes != 1 {
-		t.Fatal("uncertain write retried")
+	if !strings.Contains(err.Error(), "校园网") {
+		t.Fatalf("错误没有告诉用户需要校园网：%v", err)
 	}
 }
-func TestBookingRejectsUnconfirmedAndDuplicateSlots(t *testing.T) {
-	day := &bookingDay{Room: bookingRoom{Type: bookingType{Max: 4}}, Slots: []bookingSlot{{Index: 28, State: "available"}}}
-	p := bookingInput{Phone: "13800000000", Grade: "2025", Times: []int{28}}
-	if validateBooking(p, day) == nil {
-		t.Fatal("missing rule consent accepted")
+
+// 预约只保留只读的场地与空位查询。这四个端点里 commit 会真的向学校提交预约，
+// session 会收用户粘贴的 Cookie，而界面早已不调用它们；留着就等于发布包里
+// 带一条没人验收过的写操作通路（STATUS.md F23）。
+func TestBookingWriteEndpointsAreNotServed(t *testing.T) {
+	s := &Server{booking: newBookingService()}
+	mux := http.NewServeMux()
+	s.routes(mux, fstest.MapFS{})
+
+	for _, path := range []string{"/api/booking/session", "/api/booking/history", "/api/booking/prepare", "/api/booking/commit"} {
+		for _, method := range []string{http.MethodGet, http.MethodPost, http.MethodDelete} {
+			r := httptest.NewRequest(method, "http://127.0.0.1"+path, strings.NewReader("{}"))
+			r.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, r)
+			if w.Code != http.StatusNotFound {
+				t.Fatalf("%s %s 仍在提供服务，得到 %d（应为 404）", method, path, w.Code)
+			}
+		}
 	}
-	p.Agree = true
-	p.Times = []int{28, 28}
-	if validateBooking(p, day) == nil {
-		t.Fatal("duplicate slots accepted")
+}
+
+// 只读的两个端点必须还在：删死代码不能顺手删掉已实测可用的功能。
+func TestBookingReadOnlyEndpointsStillServed(t *testing.T) {
+	s := bookingFixture(t)
+	mux := http.NewServeMux()
+	s.routes(mux, fstest.MapFS{})
+
+	for _, path := range []string{"/api/booking/rooms", "/api/booking/availability"} {
+		r := httptest.NewRequest(http.MethodGet, "http://127.0.0.1"+path+"?room=1&date=2026-09-22", nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, r)
+		if w.Code == http.StatusNotFound {
+			t.Fatalf("%s 被误删了", path)
+		}
 	}
 }

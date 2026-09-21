@@ -9,32 +9,24 @@ import (
 	"strings"
 )
 
-// linuxStore 优先使用 Secret Service（gnome-keyring、KWallet 等提供的
-// 标准密码存储接口），机器上没有这套服务时退化成权限受限的文件。
+// linuxStore 用 Secret Service（gnome-keyring、KWallet 等提供的标准密码存储
+// 接口）保存校园网凭据。
 //
 // 为什么不像 macOS 那样直接调系统 API：Linux 上没有统一的钥匙串实现，
 // 走 secret-tool 这个命令行入口是最省事、覆盖最广的办法。
-type linuxStore struct {
-	fallback  *fileStore
-	useSecret bool
-}
+//
+// 机器上没有 secret-tool、或者密钥环服务没跑起来时，**不退回明文文件**，
+// 一律返回错误（见 store_unavailable.go）。明文密码会被备份、云同步和
+// 误提交带走，而用户看到的却是「保存成功」，那比保存失败糟得多。
+type linuxStore struct{}
+
+const secretToolMissing = "本机没有 Secret Service，找不到 secret-tool 命令"
 
 func platformStore() Store {
-	path, err := dataPath()
-	if err != nil {
-		return &fileStore{path: "credentials.json", desc: "文件（无法确定用户目录）"}
+	if _, err := exec.LookPath("secret-tool"); err != nil {
+		return newUnavailableStore(secretToolMissing)
 	}
-
-	s := &linuxStore{
-		fallback: &fileStore{
-			path: path,
-			desc: "文件（~/.szunet/credentials.json，权限 600）",
-		},
-	}
-	if _, err := exec.LookPath("secret-tool"); err == nil {
-		s.useSecret = true
-	}
-	return s
+	return &linuxStore{}
 }
 
 // School sessions require Secret Service. Never fall back to plaintext.
@@ -46,10 +38,6 @@ func platformSessionStore() SessionStore {
 }
 
 func (s *linuxStore) Save(c Credentials) error {
-	if !s.useSecret {
-		return s.fallback.Save(c)
-	}
-
 	data, err := json.Marshal(c)
 	if err != nil {
 		return err
@@ -64,30 +52,22 @@ func (s *linuxStore) Save(c Credentials) error {
 	cmd.Stdin = strings.NewReader(string(data))
 
 	if out, err := cmd.CombinedOutput(); err != nil {
-		// 钥匙串服务没跑起来时不要直接失败，退回文件方式，保证工具还能用。
-		if ferr := s.fallback.Save(c); ferr == nil {
-			s.useSecret = false
-			return nil
-		}
-		return fmt.Errorf("写入密钥环失败: %v（%s）", err, strings.TrimSpace(string(out)))
+		// 无头环境里没有 D-Bus 会话时也会走到这里。宁可失败并让用户知道，
+		// 也不偷偷写一个明文文件。
+		return fmt.Errorf("%w：写入密钥环失败: %v（%s）", ErrStorageUnavailable, err, strings.TrimSpace(string(out)))
 	}
 	return nil
 }
 
 func (s *linuxStore) Load() (Credentials, error) {
-	if !s.useSecret {
-		return s.fallback.Load()
-	}
-
 	out, err := exec.Command("secret-tool", "lookup",
 		"service", "szunet",
 		"account", "szunet",
 	).Output()
 	if err != nil {
-		// 密钥环里没有，再试试文件兜底。
-		if c, ferr := s.fallback.Load(); ferr == nil {
-			return c, nil
-		}
+		// 已知局限：这里分不清「密钥环里没这一条」和「密钥环被锁 / 服务没起来」，
+		// 两种都当成没保存过。macOS 那边（R06）已经按退出码区分，Linux 还没有
+		// 可靠依据，不猜。
 		return Credentials{}, ErrNotFound
 	}
 
@@ -99,16 +79,17 @@ func (s *linuxStore) Load() (Credentials, error) {
 }
 
 func (s *linuxStore) Delete() error {
-	_ = exec.Command("secret-tool", "clear",
+	out, err := exec.Command("secret-tool", "clear",
 		"service", "szunet",
 		"account", "szunet",
-	).Run()
-	return s.fallback.Delete()
+	).CombinedOutput()
+	if err != nil {
+		// 删除失败不报成功：用户以为「忘掉账号」了，凭据其实还在。
+		return fmt.Errorf("清除密钥环里的凭据失败: %v（%s）", err, strings.TrimSpace(string(out)))
+	}
+	return nil
 }
 
 func (s *linuxStore) Describe() string {
-	if s.useSecret {
-		return "Linux Secret Service（gnome-keyring / KWallet）"
-	}
-	return s.fallback.Describe()
+	return "Linux Secret Service（gnome-keyring / KWallet）"
 }

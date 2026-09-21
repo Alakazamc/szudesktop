@@ -17,6 +17,8 @@ import sys
 import zipfile
 from pathlib import Path
 
+import release_notes  # 同目录：发布说明的抽取与校验
+
 # GitHub Windows Runner 可能使用 CP1252；中文发布日志统一输出为 UTF-8。
 for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
@@ -69,8 +71,26 @@ def read_version():
     return ver
 
 
+def check_changelog(ver):
+    """打包前先确认 CHANGELOG.md 里写好了这个版本的发布说明。
+
+    CI 的 release job 会再拦一次，但拦在打包之前更有用：VERSION 一升、
+    CHANGELOG 忘了写，PR 阶段就会红，而不是等打完 tag 才发现说明是空的
+    （beta0.7 就是这样发出去的，正文只有一行 compare 链接）。
+    """
+    try:
+        release_notes.extract(release_notes.load(), ver)
+    except release_notes.NotesError as e:
+        print("!! " + str(e))
+        sys.exit(1)
+    except OSError as e:
+        print("!! 读不到 CHANGELOG.md: %s" % e)
+        sys.exit(1)
+
+
 def main():
     ver = read_version()
+    check_changelog(ver)
     if not os.path.exists(EXE):
         print("!! 还没有编好的 exe，先跑 desktop/build-windows.py")
         sys.exit(1)

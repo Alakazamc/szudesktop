@@ -22,7 +22,8 @@ type windowsStore struct {
 func platformStore() Store {
 	path, err := dataPath()
 	if err != nil {
-		return &fileStore{path: "credentials.json", desc: "文件（无法确定用户目录）"}
+		// 连用户目录都定不下来时，不往当前目录写明文 credentials.json。
+		return newUnavailableStore("无法确定用户目录")
 	}
 	return &windowsStore{path: path}
 }

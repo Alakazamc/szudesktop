@@ -69,7 +69,7 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | :--- | :----- |
 | Desktop app | Windows x64 (`szudesktop.exe`) |
 | Command line | Windows / macOS / Linux, single binary `szunet` |
-| Current version | [beta0.7.1](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.7.1) · public beta (pre-release); Windows download published |
+| Current version | [beta0.7.2](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.7.2) · public beta (pre-release); Windows download published |
 | Runtime | No dependencies to install; the window is provided by your browser (Edge / Chrome app window) |
 
 ### First run
@@ -98,8 +98,11 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 ### Where my data lives
 
 - Under the `.szunet` directory in your user profile by default
-- Campus network passwords are encrypted with Windows DPAPI — only this machine and this
-  Windows account can decrypt them, and they are never written in plain text
+- Campus network passwords are stored per platform: Windows DPAPI (only this machine and
+  this Windows account can decrypt them), the macOS Keychain, and Secret Service
+  (`secret-tool`) on Linux. **There is no plain-text fallback on any platform:** when the
+  system secure store is unavailable, saving fails with an explicit error instead of quietly
+  writing a plain-text file (F24, fixed)
 - Garden saves are `workspace-v1.json`, plain JSON you can back up yourself; an export
   never contains your campus account or password
 - Before switching computers, export your save in Settings and import it on the new one
@@ -113,9 +116,9 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | Campus network sign-in | ✅ | Teaching area (SRun) / dorm area (Dr.COM), zone detected automatically; sign-out and manual zone override |
 | Access point ID (`ac_id`) discovery | ✅ | Tries in order: your manual value → what worked on this port before → the gateway redirect → a guess. Guesses are labelled as such |
 | Connection diagnostics | ✅ | Lists zone decision, portal reachability, protocol fingerprint and the conclusion |
-| Credential storage | ✅ | Windows DPAPI; saved **only after a successful sign-in and only if you ticked "remember"** |
+| Credential storage | ✅ | Windows DPAPI / macOS Keychain / Linux Secret Service; saved **only after a successful sign-in and only if you ticked "remember"**. Without a system secure store it refuses to save and says why — **no plain-text fallback** (F24, fixed). The macOS save path has not been validated on real hardware (F25) |
 | Notices | Partial | Current source groups notices by college or department: 28 academic-unit links, 17 readable college columns, plus Academic Affairs and the Graduate School. Dates and original links are preserved with a 10-minute cache; other units link to their official sites |
-| Room availability and booking | Partial | Live community rooms and half-hour availability on the campus network. Current source opens the official school page for login and booking, without asking users to copy booking cookies. Library services use a separate official system |
+| Room availability and booking | Partial | Live community rooms and half-hour availability on the campus network (read-only). The interface opens the official school page for login and booking and never asks users to copy booking cookies. The server has **no booking write endpoints left** (F23, removed). Library services use a separate official system |
 | Calendar and timetables | Partial | Official calendar updates and manual week overrides. Undergraduate personal timetable reading and graduate login are **pending full live account validation** |
 | Study reminders | ✅ | Add a reminder manually, export a standard ICS calendar (15 minutes before start). **A reminder is not a booking** |
 | Common contacts | Partial | Only numbers verifiable on official school pages (library help desks); other offices link to their official pages |
@@ -123,12 +126,19 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | Todo and focus timer | ✅ | Todo list plus 5 / 25 / 45-minute focus sessions |
 | Lychee Garden | ✅ | Companion care and growth, crops, plots, watering, harvest, decorations, daily goals, achievements and a field guide. No purchases, no real-money trading |
 | Save file | ✅ | Fixed local file, survives restarts and port changes, supports export / import and multi-window conflict protection |
+| Launch at login | ✅ (Windows only) | Starts the service silently after Windows login and connects once, without opening a window; toggle and real registered state in Settings. macOS / Linux are unsupported and say so instead of failing silently |
 
-beta0.7.1 is a public prerelease. Score reading remains limited to the first page; balance is not integrated. Timetables require manual queries and still await full live account validation. In the current source, reservations are completed on the official school page; embedding that page inside the app is not yet implemented. See [STATUS.md](STATUS.md).
+beta0.7.2 is a public prerelease. Score reading remains limited to the first page; balance is not integrated. Timetables require manual queries and still await full live account validation. In the current source, reservations are completed on the official school page; embedding that page inside the app is not yet implemented. See [STATUS.md](STATUS.md).
 
 **College notice filtering:** selecting a college automatically reads its public column. Unsupported units have an official-site link; authenticated internal notices are not included. This update is included in beta0.6.1.
 
-**Booking usability fix:** current source removes the booking cookie field, developer-tools instructions and unverified local submission form. Availability is a read-only overview; the booking button opens the official school website in the browser. This change is included in beta0.6.1. Embedded official pages and their full login flow remain unverified.
+**Booking usability fix:** since beta0.6.1 the interface no longer shows the booking cookie field, developer-tools instructions or the unverified local submission form. Availability is a read-only overview; the booking button opens the official school website in the browser, where you sign in and submit yourself. **Follow-up:** beta0.6.1 only withdrew the interface — `/api/booking/{session,history,prepare,commit}` stayed in the binary. Those four endpoints have now been **removed entirely** (F23); the booking module keeps only the read-only rooms and availability queries, so there is no code path left that can submit a reservation to the school. Embedded official pages and their full login flow remain unverified.
+
+### Experimental score reading
+
+Since beta0.6.1 the app includes undergraduate and graduate score readers, pending validation with real school records. Enter the Cookie only in the local application. Session storage fails closed if secure storage is unavailable — no plaintext fallback is used, and campus network passwords now follow the same rule (F24, fixed). Verification targets the selected academic application and distinguishes missing permission from an expired session. Only the first page is read; unknown totals and partial results are explicitly labelled. Community reservations are completed on the official school page; sports venues are not integrated.
+
+The app provides the official academic calendar, local graduate login and timetable reading, and undergraduate personal timetable reading using a business-specific ehall cookie. Timetable adapters still require live account acceptance. Public community rooms and availability can be read on the campus network. Users open the official school page to sign in, submit a reservation, and view its result. The booking session input and experimental local submission interface shipped in beta0.6 were withdrawn from the interface in beta0.6.1, and the server endpoints have since been removed (F23). See [STATUS.md](STATUS.md) for current acceptance status.
 
 ---
 
@@ -145,7 +155,8 @@ build with `go build -o dist/szunet ./cmd/szunet`.
 | `detect` | Detect the current zone and access point ID |
 | `diag` | Diagnostics: zone decision and protocol fingerprint |
 | `config` | View / change local configuration |
-| `autostart` | Configure launch at login |
+| `autostart` | Configure launch at login (Windows only) |
+| `vpn` | Guidance for the three official ways to reach the campus network from outside (WebVPN / EasyConnect / zero trust). **Guidance only — it contains no experimental VPN protocol code** |
 | `version` | Show the version |
 
 ```text
@@ -214,9 +225,12 @@ authentication requests on a timer behind your back.
 <summary><b>Where is my password stored?</b></summary>
 
 On Windows it's encrypted with DPAPI — only this machine and this Windows account can
-decrypt it, and it's never written in plain text. It is saved **only after a successful
-sign-in and only if you ticked "remember"**, so a wrong password won't overwrite the stored
-one. You can clear it at any time with "forget account".
+decrypt it. macOS uses the system Keychain; Linux uses Secret Service. **No platform falls
+back to plain text:** if the system secure store is unavailable, saving fails with an explicit
+error, and "forget account" also removes any plain-text file an older version may have left
+behind. It is saved **only after a successful sign-in and only if you ticked "remember"**, so
+a wrong password won't overwrite the stored one. You can clear it at any time with
+"forget account".
 </details>
 
 ---
@@ -225,9 +239,18 @@ one. You can clear it at any time with "forget account".
 
 - **No data collection**: no telemetry, no analytics. Everything stays on your machine
 - **Credentials encrypted locally**: Windows DPAPI, undecryptable on another machine or
-  under another user account
-- **It never submits for you**: booking a room, picking courses, paying — the app only
-  gives you the entry point and reminders; the final action is yours, in the official system
+  under another user account; macOS Keychain; Linux Secret Service. No plain-text fallback —
+  saving fails with an explicit error when no system secure store is available
+- **It never submits for you**: booking a room, picking courses, paying — the app gives you
+  the entry point and reminders; the final action is yours, in the official system. The
+  experimental server booking endpoints from beta0.6 have been removed entirely (F23), so no
+  code path can submit a reservation
+- **Loopback only**: the desktop service listens on `127.0.0.1` and refuses to start on a
+  non-loopback address; every `/api/*` route checks Host, `Sec-Fetch-Site` and a same-origin
+  `Origin`, returning 403 to any other page
+- **Dorm-area sign-in is plain text**: the school's Dr.COM gateway is HTTP by default
+  (`http://172.30.255.42`). That is the university's protocol, not this app's choice; the
+  teaching-area SRun portal is HTTPS and **does** verify certificates
 - **Nothing that bypasses billing or shares your connection**. Please follow your
   university's network rules
 - **Official sources only**: notices are read from predefined school pages; the app is not
@@ -241,19 +264,40 @@ You need Go (see `go.mod`), Python 3 and Node.js.
 
 ```text
 python desktop/sync-assets.py      # sync interface assets
-node   desktop/check-ui.mjs        # interface rule checks
-node   desktop/check-campus.mjs    # campus service and grade import checks
+node   desktop/check-ui.mjs        # the 10 frontend regressions below all run in CI
+node   desktop/check-campus.mjs
+node   desktop/check-notices.mjs
+node   desktop/check-session-ui.mjs
+node   desktop/check-academic.mjs
+node   desktop/check-school.mjs
+node   desktop/check-booking.mjs
+node   desktop/check-network-ui.mjs
+node   desktop/check-workspace-ui.mjs
+node   desktop/check-autostart-ui.mjs
 go vet ./... && go test ./...      # static checks and unit tests
+python desktop/check_release_notes.py # release-notes extraction regression
 python desktop/build-windows.py    # build the Windows desktop app
 python desktop/smoke_windows.py    # end-to-end smoke test
-python desktop/make_release.py     # produce the release package
+python desktop/make_release.py     # produce the release package (only when actually releasing; it overwrites same-named local artifacts)
 ```
+
+Release notes live in the root [CHANGELOG.md](../CHANGELOG.md): when bumping the version,
+rename the `## 未发布` ("unreleased") section to the new version. CI extracts that section as
+the GitHub Release body and fails the release if it is missing or empty.
+`python desktop/release_notes.py <version>` previews it locally.
 
 The only interface sources are `desktop/index.html` and `desktop/assets/garden/`.
 Don't hand-edit build outputs. The default desktop build **excludes the experimental VPN
 protocol** and unverified third-party game artwork, and only links to the official WebVPN.
 Experimental sources are kept for provenance review and protocol study, and must not be
-presented as a finished, verified feature.
+presented as a finished, verified feature. The exclusion works through a build tag:
+`internal/vpn` is referenced only from files guarded by `//go:build campusvpn`, and neither
+CI nor the build scripts pass `-tags campusvpn`, so neither the desktop app nor the five CLI
+release binaries contain that protocol code. The provenance and licensing of `internal/vpn`
+are still unverified (STATUS.md F11): its package comment now says so plainly and makes no
+claim of independent authorship, and F06 / F07 / F08 (false "connected" state, missing
+timeouts, skipped certificate verification) are all still open. Until the provenance is
+verified, this module must not be presented as a working feature or as clean-source code.
 
 ---
 
@@ -283,12 +327,3 @@ Third-party components keep their own licences: Fusion Pixel Font is under OFL 1
 experimental VPN module's third-party provenance is still being verified and is not included
 in default desktop builds. Names such as EasyConnect remain the property of their
 respective owners.
-
-
-### Experimental score reading
-
-beta0.6.1 includes undergraduate and graduate score readers, pending validation with real school records. Enter the Cookie only in the local application. Session storage fails closed if secure storage is unavailable; no plaintext fallback is used. Verification targets the selected academic application and distinguishes missing permission from an expired session. Only the first page is read; unknown totals and partial results are explicitly labelled. Community reservations are completed on the official school page; sports venues are not integrated.
-
-Additional frontend regression check: `node desktop/check-session-ui.mjs`.
-
-The app provides the official academic calendar, local graduate login and timetable reading, and undergraduate personal timetable reading using a business-specific ehall cookie. Timetable adapters still require live account acceptance. Public community rooms and availability can be read on the campus network. In the current source, users open the official school page to sign in, submit a reservation, and view its result. The booking session input and experimental local submission interface shipped in beta0.6 have been removed in beta0.6.1. See [STATUS.md](STATUS.md) for current acceptance status.

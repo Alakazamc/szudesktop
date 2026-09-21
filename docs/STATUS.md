@@ -7,8 +7,12 @@
 
 ## 1. 当前状态
 
-- 2026-09-21 完成一轮工程债清理：版本号单一来源、桌面设置接通开机自启、首次使用引导、macOS 钥匙串错误分类、统一「未经真实验收」标注，详见第 29 节。均为源码改动，未打 tag、未发布。本轮复核另发现 F21（macOS 凭据经命令行参数暴露）待做。
 - 当前公开 Release 为 **beta0.7.1**（2026-09-21，macOS 凭据暴露修复），交付记录见第 34 节；beta0.7 见第 31 节，beta0.6.1 见第 28 节。
+- **本次以 beta0.7.2 发布**：F22（CLI 无账号时也查在线状态）、U16（教务登录与我的课表拆成两张卡），以及第 37 节的 F23 / F24 / F11 / F25、第 38 节的发布说明机制、新增的 SECURITY.md 与 CONTRIBUTING.md。
+- 发布归属已核对并更正：工程债清理（第 29 节）与仓库瘦身、背景修复（第 30 节）随 **beta0.7** 发布；F21 修复（第 33 节）随 **beta0.7.1** 发布；学院公告筛选与预约回归官方页（第 26.3 / 27 节）随 **beta0.6.1** 发布。这些节标题上早先写的「未发布」是当时的状态，现已按实际发布更正。
+- 2026-09-21 做了一轮**全项目严重问题复核**：新发现 F23 / F24 / F25，F11 的完成度下调，同时排除了一处会被误判成漏洞的探测代码。证据、影响面与验收标准见第 36 节。
+- 2026-09-21 同日按第 36.7 节的顺序**动手修完**：F23（删掉预约的服务端写端点）、F24（凭据不再退回明文文件）、F11（撤掉未核实的来源保证）、F25（CI 加 macOS job），并补上 SECURITY.md 与 CONTRIBUTING.md。全部改动与验证证据见第 37 节，**均未发布**。
+- 2026-09-22 把**发布说明接上单一来源** `CHANGELOG.md`：CI 抽取对应版本那一节作为 Release 正文，抽不到就不上传附件；`make_release.py` 打包前也拦一次。起因是查出 beta0.7 的 Release 正文只有一行 compare 链接。见第 38 节。
 - 2026-09-20 使用路径复核已修复 5 类问题，详见第 20 节；当时的候选包与公开附件分开记录。
 
 - beta0.5.1 阶段的预发布版 **荔枝庭院**，Windows x64。起点 `457353f`；PR #1 已合并到 main（`1644f09`），其测试及各平台构建通过；按用户要求恢复原有星露谷式界面，该阶段已合并并发布 beta0.5 预发布。会话与成绩安全修复见第 17 节；beta0.5.1 已发布到 GitHub，交付记录见第 18 节。
@@ -49,7 +53,7 @@
 | F08 | VPN 跳过证书验证、协议探针可能明文携带会话，错误内容需脱敏 | P0 | L | 待做 | 明确安全连接方案与兼容边界；证书错误可控处理；实际隧道测试；全链路日志审查 |
 | F09 | 随机 localhost 端口使 localStorage 存档随源变化，看似丢失 | P1 | M | 已完成（现有发布范围） | 固定本机 JSON、原子替换、跨进程锁、冲突同步与跨端口恢复已验证；无老版本用户，不做迁移助手 |
 | F10 | 冒烟按 exe 名杀进程，可能关闭用户另一客户端 | P1 | S | 已完成（本地验证） | 只结束并回收测试自己的子进程 PID |
-| F11 | VPN 来源与“独立实现”宣传冲突；MIT 与非商业措辞不一致 | P0 | L | 部分完成 / 待来源核验 | 默认包不编译实验 VPN；删除未经核实的独立实现保证及冲突措辞。历史实验源码授权仍未确认，不据此宣称整个仓库来源已核验 |
+| F11 | VPN 来源与“独立实现”宣传冲突；MIT 与非商业措辞不一致 | P0 | L | 部分完成 / **仍待来源核验**（保证语句已撤，见第 37.3 节） | 「默认包不编译实验 VPN」已核实为真：`internal/vpn` 只被 `//go:build campusvpn` 的 `desktop/internal/ui/vpn.go` 引用，CI 与 `build-windows.py` 都不传 `-tags`。原先公开写在 `internal/vpn/vpn.go` 包注释里的「代码为自行编写，未复制任何厂商或第三方的源代码」**已删除**，改为如实说明来源与授权尚未核实、不作独立编写保证，并写明 F06/F07/F08 未修。**但来源本身仍未核实**：历史实验源码授权没有确认，F11 不能关闭，相关宣传仍受限 |
 | F12 | 外网连通、区域、账号认证状态混用；固定显示已连 SZU_WLAN | P1 | S | 部分完成 | 去掉固定已连接；online 显示区域未确认，账号未确认不写不在线；真实区域/会话查询仍待完善 |
 | F13 | VPN 把系统原有代理显示成本应用已打开 | P1 | S | 已完成（本地验证） | 区分 enabled 与 managed；显示其他代理；切换按钮按应用管理状态表达 |
 | F14 | 旧记录“在线位置”误填凭据存放方式 | P1 | S | 待复核 | 当前源码已写存放位置，旧错位未重现；与 F12 实机复核后关闭 |
@@ -59,9 +63,11 @@
 | F18 | 校外 VPN、宿舍 Dr.COM、教学区及教工区缺真实环境验收 | P1 | L | 待外部验证 | 分场景实测；模拟协议服务不能替代真实网络验收 |
 | F19 | CI 依赖升级及 Node 20 弃用告警待核对 | P2 | S | 已完成（PR CI 验证） | 查各 action 实际最新标签后升级：checkout v7.0.1 / setup-go v7.0.0 / setup-python v7.0.0 / upload-artifact v7.0.1 / download-artifact v8.0.1 / action-gh-release v3.0.3；不能只凭旧警告盲改 |
 | F20 | 出口已被占用时报成成功、能上网时反而跳过在线查询 | P1 | S | 已完成（本地验证） | 2026-09-20 真实网络复现：深澜 `ip_already_online` 是 IP 级短路，账号密码与 `ac_id` 都未被校验，不能算成功、更不能缓存 `ac_id`；能上外网时也必须在统计在线状态，否则用户只看到"没查到"而误判掉线 |
-
 | F21 | macOS 保存凭据把密码 JSON 当命令行参数传给 `security -w`，本机其他用户或进程 `ps` 可见 | P0 | M | 已修复（待 macOS 真机验收，见第 33 节） | 改为 `-w` 放末尾触发提示输入 + 子进程脱离控制终端 + 密码经标准输入喂入；写前用一次性条目自检、写后读回校验，自检不过就明确报错，不退回 argv 写法 |
 | F22 | CLI `status` 在没有保存账号时跳过在线查询，只报「没查到」 | P1 | S | 已完成（真实网络验证，见第 35 节） | 原先写的是 `if credErr == nil { 查 }`，而门户查询按出口 IP 回答、与账号无关；同一时刻桌面端报「已在线」、CLI 报「没查到」。去掉短路，与桌面端共用同一查询入口，并补 `online_known` 与登录提示 |
+| F23 | 预约的**服务端写操作端点仍在发布包里活着**，而 README 与本文都写着「已撤下本地提交表单」「不代提交」 | P0 | S | 已完成（真机成品验证，见第 37.1 节） | 删掉 `/api/booking/{session,history,prepare,commit}` 四个端点及其专属代码（`bookingInput`/`bookingPending`/`bookingRecord`/`bookingHistory`/`validateBooking`/`history()`），`request()` 收敛成只发 GET、不再接受任何写载荷，`bookingSecure` 与 Cookie 字段一并移除。只读的 rooms / availability 保留。验收：新增 404 断言测试（先看它红）、前端回归、74 项冒烟、以及**真实成品**上 12 种方法组合全部 404 且 rooms 仍返回真实场地 |
+| F24 | Linux 上校园网密码可能**明文落盘且静默报成功**，文档只承诺 DPAPI/钥匙串 | P1 | S | 已完成（本机测试 + Linux 编译验证，见第 37.2 节） | 范围比复核时判断的更大：Windows 在拿不到用户目录时也会写明文相对路径。做法是删掉 `fileStore`，新增 `unavailableStore` 与 `ErrStorageUnavailable`——没有系统密钥环就明确报错、绝不落明文，与会话存储同一标准；`Delete()` 仍会清掉老版本可能留下的明文文件。两份 README 与排查指南已补实情 |
+| F25 | macOS 凭据路径**没有任何自动化覆盖**：CI 只在 ubuntu 跑测试，darwin 仅交叉编译不执行 | P1 | M | 部分完成（CI 已加 macOS job，**尚未运行验证**，见第 37.4 节） | 新增 `test-macos` job：darwin 上跑 `go vet` 与 `go test ./internal/credential/...`，外加一个用一次性钥匙串、直接对真实 `security` 命令验证「`-w` 放末尾会退回读 stdin」的探针步骤。该 job 不在任何 `needs` 里且探针 `continue-on-error`，不会卡发布。真机验收仍待做 |
 
 ### 3.2 排版、外观与交互
 
@@ -119,7 +125,7 @@ C 类须验证各系统会话；D1/D2 不是“一次完成全部解锁”。预
 | B8 | 校园笔记 / 社区 | P3 | M | 待做 | 接入前确认数据来源和使用范围 |
 | B9 | 失物招领 | P2 | M | 待做 | 接入前确认数据来源和使用范围 |
 | B10 | 校园地图地点 | P2 | M | 待做 | 接入前确认数据来源和使用范围 |
-| B11 | 抓公开页：公告聚合 | P2 | M | 部分完成 | 当前源码新增按发布院系选择：28 个院系入口，17 个学院栏目可直接读取，加上原有教务部和研究生院；保留官网入口、日期和缓存提示。未发布，公文通等需登录公告仍未接入，见第 27 节 |
+| B11 | 抓公开页：公告聚合 | P2 | M | 部分完成 | 当前源码新增按发布院系选择：28 个院系入口，17 个学院栏目可直接读取，加上原有教务部和研究生院；保留官网入口、日期和缓存提示。已随 beta0.6.1 发布，公文通等需登录公告仍未接入，见第 27 节 |
 | B12 | 智算中心通知订阅 | P2 | M | 待做 | 接入前确认数据来源和使用范围 |
 | B13 | 讲座日历 | P2 | M | 待做 | 接入前确认数据来源和使用范围 |
 | B14 | 校园网质量历史曲线 | P2 | M | 待做 | 把每次 `detect` 结果存本地，画时间线 |
@@ -836,17 +842,17 @@ Use case: style-transfer. Asset: final full-bleed desktop app background, wide 1
 - 交付为本地 `dist/szudesktop-windows-amd64.exe`，尚未提交或更新 GitHub 的 beta0.6 安装包。
 
 
-### 26.3 预约回归官方页面交互（2026-09-20，未发布）
+### 26.3 预约回归官方页面交互（2026-09-20，已随 beta0.6.1 发布；服务端提交端点未一并撤下，见 F23）
 
 - 用户明确指出 F12 → 复制 Cookie → 粘贴会话的流程不适合普通同学，并提出「应用承载学校原页」或「读取接口、自行展示」。采用分工：公开空位由本机读取并渲染，登录、预约及结果确认交给学校原页面；应用内承载官方网页作为 R04 继续推进。
 - 当前界面撤下预约 Cookie 输入、F12 教程、实验性本人记录和本地提交表单。主入口为「登录并预约」，明确在浏览器打开学校官方页面。空位改为静态状态格，不再允许在无法提交的本地表单前选择时段。图书馆仍使用独立官方入口。
 - iframe 可行性原型未通过：当前浏览器中的内嵌页面一直空白，直接打开则导航到学校统一认证页；未完成二次认证及预约，不将空白直接归因为校方限制。原型未加入产品。原生 WebView 的完整承载仍未实现，不能把本轮外链调整称为应用内预约已完成。
 - 预约服务端适配代码及测试保留，前端不再调用会话、本人记录或提交接口；后续接入正常登录前不重新开放给普通用户。本轮不改成绩和教务模块的登录方式。
 - 验证：预约前端 6 项、校园业务 9 项通过；Windows 重新构建并核对内嵌模块。实际页面读取到 15 个场地及 2026-09-21 的 20 个开放半小时时段，静态空位展示正常；预约卡片内无 Cookie 输入或可选时段、无横向溢出、无控制台错误。没有提交任何预约。
-- 成品仍为本地 `dist/szudesktop-windows-amd64.exe`。中英 README 明确这是尚未发布的源码调整；GitHub beta0.6 原下载包未被覆盖。第 26.2 节的「连接登录」临时入口已由本节方案替代。
+- 成品仍为本地 `dist/szudesktop-windows-amd64.exe`。中英 README 当时明确这是尚未发布的源码调整；GitHub beta0.6 原下载包未被覆盖。第 26.2 节的「连接登录」临时入口已由本节方案替代。**后续更正**：本节的前端调整已随 beta0.6.1 发布，但服务端 `/api/booking/{session,prepare,commit}` 并未一并撤下，见 F23 与第 36.2 节。
 
 
-## 27. 学校公告按学院查看（2026-09-20，未发布）
+## 27. 学校公告按学院查看（2026-09-20，已随 beta0.6.1 发布）
 
 用户提出按学院查看学校公告。本轮按**发布单位的公开栏目**分类，不根据标题关键词猜学院，也不把未读取的院系显示成空公告。
 
@@ -877,7 +883,7 @@ Use case: style-transfer. Asset: final full-bleed desktop app background, wide 1
 - 发布结果：GitHub Actions [35514050275](https://github.com/SzuDesktopTeam/szudesktop/actions/runs/35514050275) 全部成功，包含 Windows 整机冒烟。公开预发布 [beta0.6.1](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.6.1) 已上传 8 个文件；标签对应 `20fbe2a`。
 - GitHub 发布文件摘要：Windows ZIP SHA256 `b29359fe33add5a37963dc187461f35723c19a92586b40cb03ec1e35388d28e0`；EXE SHA256 `59bfccdc0a6274eccdbb75576ba9c054edf6e7b20b31e3557c73aa245a28e5c5`。
 
-## 29. 工程债清理：版本号单一来源、开机自启接线、首次引导、macOS 钥匙串与统一验收标注（2026-09-21，未发布）
+## 29. 工程债清理：版本号单一来源、开机自启接线、首次引导、macOS 钥匙串与统一验收标注（2026-09-21，已随 beta0.7 发布）
 
 本轮做用户选定的「工程收尾与体验补齐」。不改已发布附件，内部版本仍为 beta0.6.1。
 
@@ -888,7 +894,7 @@ Use case: style-transfer. Asset: final full-bleed desktop app background, wide 1
 | X01 / Q05 / U15 | 首次打开功能很多，不知道先做什么 | P2 / M | 已完成初版。首次启动弹一张四段短引导（这是什么、数据只在本机、怎么退出、先做什么），按钮或 Esc 都能关，状态写进 `preferences.onboarded`，不会每次打开都弹；保存设置不再把这个标记丢掉 |
 | R06 | macOS 钥匙串读取失败被当成「未保存」，删除错误被忽略 | P2 / M | 已完成。`security` 退出码 44 / errSecItemNotFound 才算「没有这一条」；钥匙串被锁、授权被拒、命令缺失一律报 `ErrSessionStorageUnavailable`，删除失败不再报成功。判断逻辑放在无构建标签的 `keychain_error.go`，Linux CI 也能测到；真机 macOS 仍未现场验收 |
 | — | 「接入测试」「实验功能」各页措辞不一，用户看不出哪些结果能信 | P1 / S | 已完成。统一标记收敛到 `desktop/assets/garden/labels.mjs`，研究生教务、本科课表、在线成绩三处用同一个 `接入测试 · 未经真实验收` warning 徽章（带悬浮说明）；已真实验证的官方校历保持 success 色，不混用 |
-| F21（本轮新发现） | macOS 保存凭据时把密码 JSON 当命令行参数传给 `security -w`，本机其他用户或进程用 `ps` 就能看到 | P0 / M | 待做，见第 3.1 节 F21。Linux 版第 17 节已改成只经标准输入，Windows 走 DPAPI，只有 darwin 这条还漏着 |
+| F21（本轮新发现） | macOS 保存凭据时把密码 JSON 当命令行参数传给 `security -w`，本机其他用户或进程用 `ps` 就能看到 | P0 / M | 当时记为待做，见第 3.1 节 F21。Linux 版第 17 节已改成只经标准输入，Windows 走 DPAPI，只有 darwin 这条还漏着。**后续更正**：已于第 33 节修复并随 beta0.7.1 发布（不属于 beta0.7 的范围）；macOS 真机验收仍未做，见 F25 |
 
 ### 29.1 验证
 
@@ -901,10 +907,10 @@ Use case: style-transfer. Asset: final full-bleed desktop app background, wide 1
 
 ### 29.2 交付与仓库状态
 
-- 本轮为源码改动：未打 tag、未发布、未覆盖 GitHub 上 beta0.6.1 的附件。`dist/szudesktop-windows-amd64.exe` 只用于本轮验证。
+- 本轮当时为源码改动：未打 tag、未发布、未覆盖 GitHub 上 beta0.6.1 的附件。`dist/szudesktop-windows-amd64.exe` 只用于本轮验证。**后续更正**：本节内容已随 beta0.7 发布（见第 31.4 节）。
 - 分支清理：`feat/beta05-lychee-garden`、`fix/desktop-state-review`、`fix/restore-pixel-campus`、`fix/session-score-safety` 的本地与远端副本已按用户确认删除。前两个内容已完全并入 main；后两个各含一个被 main 上新版本取代的旧提交，直接合并会回退代码与文档（`fix/session-score-safety` 合并将删掉 3737 行，含 F20 修复）。仓库现在只有 main。
 
-## 30. 仓库瘦身与背景呈现修复（2026-09-21，未发布）
+## 30. 仓库瘦身与背景呈现修复（2026-09-21，已随 beta0.7 发布）
 
 用户要求清理冗余文件（本地与云端）并指出背景仍不好看。清理范围由我判断，删除项与理由如下。
 
@@ -974,11 +980,15 @@ Use case: style-transfer. Asset: final full-bleed desktop app background, wide 1
 
 ## 32. 待办（本次未做）
 
-- **必须现场做的**：本科 / 研究生真实账号验收（成绩、课表、教务登录）、教学区与宿舍校园网真机认证、预约登录衔接与提交。
+- **本轮复核新增**：~~F23 撤掉预约的服务端写端点、F11 撤掉未核实的来源保证、F24 Linux 明文兜底不再静默成功~~ 已于同日完成（第 37 节）；F25 已加 CI 探针但**真机验收仍待做**。
+- **必须现场做的**：本科 / 研究生真实账号验收（成绩、课表、教务登录）、教学区与宿舍校园网真机认证、预约登录衔接与提交（现在一律在学校官方页面办理）。
 - **代码侧**：F06/F07/F08 实验 VPN、F15 余额 / 流量数据层、D5 白名单转发、R05 图书馆座位系统。
-- **例行维护**：`ubuntu-latest` 将于 2026-10-19 迁移到 Ubuntu 26，届时核对各 action。
+- **发布**：F22、U16 与第 37 / 38 节的全部修复都已就绪但**未发布**，下一个版本必须带上。发版流程已改：升 `internal/version/VERSION` 的同时，把 `CHANGELOG.md` 的 `## 未发布` 改成新版本号并补齐内容，否则 `make_release.py` 与 CI 的 release job 都会失败（第 38 节）。
+- **待 CI 首次运行确认**：`test-macos` job（含真实 `security` 命令的 stdin 探针）与 release job 的 `body_path` 拼接效果，都只能在下一次推送 / 打 tag 后才知道结果。
+- **协作面**：SECURITY.md 与 CONTRIBUTING.md 已补；issue 模板仍缺；本文已超过 1150 行，建议拆分或加目录锚点。GitHub 的私有漏洞报告入口需要仓库管理员在设置里启用（SECURITY.md 已写明）。
+- **例行维护**：`ubuntu-latest` 将于 2026-10-19 迁移到 Ubuntu 26，届时核对各 action；同时确认新加的 `test-macos` job 是否稳定，稳定后考虑纳入 `needs`。
 
-## 33. F21 修复：macOS 凭据不再经命令行参数暴露（2026-09-21，未发布）
+## 33. F21 修复：macOS 凭据不再经命令行参数暴露（2026-09-21，已随 beta0.7.1 发布；macOS 真机仍未验收，见 F25）
 
 **问题**：darwin 的保存路径用 `security add-generic-password ... -w <密码 JSON>` 写入，
 密码会出现在子进程的命令行参数里，同机其它进程 `ps` 就能看到。Windows 走 DPAPI、
@@ -1067,3 +1077,247 @@ Linux 早已改成只经标准输入，只有 macOS 这条漏着，而 `szunet-d
 
 - **校园网真实登录 / 注销（教学区深澜）**：需要校园卡号与密码。当前出口已有一个在线会话，登录会命中 `ip_already_online` 分支——这本身就是对 F20 的现场验证（不得报成功、不得缓存 `ac_id`、应把在线设备信息带出来）。验收顺序建议：先在有会话时点登录看提示 → 再注销 → 再登录。
 - **教务登录 / 成绩 / 课表（ehall）**：需要账号或按业务粘贴 Cookie，凭据只能由用户在本机应用界面输入；我只负责核对结果（会话长度不回显、磁盘无明文、只读第一页、过期与无权限分开报）。
+
+## 36. 全项目严重问题复核（2026-09-21）
+
+复核方法：**不沿用旧结论**，每条都回到代码与 CI 配置取证，给出 `文件:行号`；严重度按第 2 节的 P0–P3 判定，影响面与发生条件分开写。基线 HEAD `99a0b3a`，`internal/version/VERSION` = `beta0.7.1`，`go mod` 路径 = `github.com/SzuDesktopTeam/szudesktop`。本轮实跑 `go vet ./...` 退出码 0、`go test ./...` 12 个包全绿（8 个有测试）。
+
+### 36.1 F11：未核实的「独立编写」保证仍随仓库公开（P0，完成度下调）
+
+- **证据**：`internal/vpn/vpn.go:3-4` 包注释写「本包为**依据公开协议行为分析独立编写**的实现……代码为自行编写，**未复制任何厂商或第三方的源代码**」。`git ls-files internal/vpn/` 返回 8 个文件，全部被公开跟踪。
+- **已核实为真的那半条**：实验 VPN 确实**不在任何发布件里**。`internal/vpn` 的唯一引用点是 `desktop/internal/ui/vpn.go:19`，该文件带 `//go:build campusvpn`（`vpn_disabled.go:1` 是 `!campusvpn` 的替身，返回「当前发布版不包含实验 VPN 协议」）；`release.yml`、`desktop/build-windows.py`、`Makefile` 都不含 `-tags`。所以这一条的影响面是**公开的法律/来源声明**，不是运行时安全。
+- **为什么仍按 P0 记**：F11 的验收条件原文是「删除未经核实的独立实现保证」，而这句话还在公开仓库里；第 2 节把「代码许可来源」明确列为 P0。「部分完成」应读作「一半没做」。
+- **修复与验收**：把包注释改成不含来源保证的中性表述（例如「协议流程依据公开交互行为整理，来源与授权尚未核实，不得用于商业用途」），或取得授权证据后再保留原句。验收：`grep -rn "未复制任何厂商" internal/` 无命中；`go build ./...`、`go vet ./...` 通过；`-tags campusvpn` 也能编译通过。
+
+### 36.2 F23：预约的服务端写操作端点仍在发布包里（P0，文档与代码相反）
+
+- **证据链**：
+  - `desktop/internal/ui/server.go:312-315` 注册 `/api/booking/session`（GET/POST/DELETE）、`/api/booking/prepare`、`/api/booking/commit`；
+  - `booking.go:306-338` 的 session POST 接受用户粘贴的预约 Cookie（`booking.go:320-323`）；
+  - `booking.go:415-443` 的 commit 校验一次性 token 后**真的向学校提交**：`b.request(ctx, "/boothReservation/add", nil, payload, true, nil)`（:439），成功回「学校已接受预约请求」；
+  - 前端已完全不用它：`grep -rn "booking/prepare|booking/commit|booking/session" desktop/assets desktop/index.html` **无命中**，`booking.mjs` 只打开学校原页；
+  - 文档相反面：README.md:120「当前源码撤下了预约 Cookie 输入、F12 教程和未经真实验收的本地提交表单」、:128「预约会话输入与实验性本地提交入口已在 beta0.6.1 撤下」、:217「本应用不自动抢位或代提交」；本文第 4 节表头（:97）「预约/付款/选课/签到最终操作由用户在官方系统完成」。
+- **影响面（分开说）**：
+  - **不是远程可利用漏洞**：服务只监听回环（`server.go:166,171`，非回环地址直接拒绝启动），`api_guard.go:14-40` 还要求 Host 为回环、`Sec-Fetch-Site` 为 same-origin/none、`Origin` 严格同源、方法在白名单内。校园网里别人打不到，浏览器里的其它站点也打不到。
+  - **真正的问题是三件事**：① 对外承诺与代码不符——说「撤下了」，其实只是前端不显示；② 一段**从未用真实账号验收**的写操作代码随每个 Windows 发布件分发，一旦被误用就会在学校系统里生成真实预约记录；③ commit 的错误分支自己就承认这个风险：「未能确认提交结果……不要直接重复提交」（:440）。
+- **修复与验收（推荐第一条）**：**删掉**这三个端点，以及 `booking.go` 里只服务它们的 `pending` / `validateBooking` / commit 逻辑，只保留只读的 rooms / availability / history。验收：`grep -rn "booking/commit|booking/prepare|booking/session" desktop/` 无命中；`go test ./...` 通过；`smoke_windows.py` 74 项通过；`check-booking.mjs` 前端回归通过；README 与本文的「已撤下」表述从此是事实。若决定保留，则必须改文档写明「服务端仍有实验提交端点、未经真实验收」并补真实账号验收记录——不能维持现状。
+
+### 36.3 F24：Linux 明文密码兜底静默成功，文档只承诺加密（P1）
+
+- **证据**：`internal/credential/keyring_linux.go:34-37` 只在找得到 `secret-tool` 时启用 Secret Service；`:48-51` 不可用时直接走 `fileStore`；`:66-71` 写入失败时也退回文件并 `return nil`——用户看到的是「保存成功」。文件是 `~/.szunet/credentials.json`、权限 0600、**明文 JSON**（`store.go:63,72-84`）。
+- **同一个包里标准不一致**：会话存储写明「School sessions require Secret Service. Never fall back to plaintext.」（`keyring_linux.go:40-46`），不可用就返回 `unavailableSessionStore`；`store.go:3` 的包注释也写着「密码不落明文盘」。凭据这条路径违反了自己写下的原则。
+- **文档面**：README.md:88/103/206/216 与 README_en.md:101/116/216/227 只讲 Windows DPAPI；README.md:126 的「系统安全存储不可用时拒绝保存」按代码只对 Cookie 成立。下载 `szunet-linux-*` 的用户得不到任何提示。
+- **发生条件与影响面**：仅限 Linux 且缺 Secret Service（或写入失败）的机器。文件 0600，同机其他用户读不到，但会被备份、云同步或误提交带走。
+- **修复与验收**：二选一——(a) 与会话存储统一，不可用就报错不保存；(b) 保留兜底但**不静默**：把 `Describe()`（已经是「文件（~/.szunet/credentials.json，权限 600）」）回给调用方，并在 CLI / 界面明确提示「本机没有密钥环，密码将以受限权限明文保存」。两种都要在两份 README 补 Linux 实情。验收：新增测试覆盖「无 `secret-tool` 时不得静默报成功」；`go test ./...` 通过；README 对 Linux 存储方式有明确描述。
+
+### 36.4 F25：macOS 凭据路径没有任何自动化覆盖（P1）
+
+- **证据**：`release.yml:16` 的 `test` job 是 `runs-on: ubuntu-latest`，是全仓唯一执行测试的 job；`:53-59` 的 build-cli 矩阵含 darwin amd64/arm64，但只 `go build`（:72），从不运行。`keychain_prompt_unix_test.go` 由 Linux CI 执行，用的是假 `security` 脚本。
+- **后果**：F21 的核心假设——真实 macOS 上 `security -w` 的提示会退回读标准输入（第 33 节明写「未验证」）——既没有真机验收，也不可能被 CI 发现回归。而 `szunet-darwin-*` 是每次发布都上传的附件。当前设计是「假设不成立就明确报错而不是退回 argv」，这个取舍是对的，但意味着 macOS 用户可能**根本存不了凭据**，而我们不会知道。
+- **修复与验收**：加一个 `macos-latest` job 跑 `go test ./internal/credential/...`（macOS runner 上 `security` 真实存在），或找一台真机做一次 `szunet config set` → `config get` 往返并把结果记进本文。验收：CI 里出现 macOS 的测试结论，或本文有一条带日期的真机记录。在此之前任何文档都不得把 macOS 凭据写成「已验证」。
+
+### 36.5 排除的误报：`detect.go` 跳过证书校验不涉及凭据
+
+记下来，免得下次又当漏洞查一遍。
+
+- `internal/portal/detect.go:225,248,273` 三处 `InsecureSkipVerify: true` 都在**不带凭据**的探测里：`internetReachable` 只看外网是否返回 204；`srunUsable` 用假账号 `username=probe` 只握手不登录（:293-300 的注释与代码一致）；`drcomUsable` 账号密码留空（:325-335）。
+- 带凭据的登录走另一个客户端：`internal/portal/http.go:24-49` 的 `newHTTPClient` **保留**默认证书校验，只在指定 `--ip` 时补 `ServerName` 让 SNI 对上原域名（:41-47）——这正是正确做法。
+- 剩余影响：中间人最多让「判区」结论出错，拿不到密码。归 P3，不列为严重问题。
+- **但要如实告知用户**：宿舍 Dr.COM 默认是明文 HTTP（`internal/portal/drcom.go:15`，`http://172.30.255.42`）。这是学校协议的现状、不是本项目的选择；排查指南与 README 应说清「宿舍区认证走明文，不要把它当成加密连接」。
+
+### 36.6 工程与协作面的缺口（P2，但会放大上面所有问题）
+
+- **单文件文档已到 140KB / 1073 行**：本文同时承担需求、设计、任务、验收、发布记录五种角色，定位一条结论要靠 grep。建议拆成「当前状态 + 问题总表」「历史发布记录」「验收方法」三份，或至少加目录锚点。验收：新读者不滚屏就能查到「现在发布的是哪一版、还有哪些 P0」。
+- **没有 CONTRIBUTING / SECURITY / issue 模板**：`.github/` 下只有 `workflows/`。仓库刚转到 SzuDesktopTeam 组织，外部协作者只能靠猜怎么跑测试。SECURITY 尤其该有——本项目处理校园网密码和教务 Cookie，需要一个私有报告渠道。
+- **推送身份仍未落实**：deploy key 在组织转移后是只读，写权限待用户在 GitHub 设置里开；当前推送依赖 `git -c http.proxy=… push https://…`（环境只有 `http_proxy`、没有 `https_proxy`）。发布路径依赖一个人的本地环境。
+- **`ubuntu-latest` 迁移**：2026-10-19 起指向 Ubuntu 26，届时 `secret-tool`、Node、Go 的行为都要重核。
+
+### 36.7 本轮结论：按处理顺序
+
+> **后续更正**：下表第 1、2、3、5 项已在同日完成，第 6 项的 SECURITY.md / CONTRIBUTING.md 也已补上，证据见第 37 节。第 4 项（发版）仍待做。
+
+| 顺序 | 事项 | 编号 | 为什么排这里 |
+|---|---|---|---|
+| 1 | 删掉预约的三个服务端写端点，或改文档并补真实验收 | F23 | 对外承诺与代码相反，且带真实写操作；改动小、可回归 |
+| 2 | 撤掉 `internal/vpn/vpn.go` 里未核实的来源保证 | F11 | P0 里唯一的纯文本改动，一次编辑即可闭环 |
+| 3 | Linux 明文兜底不再静默成功 + README 补实情 | F24 | 凭据安全，改动集中在一个文件 |
+| 4 | 发一个带 F22 / U16 的版本 | F22、U16 | 用户手上的 beta0.7.1 仍带着已修好的缺陷 |
+| 5 | macOS 测试覆盖或真机验收 | F25 | 需要 CI 改动或用户的机器，周期最长 |
+| 6 | SECURITY / CONTRIBUTING / 文档拆分 | — | 重要但不阻断，可排在上述之后 |
+
+### 36.8 顺带更正的过期文档（本轮已改）
+
+| 位置 | 原状态 | 更正 |
+|---|---|---|
+| 本文第 1 节 | 第 29 节记为「未打 tag、未发布」，且未提未发布的 F22 / U16 | 按实际发布归属重写，并列出未发布项 |
+| 本文 §26.3 / §27 / §29 / §29.2 / §30 / §33 标题与正文 | 均标「未发布」 | 分别更正为随 beta0.6.1 / beta0.7 / beta0.7.1 发布 |
+| 本文 §3.1 表格 | F20 与 F21 之间夹了一个空行，GitHub 会把 F21 / F22 两行渲染成断裂的表 | 删除空行 |
+| 本文 B11 行 | 「未发布」 | 已随 beta0.6.1 发布 |
+| README.md:60 | `[Releases](../../releases)` 在仓库首页解析到 `github.com/releases`（坏链） | 改为绝对链接 |
+| README.md:105/115/120/128/217、README_en 对应处 | 称预约 Cookie 输入与本地提交表单「已撤下」 | 改为「界面入口已撤下，服务端实验端点仍在，见 F23」 |
+| README.md:88/103/206/216、README_en:101/116/216/227 | 只讲 Windows DPAPI | 补 Linux 实情与 macOS 未验收边界 |
+| README.md:135-144、README_en:140-149 | 子命令表缺 `szunet vpn` | 补一行（该子命令只是三条官方通道指引，不含实验 VPN 代码） |
+| README.md:113 | 开机自启标 ✅ 未注平台 | 注明仅 Windows（`autostart_other.go:12` 返回 ErrUnsupported） |
+| docs/blog/ac_id-接入点编号.md:229 | 「桌面端还没有让用户手动填 ac_id 的界面入口」 | 已过期：`app.mjs:53` 的高级设置有 `ac_id` 输入框 |
+| docs/深圳大学校园网连不上排查指南.md:125-128 | 把同一个项目当成两个工具列了两次 | 合并为一条 |
+
+## 37. 修掉复核发现的严重问题（2026-09-21，未发布）
+
+按第 36.7 节的顺序做。修 bug 的部分一律**先写会失败的测试、亲眼看它红**，再改代码让它变绿；
+纯文本与 CI 配置改动则先写下可核验的验收标准，再逐条核对。
+
+### 37.1 F23：预约的服务端写端点已删除
+
+- **删了什么**：`/api/booking/session`、`/api/booking/history`、`/api/booking/prepare`、
+  `/api/booking/commit` 四个端点（`server.go`），以及只服务它们的
+  `handleBookingSession` / `handleBookingHistory` / `handleBookingPrepare` / `handleBookingCommit` /
+  `validateBooking` / `history()`、类型 `bookingInput` / `bookingPending` / `bookingRecord` /
+  `bookingHistory`、`bookingService` 的 `cookie` 与 `pending` 字段、常量 `bookingSecure`、
+  错误 `errBookingSession`。`booking.go` 从 444 行降到 223 行。
+- **收敛了什么**：`request()` 去掉 `input` 与 `authenticated` 两个参数，现在**只能发 GET**——
+  代码层面不再存在向学校提交预约的通路，而不是靠"前端不调用"来保证。
+  `availability()` 同步去掉 `authenticated` 参数。
+- **保留了什么**：只读的 `/api/booking/rooms` 与 `/api/booking/availability`（第 35.1 节已用真实数据实测过）。
+- **TDD 记录**：先写 `TestBookingWriteEndpointsAreNotServed`（断言四个路径 × 三种方法都是 404），
+  跑出来是 **`GET /api/booking/session 仍在提供服务，得到 200（应为 404）`**——红得符合预期，
+  然后才动代码。另配 `TestBookingReadOnlyEndpointsStillServed` 防止删过头。
+  测试替身现在对三件事零容忍：请求带 Cookie、请求不是 GET、目标不是学校公开地址；
+  `/venue-api/boothReservation/*` 没有列进替身的 switch，任何代码走到那里都会撞上 default 而失败。
+- **诚实说明**：`history`（我的预约）也一并删了——它依赖只有 `session` POST 能设置的 Cookie，
+  界面从不调用它，留着就是不可达的死代码。将来若要在应用内办理预约，需要重新设计并做真实账号验收，
+  **不是**把这几个端点恢复回来。
+
+### 37.2 F24：凭据不再退回明文文件（范围比复核时判断的更大）
+
+- **复核时低估了**：不只是 Linux。`keyring_windows.go` 在拿不到用户目录时也会写
+  `fileStore{path: "credentials.json"}`——一个**相对路径**的明文文件。
+- **做法**：删掉 `fileStore` 整个类型；新增 `store_unavailable.go`：
+  `ErrStorageUnavailable` + `unavailableStore`（Save / Load 一律报错，`Describe()` 如实说明
+  「系统安全存储不可用（原因），不使用明文文件」）。Linux 无 `secret-tool` 或写入失败 → 报错；
+  Windows 拿不到用户目录 → 报错。与会话存储（`unavailableSessionStore`）终于是同一个标准，
+  `store.go` 的包注释也去掉了「Linux 没有就退化成权限受限的文件」那句。
+- **Delete 的取舍**：`Delete()` 仍然会删掉老版本可能留下的明文 `credentials.json`，
+  因此可以如实报成功——没有密钥环时，明文文件就是密码唯一可能存在的地方。
+  修好新路的同时不把旧坑留在用户盘上。
+- **调用方已核对**：CLI `config set` 走 `fail(err)`（`main.go:531-534`）；
+  桌面端 `POST /api/credential` 返回 500 且带错误文本（`server.go:635-637`），
+  前端显示「认证已成功，但保存凭据失败：…」。不存在"报错了但界面说成功"的路径。
+- **TDD 记录**：先放一个 `Save` 返回 nil 的桩，测试报
+  **「没有密钥环时 Save 竟然报成功」**（红），实现后转绿；遗留明文清理那条同样先看它红
+  （「删除不该失败：系统安全存储不可用…」）再实现。
+- **已知局限（如实）**：Linux 的 `Load()` 仍分不清「密钥环里没这一条」和「密钥环被锁 / 服务没起来」，
+  两种都当成没保存过。macOS 那边 R06 已按退出码区分，Linux 还没有可靠依据，**不猜**。
+- **验证边界（如实）**：可移植测试 2 项在本机 Windows 实跑通过；`keyring_linux_test.go`
+  带 `//go:build linux`，本机只能做 `GOOS=linux go vet` 编译验证，
+  **它要在本次提交后的第一次 CI（ubuntu）里才算真正跑过**。
+
+### 37.3 F11：撤掉未核实的来源保证
+
+- `internal/vpn/vpn.go` 包注释里的「本包为依据公开协议行为分析独立编写的实现……
+  代码为自行编写，未复制任何厂商或第三方的源代码」已删除，改为如实说明：
+  来源与授权尚未核实、早期参考过第三方实验源码、在核实前不作独立编写保证、
+  不得当成来源干净的实现宣传或再分发；并补上「本包不在任何发布件里（只有 `-tags campusvpn`
+  才编译）」与「F06/F07/F08 未修，不要按可用功能对待」。
+- **验收已核对**：`grep -rn "未复制任何厂商" internal/` **无命中**；
+  `go build ./...` 与 `go build -tags campusvpn ./...` 都通过；
+  `go vet ./...`（windows）与 `GOOS=linux go vet -tags campusvpn ./...` 都通过。
+- **F11 仍不关闭**：撤掉保证 ≠ 核实来源。历史实验源码的授权依然没有确认，
+  按第 6 节约定，相关宣传仍受限。
+
+### 37.4 F25：CI 加 macOS job（**尚未运行验证**）
+
+- 新增 `test-macos`（`runs-on: macos-latest`，job 超时 20 分钟）：
+  ① darwin 上跑 `go vet ./...`；② `go test ./internal/credential/... -v`；
+  ③ 一个**真实 `security` 命令的探针**——建一次性钥匙串、
+  `printf '…' | security add-generic-password -a probe -s szunet-selftest-probe -U -w`、
+  读回比对、清理。CI 进程本来就没有控制终端，正好复现 F21 依赖的那个条件
+  （`readpassphrase` 打不开 `/dev/tty` 时退回读标准输入），所以这一步能在没有真机的情况下
+  验证假设本身。
+- **不阻断发布**：该 job 不在任何 `needs` 列表里，探针步骤另有 `continue-on-error: true`
+  与 5 分钟超时（挂住也不会拖垮 job）。先拿证据，稳定后再考虑纳入 `needs`。
+- **未验证（如实）**：本机没有 macOS，也没有 YAML 解析器（pyyaml / js-yaml 都不可用）。
+  workflow 只做了**逐字节缩进核对**（`cat -A` 无 tab，层级与同级 `test` job 一致）。
+  这个 job 跑不跑得通、探针结论是什么，**要等下一次推送后在 GitHub 上才知道**。
+- 真机验收仍未做；在此之前任何文档不得把 macOS 凭据记成「已验证」。
+
+### 37.5 协作面：补 SECURITY.md 与 CONTRIBUTING.md
+
+- `SECURITY.md`：漏洞报告渠道（并如实写明 GitHub 私有漏洞报告入口需要仓库管理员在设置里启用）、
+  三平台凭据现状表、本地服务只绑回环等约定、**已知未解决的安全项**（F06/F07/F08、F11、F21/F25、
+  宿舍区明文 HTTP）、以及「哪些不算漏洞」的设计决定（无代码签名、不自动重连、
+  探测跳过证书校验但不带凭据）。
+- `CONTRIBUTING.md`：环境依赖、界面资源规矩（唯一源文件 + `sync-assets.py`，生成副本勿手改）、
+  提交前必跑的 10 个前端回归与 Go 检查、**`gofmt` 在 Windows 工作副本上的 CRLF 陷阱**
+  （`gofmt -l .` 会把几乎所有文件列出来，那不是格式问题，CI 也不跑 gofmt）、
+  7 条红线、修 bug 的方式（先写失败测试，并指出仓库里 F22/F23/F24 三个现成例子）、
+  发布流程与 `make_release.py` 的覆盖陷阱。
+- issue 模板仍缺；本文已超过 1200 行，拆分建议仍在第 36.6 节。
+
+### 37.6 本轮验证汇总
+
+| 验证项 | 结果 |
+|---|---|
+| 前端 10 个检查脚本（`sync-assets.py` 后） | 全部通过，失败数 0 |
+| `go vet ./...` | windows / linux / darwin **三平台**通过 |
+| `go test ./...` | 8 个有测试的包全绿 |
+| `go build ./...` 与 `-tags campusvpn` | 两种配置都通过 |
+| `python desktop/build-windows.py` | 成功；嵌入资源两边一致（30800 字节，`6647b1a17e`） |
+| `python desktop/smoke_windows.py` | **74 项全部通过**（数量与修复前一致，无回归） |
+| **真实成品端点实测** | 4 个已删端点 × GET/POST/DELETE = **12 组合全部 404**；`/api/booking/rooms` 仍返回真实场地（时光社区共享琴房1 等）；隔离配置目录内**没有**生成 `credentials.json` |
+| `test-macos` job | **未运行**，见 37.4 的未验证说明 |
+| `keyring_linux_test.go` | **未在真实 Linux 上执行**，只做了 `GOOS=linux` 编译验证 |
+
+### 37.7 仍未解决
+
+- **以上全部未发布**：F22、U16、F23、F24、F11 的注释修正、F25 的 CI job、两份新文档都还在本地。
+- F25 需要下一次 CI 运行才能确认；macOS 真机验收仍待做。
+- F24 的 Linux 专属测试要在 CI 的 ubuntu 上跑过一次才算数。
+- F11 的来源核实、F06/F07/F08、F15、D5、R05 都还没动。
+- 真实账号验收（第 35.3 节）仍只能由用户本人操作。
+- deploy key 写权限仍待用户在 GitHub 设置里开启。
+
+## 38. 发布说明接上 CHANGELOG 单一来源（2026-09-22，未发布）
+
+**起因**：用户问「每次更新并推送的时候会在 release 写清楚更新说明吗」。查线上实际情况：
+
+- **beta0.7 的 Release 正文只有一行**：`**Full Changelog**: https://github.com/Alakazamc/szudesktop/compare/beta0.6.1...beta0.7`（88 字节，链接还指向转移前的旧组织名）。
+- beta0.7.1 有 1590 字节的完整说明——那是发完之后用 `gh release edit --notes` **手写**的，不是 CI 生成的。
+
+所以答案是**不会自动写清楚**。`release.yml` 的 release job 里只有 `generate_release_notes: true`，
+而 GitHub 的自动生成靠 PR 标题与标签；本项目一直直接提交 main、没有 PR，它就只能吐一个 compare 链接。
+仓库里也没有 `.github/release.yml`（那个文件同样只对 PR 分类），`make_release.py` 不生成任何说明文字。
+**写不写说明，取决于当次有没有人记得**——beta0.7 就是没记得的那次。
+
+**做法**：
+
+1. 新增根目录 `CHANGELOG.md` 作为发布说明的唯一来源。已回填 beta0.6.1 / beta0.7 / beta0.7.1 三节
+   （beta0.7.1 用线上正文原文，beta0.7 按第 31.4 节补记并注明是事后补记），当前批次写在 `## 未发布`。
+2. 新增 `desktop/release_notes.py`：按版本号抽取对应小节，再拼上自动生成的下载清单。
+   四种情况直接失败——没有这一节、正文为空、正文只有空白、正文里留着 `__VERSION__`；
+   另外拒绝把「未发布」当版本号发布。抽取只认**完全相等**的标题，`beta0.7` 不会命中 `beta0.7.1`。
+3. `release.yml` 的 release job 补 `checkout` + `setup-python`，先抽取写 `$RUNNER_TEMP/notes.md`，
+   再作为 `body_path` 传给 action。**抽取失败就一个附件都不会上传。**
+   保留 `generate_release_notes: true`：action 文档写明「提供了 body 时，body 在前、
+   自动生成的内容追加在后」，所以 compare 链接仍会自动补上。
+4. `make_release.py` 打包前调同一个校验。VERSION 一升、CHANGELOG 忘了写，
+   **PR 阶段的 windows job 就会红**，不用等到打 tag 才发现。
+5. 标签名不在 `run:` 里直接插值 `${{ }}`，改走 `env:`，避免成为脚本注入面。
+
+**TDD**：先写 `desktop/check_release_notes.py`（11 项），跑出 `ModuleNotFoundError: release_notes`（红），
+再实现模块转绿。
+
+**验证**：
+
+| 验证项 | 结果 |
+|---|---|
+| `python desktop/check_release_notes.py` | 11 项全部通过 |
+| 抽取真实 CHANGELOG 的 `beta0.7.1` | 退出码 0，得到 1656 字节正文 + 下载清单 |
+| 抽取 `未发布` / `beta0.9` | 都退出码 1，错误信息可直接照做 |
+| 下载清单里的附件名 | 按线上 beta0.7.1 的 **8 个真实附件**核对过（独立 EXE 不带版本号、也没有单独的 `.sha256`，只有 ZIP 有） |
+| `make_release.py` 的关卡 | 用**导入方式**验证，没有真的打包：`beta0.7.1` 放行，`beta0.9` 与 `未发布` 均退出码 1；`dist/` 确认未生成 zip |
+| workflow 缩进 | `cat -A` 逐字节核对，无 tab，层级与同级 job 一致 |
+
+**未验证（如实）**：本机没有 YAML 解析器（pyyaml / js-yaml 都不可用），也没法在本地跑 GitHub Actions。
+release job 是否真按预期把 CHANGELOG 正文放前面、compare 链接接在后面，**要等下一次打 tag 才知道**。
+「抽取失败会阻断发布」这一点是靠脚本退出码保证的，已在本地验证。
+`test-macos` job 同样还没运行过（见第 37.4 节）。

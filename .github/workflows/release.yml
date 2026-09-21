@@ -40,10 +40,48 @@ jobs:
           node desktop/check-workspace-ui.mjs
       - name: Settings autostart UI regression
         run: node desktop/check-autostart-ui.mjs
+      - name: 发布说明抽取回归
+        run: python desktop/check_release_notes.py
       - name: 静态检查
         run: go vet ./...
       - name: 单元测试
         run: go test ./...
+
+  # F25：darwin 此前只被交叉编译、从不执行，而 szunet-darwin-* 是随发布分发的。
+  # 这个 job 不进入任何 needs 列表，所以它失败不会卡住发布——先拿到证据，
+  # 稳定之后再考虑改成必须通过。
+  test-macos:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: darwin 静态检查
+        run: go vet ./...
+      - name: 凭据包测试（darwin 构建）
+        run: go test ./internal/credential/... -v
+
+      # F21 的核心假设：`security add-generic-password -w`（-w 放末尾、不带值）
+      # 在打不开 /dev/tty 时会退回读标准输入。CI 里的进程本来就没有控制终端，
+      # 正好复现这个条件，所以这一步能在没有真机的情况下验证假设本身。
+      # 用一次性钥匙串，不碰 runner 的默认钥匙串；设了超时，挂住也不会拖垮 job。
+      - name: 真实 security 命令的 stdin 假设探针
+        timeout-minutes: 5
+        continue-on-error: true
+        run: |
+          set -x
+          KC="$RUNNER_TEMP/szunet-probe.keychain-db"
+          security create-keychain -p probe "$KC"
+          security unlock-keychain -p probe "$KC"
+          security list-keychains -d user -s "$KC"
+          printf 'szunet-probe-value\n' | security add-generic-password -a probe -s szunet-selftest-probe -U -w
+          got=$(security find-generic-password -a probe -s szunet-selftest-probe -w)
+          security delete-generic-password -a probe -s szunet-selftest-probe >/dev/null || true
+          security delete-keychain "$KC" || true
+          test "$got" = "szunet-probe-value"
+          echo "F21 假设成立：security -w 在无控制终端时确实从标准输入读取密码"
 
   build-cli:
     needs: test
@@ -107,6 +145,18 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/beta')
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.13'
+      # 发布说明必须来自 CHANGELOG.md 里对应版本的那一节。抽不到就在这里失败，
+      # 附件一个都不会上传——beta0.7 那次只发了一行 compare 链接，就是因为没有这道关卡。
+      # 本项目直接提交到 main、没有 PR，GitHub 的自动分类拿不到任何内容。
+      - name: 从 CHANGELOG.md 抽取发布说明
+        env:
+          # 不在 run: 里直接插值 ${{ }}，避免标签名成为脚本注入面
+          TAG: ${{ github.ref_name }}
+        run: python desktop/release_notes.py "$TAG" -o "$RUNNER_TEMP/notes.md"
       - uses: actions/download-artifact@v8.0.1
         with:
           path: dist
@@ -114,6 +164,8 @@ jobs:
       - uses: softprops/action-gh-release@v3.0.3
         with:
           name: szuDesktop ${{ github.ref_name }}
+          body_path: ${{ runner.temp }}/notes.md
           files: dist/*
+          # 按 action 文档：提供了 body 时，body 在前，自动生成的 compare 链接追加在后
           generate_release_notes: true
           prerelease: ${{ startsWith(github.ref_name, 'beta') }}

@@ -6,6 +6,10 @@
 *.test
 *.out
 
+# Python 缓存（构建/冒烟/发布说明脚本会生成）
+__pycache__/
+*.pyc
+
 # 本地配置：里面可能有账号信息，绝对不要提交
 .szunet/
 config.json
