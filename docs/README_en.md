@@ -69,7 +69,7 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | :--- | :----- |
 | Desktop app | Windows x64 (`szudesktop.exe`) |
 | Command line | Windows / macOS / Linux, single binary `szunet` |
-| Current version | [beta0.6.1](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.6.1) · public beta (pre-release); Windows download published |
+| Current version | [beta0.7](https://github.com/Alakazamc/szudesktop/releases/tag/beta0.7) · public beta (pre-release); Windows download published |
 | Runtime | No dependencies to install; the window is provided by your browser (Edge / Chrome app window) |
 
 ### First run
@@ -90,6 +90,10 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
   immediately use **Settings → Exit**
 - Reloading the page does not stop the service
 - To start the service without a window, launch `szudesktop.exe` with `--no-open`
+- A short, skippable guide appears on first launch; it explains where your data lives,
+  how to quit, and what to try first
+- Autostart can be toggled in **Settings** (the CLI equivalent is `szunet autostart`).
+  If its state cannot be read, the app says so instead of showing "off"
 
 ### Where my data lives
 
@@ -120,7 +124,7 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | Lychee Garden | ✅ | Companion care and growth, crops, plots, watering, harvest, decorations, daily goals, achievements and a field guide. No purchases, no real-money trading |
 | Save file | ✅ | Fixed local file, survives restarts and port changes, supports export / import and multi-window conflict protection |
 
-beta0.6.1 is a public prerelease. Score reading remains limited to the first page; balance is not integrated. Timetables require manual queries and still await full live account validation. In the current source, reservations are completed on the official school page; embedding that page inside the app is not yet implemented. See [STATUS.md](STATUS.md).
+beta0.7 is a public prerelease. Score reading remains limited to the first page; balance is not integrated. Timetables require manual queries and still await full live account validation. In the current source, reservations are completed on the official school page; embedding that page inside the app is not yet implemented. See [STATUS.md](STATUS.md).
 
 **College notice filtering:** selecting a college automatically reads its public column. Unsupported units have an official-site link; authenticated internal notices are not included. This update is included in beta0.6.1.
 
