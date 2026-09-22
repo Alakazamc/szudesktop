@@ -14,6 +14,9 @@
 - 2026-09-21 做了一轮**全项目严重问题复核**：新发现 F23 / F24 / F25，F11 的完成度下调，同时排除了一处会被误判成漏洞的探测代码。证据、影响面与验收标准见第 36 节。
 - 2026-09-21 同日按第 36.7 节的顺序**动手修完**：F23（删掉预约的服务端写端点）、F24（凭据不再退回明文文件）、F11（撤掉未核实的来源保证）、F25（CI 加 macOS job），并补上 SECURITY.md 与 CONTRIBUTING.md。全部改动与验证证据见第 37 节，**均未发布**。
 - 2026-09-22 把**发布说明接上单一来源** `CHANGELOG.md`：CI 抽取对应版本那一节作为 Release 正文，抽不到就不上传附件；`make_release.py` 打包前也拦一次。起因是查出 beta0.7 的 Release 正文只有一行 compare 链接。见第 38 节。
+- 2026-09-22 **第一个外部 PR 合并**：协作者 StrangeWh 的 [PR #5](https://github.com/SzuDesktopTeam/szudesktop/pull/5) 修掉了我引入的渲染静默失败（F28）与命令行版开机自启静默失效（F27），merge commit `97063da`。见第 41 节。
+- 2026-09-22 **协作权限放开**：rcwalter24 与 StrangeWh 均为 write；main 保护改为「0 批准 + 禁止直接推」；StrangeWh 是外部协作者，不在组织内。详见第 32.3 节。
+- **当前待办总入口是第 32 节**（2026-09-22 重写，含建议顺序）。
 - 2026-09-20 使用路径复核已修复 5 类问题，详见第 20 节；当时的候选包与公开附件分开记录。
 
 - beta0.5.1 阶段的预发布版 **荔枝庭院**，Windows x64。起点 `457353f`；PR #1 已合并到 main（`1644f09`），其测试及各平台构建通过；按用户要求恢复原有星露谷式界面，该阶段已合并并发布 beta0.5 预发布。会话与成绩安全修复见第 17 节；beta0.5.1 已发布到 GitHub，交付记录见第 18 节。
@@ -68,7 +71,9 @@
 | F22 | CLI `status` 在没有保存账号时跳过在线查询，只报「没查到」 | P1 | S | 已完成（真实网络验证，见第 35 节） | 原先写的是 `if credErr == nil { 查 }`，而门户查询按出口 IP 回答、与账号无关；同一时刻桌面端报「已在线」、CLI 报「没查到」。去掉短路，与桌面端共用同一查询入口，并补 `online_known` 与登录提示 |
 | F23 | 预约的**服务端写操作端点仍在发布包里活着**，而 README 与本文都写着「已撤下本地提交表单」「不代提交」 | P0 | S | 已完成（真机成品验证，见第 37.1 节） | 删掉 `/api/booking/{session,history,prepare,commit}` 四个端点及其专属代码（`bookingInput`/`bookingPending`/`bookingRecord`/`bookingHistory`/`validateBooking`/`history()`），`request()` 收敛成只发 GET、不再接受任何写载荷，`bookingSecure` 与 Cookie 字段一并移除。只读的 rooms / availability 保留。验收：新增 404 断言测试（先看它红）、前端回归、74 项冒烟、以及**真实成品**上 12 种方法组合全部 404 且 rooms 仍返回真实场地 |
 | F24 | Linux 上校园网密码可能**明文落盘且静默报成功**，文档只承诺 DPAPI/钥匙串 | P1 | S | 已完成（本机测试 + Linux 编译验证，见第 37.2 节） | 范围比复核时判断的更大：Windows 在拿不到用户目录时也会写明文相对路径。做法是删掉 `fileStore`，新增 `unavailableStore` 与 `ErrStorageUnavailable`——没有系统密钥环就明确报错、绝不落明文，与会话存储同一标准；`Delete()` 仍会清掉老版本可能留下的明文文件。两份 README 与排查指南已补实情 |
-| F25 | macOS 凭据路径**没有任何自动化覆盖**：CI 只在 ubuntu 跑测试，darwin 仅交叉编译不执行 | P1 | M | 部分完成（CI 已加 macOS job，见第 37.4 / 39.3 节） | 新增 `test-macos` job：darwin 上跑 `go vet` 与 `go test ./internal/credential/...`，外加一个用一次性钥匙串、直接对真实 `security` 命令验证 stdin 假设的探针。首跑就抓出了 F26；现已进入 release 的 `needs`，失败即阻断发布 |
+| F25 | macOS 凭据路径**没有任何自动化覆盖**：CI 只在 ubuntu 跑测试，darwin 仅交叉编译不执行 | P1 | M | 已完成（第 37.4 / 39.3 / 40 节） | `test-macos` job 已加入且成为 release 前置条件，含对真实 `security` 命令的 stdin 探针。首跑即抓出 F26；现已稳定 |
+| F27 | 命令行版开机自启登记的是 `szunet login --auto`，而 `login` 没有 `--auto`；flag 集为 `ExitOnError`，未知开关直接 `os.Exit(2)`——**开过这个开关的用户开机时静默失效，无任何报错** | P1 | S | 已修复（外部 PR #5，见第 42.3 节） | 登记参数改为 `login`（本身非交互），抽成 `CLILoginArgs()`；给 `login` 保留 `--auto` 兼容开关，让已写进注册表的旧启动项不必手工改。新增 `autostart_args_windows_test.go` 用 `ContinueOnError` 起同配置 flag 集解析登记参数，把这类不匹配拦在测试阶段 |
+| F28 | `booking.mjs` 的 `openHours()` 用 `BigInt(m||0)`，学校返回带千分位字符串 / 小数 / 超安全整数时抛异常；它在 `services()` 里被无条件求值并整段赋给 `#main`，**异常即整页静默白板、无任何提示** | P1 | S | 已修复（外部 PR #5，见第 42.2 节） | `openHours` 与 `ruleNum` 一律不抛，不可信输入降级成「—」；`ruleNum` 用 `isSafeInteger` 同时挡小数 / `Infinity` / `NaN` / 超安全整数；0 也显示「—」（服务端会把越界值收敛成 0，分不清真 0 与自清零）；分组键从 `name` 改 `typeId`；`services()` 每张卡片各自 try/catch，`render()` 由 `pageHTML()` 兜底 |
 | F26 | macOS 上 `security -w` **可能要求输入两遍**（密码 + 确认），我们只喂一行时就得到 `passwords don't match`、退出码 44，条目根本建不起来——那种机器上**凭据完全存不进去** | P0 | S | 已修复（CI 真机探针 4 次验证，见第 39.4 节）；beta0.7.1 与 beta0.7.2 **都带着这个缺陷发出去了** | 该行为不稳定：同一镜像 macOS 26.6.2 的后续 4 次运行都记录为「只问一遍」，所以只影响会要求确认的机器。F21 改成 stdin 喂入时假设只问一遍；`secretInput` 现在喂「密码 + 确认」两行，只问一遍时多出的那行是没人读的剩余输入（已真机验证）。两个测试替身都改成如实模拟两次提问，因此本地与 Linux CI 也守得住；CI 探针去掉 `continue-on-error` 并进入 release 的 `needs` |
 
 | F27 | 「用命令行版开机自启」登记的 `szunet login --auto` 里，`--auto` 这个参数**从来不存在**；`login` 的 flag 集是 `ExitOnError`，遇到未知参数会直接 `os.Exit(2)`，于是开机时程序什么都没做就退出了——一个没有任何报错的静默失效开关 | P1 | S | 已修复（本机分析 + 新增回归；真机开机流程未验收，见第 41 节） | 注册参数改为 `login`（`login` 本来就是非交互的：按「命令行参数 > 环境变量 > 已保存凭据」取账号，失败只体现在退出码上），并抽成 `cliLoginArgs` 常量，避免三处各写各的；另外给 `login` 补上 `--auto` 兼容开关，让**已经写进用户注册表**的旧启动项不必改注册表就能恢复。新增 `cmd/szunet` 的 Windows 测试：用 `ContinueOnError` 起一个与 `login` 同配置的 flag 集去解析登记的参数，把「注册了 `login` 不认的参数」拦在测试阶段 |
@@ -982,16 +987,43 @@ Use case: style-transfer. Asset: final full-bleed desktop app background, wide 1
   - 包内程序与独立 EXE 自报版本均为 beta0.7；包内快速开始首行为 `szuDesktop beta0.7 · 荔枝庭院（Windows x64）`
 - **发布后发现并修复**：`.sha256` 附件带 CRLF——CI 的 windows 任务里 `Path.write_text` 文本模式把 `\n` 翻成 `\r\n`，Linux / macOS 用户执行 `sha256sum -c` 会因为行尾的 `\r` 直接报错（coreutils 会把它当成文件名的一部分）。`make_release.py` 已改为 `newline="\n"`，今后不再出现；beta0.7 的这个附件同时替换为 LF 版本。**ZIP 与 EXE 未改动、哈希值不变**，替换后用线上文件实测 `sha256sum -c` 通过。
 
-## 32. 待办（本次未做）
+## 32. 待办（持续维护，2026-09-22 更新）
 
-- **本轮复核新增**：~~F23 撤掉预约的服务端写端点、F11 撤掉未核实的来源保证、F24 Linux 明文兜底不再静默成功~~ 已于同日完成（第 37 节）；F25 已加 CI 探针但**真机验收仍待做**。
-- **必须现场做的**：本科 / 研究生真实账号验收（成绩、课表、教务登录）、教学区与宿舍校园网真机认证、预约登录衔接与提交（现在一律在学校官方页面办理）。
-- **代码侧**：F06/F07/F08 实验 VPN、F15 余额 / 流量数据层、D5 白名单转发、R05 图书馆座位系统。
-- **调研已做完、待排期的内容缺口**（2026-09-22 核实）：校历结构里**没有假期和考试字段**，A2 要新接来源；11 个学院公告栏目只有入口、读不出内容，每个都要对着真实 HTML 单独适配；场地**图片不可用**（学校只给裸文件名）；`roles` 返回 null，「谁有资格预约」拿不到。
-- **发布**：F22、U16 与第 37 / 38 节的修复已随 **beta0.7.2** 发布（第 39 节），F26 修复已随 **beta0.7.3** 发布（第 40 节）。发版流程已改：升 `internal/version/VERSION` 的同时，把 `CHANGELOG.md` 的 `## 未发布` 改成新版本号并补齐内容，否则 `make_release.py` 与 CI 的 release job 都会失败（第 38 节）。
-- **CI 已确认**：`test-macos`（含真实 `security` 命令的 stdin 探针）与 release job 的 `body_path` 拼接都已真跑通过（第 39.5 / 40 节）。`test-macos` 现在是 release 的前置条件。
-- **协作面**：SECURITY.md 与 CONTRIBUTING.md 已补；issue 模板仍缺；本文已超过 1150 行，建议拆分或加目录锚点。GitHub 的私有漏洞报告入口需要仓库管理员在设置里启用（SECURITY.md 已写明）。
-- **例行维护**：`ubuntu-latest` 将于 2026-10-19 迁移到 Ubuntu 26，届时核对各 action；同时确认新加的 `test-macos` job 是否稳定，稳定后考虑纳入 `needs`。
+> 本节是**当前待办的总入口**，按「建议顺序」排列。带 ✅ 的是本轮已关闭的，留在这里只为对账。
+
+### 32.1 建议下一步顺序
+
+| 顺序 | 事项 | 为什么排这里 | 状态 |
+|---|---|---|---|
+| 1 | **发 beta0.7.4**：把 PR #5 的渲染修复 + 场地规则卡一起发出去 | 规则卡从 `34c5d57` 起就只在本地；F27（开机自启静默失效）是用户能碰到的真 bug，越早发越好 | 待做 |
+| 2 | **真机走一遍场地规则卡** | 改的正是"页面渲染不白板"，而 CI 和 74 项冒烟都走 `--no-open` 无头路径，不开浏览器窗口。必须用眼睛看 | 待做 |
+| 3 | **补 PR / issue 模板** | 仓库已对任何人开放 PR（public + fork 允许），但 `.github/` 下只有 workflows。第一个外部贡献者已经出现，模板正是时候 | 待做 |
+| 4 | **`required_status_checks` 补 `test`** | 现在 CI 结果**不拦截合并**——挂了也能合。别加 `test-macos`（它是 release 前置，抽风一次堵死所有 PR） | 待做 |
+| 5 | 组织设置收紧：`default_perm` → `none`、`members_create_repos` → `false` | 现在任何进组织的人自动获得全部仓库读权限、还能自建仓库。人少时无害，人多即漏洞 | 待你决定 |
+| 6 | 真实账号验收（P0-1） | 一半卖点从未跑过真账号。卡在我读不出学校验证码，需要你念一次或在应用里自己登录 | 待你操作 |
+| 7 | 11 个学院公告栏目适配 | 已核实的內容缺口，每个都要对着真实 HTML 单独适配；我们在校园网，可当场验 | 待排期 |
+
+### 32.2 代码侧 backlog
+
+- **F06 / F07 / F08 实验 VPN**：假成功、缺全链路超时、跳过证书验证。该模块不在任何发布件里（`//go:build campusvpn`，CI 与构建脚本都不传 tag）。
+- **F11 来源核实**：`internal/vpn` 的第三方实验源码授权未确认。包注释里未核实的"独立编写"保证已撤，但来源本身仍未核。
+- **F15 余额 / 流量数据层**、**D5 白名单转发**、**R05 图书馆座位系统**。
+- **校历假期 / 考试数据（A2）**：`academicTerm` 结构体里根本没有假期和考试字段，要新接来源，不是补呈现。
+- **`roles` 字段返回 null**：「谁有资格预约」拿不到，规则卡里因此没有这一项（不编）。
+- **场地图片**：学校只给裸文件名，`coverImage` / `images` 拼不出可访问 URL，B1/B2「含照片」暂不可做。
+
+### 32.3 协作与工程面
+
+- **协作者现状**（2026-09-22）：`Alakazamc` admin（唯一组织 owner）、`rcwalter24` write（组织成员）、`StrangeWh` write（外部协作者，**不在组织里**）。给他组织成员身份的邀请因 gh 缺 `admin:org` 范围而未发出，需要你在网页上邀请：https://github.com/orgs/SzuDesktopTeam/people
+- **main 保护**：要求 0 个批准 + 禁止直接推 + 禁止强推/删分支；`enforce_admins=false`（你可直接推 main 走发版快路径）。「0 批准」是可行的——API 要求一次带齐 `required_pull_request_reviews` / `required_status_checks` / `restrictions` 三个键，漏传就报 422。
+- **StrangeWh 的协作意图仍未问清**：他最初想"fork 一版放组织里做皮肤"，该方案不成立（组织内不能 fork 同名仓库，且会分裂 issue/PR）。PR #5 说明他愿意直接在本仓库修，但皮肤那条线还没聊。
+- **issue 模板仍缺**；本文已超过 1400 行，建议拆分或加目录锚点。
+- **GitHub 私有漏洞报告入口**需要仓库管理员在设置里启用（SECURITY.md 已写明）。
+- **`ubuntu-latest` 将于 2026-10-19 迁移到 Ubuntu 26**，届时核对各 action；`test-macos` job 已稳定，仍是 release 前置条件。
+
+### 32.4 已关闭（留档对账）
+
+F22 / U16 / F23 / F24 / F25 / F26 / F27、版本号单一来源、开机自启接线、首次引导、CHANGELOG 机制、SECURITY.md 与 CONTRIBUTING.md、beta0.7 / 0.7.1 / 0.7.2 / 0.7.3 四次发布，均已完成，证据见第 29–41 节。
 
 ## 33. F21 修复：macOS 凭据不再经命令行参数暴露（2026-09-21，已随 beta0.7.1 发布；macOS 真机仍未验收，见 F25）
 
@@ -1534,3 +1566,77 @@ security: SecKeychainSearchCopyNext: The specified item could not be found in th
   再重启一台 Windows 才能看，本轮没有做，F27 只验证到「登记的参数 login 一定认得」这一层；
   学校真实返回的 `availableTimePeriod` 形态（P2-8 的实际触发概率取决于它）；以及
   `dist/` 里的产物未做真机界面点击（冒烟测试走的是 `--no-open` 无头路径，不开浏览器窗口）。
+
+## 42. 第一个外部 PR 合并：协作者修掉我引入的渲染静默失败（2026-09-22）
+
+**这是项目第一次有外部贡献者直接向 main 提 PR 并被合并**，值得单独记一节；技术细节见第 41 节。
+
+### 42.1 背景
+
+`34c5d57`（场地与琴房规则速查）上线后，协作者 StrangeWh 提了 [PR #5](https://github.com/SzuDesktopTeam/szudesktop/pull/5)，
+标题「修掉场地规则速查带出的渲染静默失败，并修好命令行版开机自启」，单个提交 `97655cf`，
+merge commit `97063da` 合入 main。**PR 描述本身按本项目的验收格式写的**（复现步骤、验证证据、未验证项分列），
+说明 CONTRIBUTING.md 的约定被读进去了。
+
+### 42.2 他修的第一个问题：我引入的渲染静默失败
+
+**问题是我造成的。** `booking.mjs` 里的 `openHours()` 写的是 `BigInt(m||0)`：
+学校返回的 `availableTimePeriod` 一旦是带千分位的字符串、小数、或超出 `Number.MAX_SAFE_INTEGER`，
+这行就抛异常；而它在 `services()` 里被**无条件求值**，结果整段赋给 `#main`。
+异常一抛，那句赋值就不执行——**整个「校园服务」页静默停止更新，用户看不到任何提示**。
+
+我在真机验证时用的是正常值（`4397794590720`），所以没触发。**这个 bug 只在字段格式异常时现形**，
+学校改一次字段格式就能让整页变白板。为了显示一个"开放 10 小时"赌上整页渲染，代价和收益完全不成比例。
+
+**修法**（我认可）：
+- `openHours` 与新增的 `ruleNum` 一律不抛，不可信输入降级成「—」
+- `ruleNum` 用 `Number.isSafeInteger` 而非 `isFinite`——同时挡住小数、`Infinity`、`NaN`、超安全整数
+- **0 也显示「—」**：服务端会把越界值收敛成 0（见 `bookingType.validate`），
+  分不清「学校真报了 0」和「我们自己清零的」，宁可标成未知，也不拿 0 冒充学校数字
+- 分组键从类型 `name` 改为 `typeId`：name 是展示字符串，两类重名会被并成一组，
+  并顺手用第一个的规则描述另一类——规则张冠李戴比不显示更糟
+- 两条读取路径**故意用不同失败策略**：`availability`（掩码决定显示哪些空位）硬失败，
+  掩码错一格就是错数据；`/booth/list`（只展示规则）把越界值降级，不为一个场地字段扣下整份列表
+
+### 42.3 他修的第二个问题：F27 命令行版开机自启静默失效
+
+`internal/autostart/autostart_windows.go` 里命令行版开机自启登记的是 `szunet login --auto`，
+而 `login` **从来没有 `--auto` 这个参数**；szunet 的 flag 集是 `ExitOnError`，遇到未知开关直接 `os.Exit(2)`。
+**所以开过这个开关的用户，开机时程序什么都没做就退出了，且没有任何报错。**
+
+修复：登记参数改为 `login`（它本来就是非交互的：按「命令行参数 > 环境变量 > 已保存凭据」取账号，
+失败只反映在退出码上），抽成 `CLILoginArgs()` 常量避免三处各写各的；
+同时给 `login` 保留 `--auto` 兼容开关，让已经写进用户注册表的旧启动项不必手工改注册表就能恢复。
+
+**他是先复现再修的**：从 `34c5d57` 单独编出 CLI 做对照，`login --auto` 得到退出码 2 与
+`flag provided but not defined: -auto`，修复后两种写法都是退出码 1、正常走到凭据检查。
+这是实证，不是看代码猜。
+
+### 42.4 顺带修掉的
+
+- `plainTextFromSchoolHTML` 补齐块级结束标签（`div` / `h3` / 表格）、大小写与自闭合 `<br>`，并丢掉 HTML 注释。
+  原来只把 `</p></li>` 换成换行，学校改用 `div` 排版时整段使用须知会被挤成一行
+- 新增 `cmd/szunet/autostart_args_windows_test.go`：用 `ContinueOnError` 起一个与 `login` 同配置的 flag 集
+  去解析登记的参数，把「注册了 `login` 不认的参数」拦在测试阶段
+- `check-booking.mjs` 由 11 项增至 14 项，其中「不可信数字只降级不抛」刻意用逐字全「—」精确匹配，
+  而不是「页面里出现过 —」——后者会被 `openHours` 单独产出的一个「—」蒙混过关
+
+### 42.5 验证与边界
+
+**已验证**：`go vet ./...` 无输出；`go test ./...` 全包 ok；前端 10 个回归脚本 74 项全绿；
+`build-windows.py` 与 `smoke_windows.py` 74 项在真实产物上通过；内嵌资源另做逐字节比对
+（`index.html` / `booking.mjs` / `campus-ui.mjs` / `app.mjs` 从运行中的 exe 取回，与磁盘源文件 md5 一致），
+用于确认没有「改了页面但没同步进二进制」这类从外面完全看不出来的事故。
+合并后的 main 我另行拉取复核：`go vet` 三平台、`go test ./...`、前端 10 脚本均通过。
+
+**仍未验证**：真机开机自启是否真的拉起并连上网（要写注册表再重启一台 Windows）；
+学校真实返回的 `availableTimePeriod` 形态；`dist/` 产物的真机界面点击（冒烟走 `--no-open` 无头路径）。
+
+### 42.6 权限侧同期发生的变化
+
+- rcwalter24（组织成员）与 StrangeWh（外部协作者）均提为 **write**
+- main 分支保护配为「要求 0 个批准 + 禁止直接推」，`enforce_admins=false`
+  ——GitHub 硬性禁止自我批准，所以"自己的 PR 自己合"只能靠把批准数降到 0 实现
+- **合并方式用了 merge commit 而非 squash**，历史上多了一个 `Merge pull request #5` 提交。
+  本项目此前一直是线性历史，今后要不要限定只允许 squash，是待决定项
+- StrangeWh 进组织的邀请未发出（gh 缺 `admin:org` 范围），需要用户在网页上操作
