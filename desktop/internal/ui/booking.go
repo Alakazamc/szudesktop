@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -25,10 +28,69 @@ type bookingService struct {
 	client *http.Client
 }
 type bookingType struct {
+	Name         string `json:"name"`
 	Mask         uint64 `json:"availableTimePeriod"`
 	Max          int    `json:"samePersonMaxReservationPerDay"`
 	Days         int    `json:"lastReservationDayBeforeAppointment"`
+	Blacklist    int    `json:"blacklistValidDuration"`
 	Announcement string `json:"announcement"`
+}
+
+// UnmarshalJSON 在解码时就剥净 announcement。场地列表里内嵌的 type 与单独查
+// /boothType/info 键集相同，两条路径都走这里，不存在某条漏掉的情况。
+func (t *bookingType) UnmarshalJSON(b []byte) error {
+	type raw bookingType // 剥掉方法，避免递归
+	var r raw
+	if err := json.Unmarshal(b, &r); err != nil {
+		return err
+	}
+	*t = bookingType(r)
+	t.Announcement = plainTextFromSchoolHTML(t.Announcement)
+	return nil
+}
+
+var (
+	// schoolTagRe 匹配任意 HTML 标签；剥完标签的文本里不该再出现它。
+	schoolTagRe = regexp.MustCompile(`</?[A-Za-z][^<>]*>`)
+	// schoolScriptRe 连内容一起丢掉，避免只剥标签却把脚本代码留在正文里。
+	schoolScriptRe = regexp.MustCompile(`(?is)<(script|style)\b[^>]*>.*?</(script|style)\s*>`)
+)
+
+// plainTextFromSchoolHTML 把学校返回的富文本转成纯文本：块级标签和列表项换成
+// 换行，script / style 连内容一起丢，实体解码，行内空白收敛。
+//
+// 为什么必须在服务端做：这些文本来自学校，直接渲染等于给外部内容开 HTML 通道。
+// 剥成纯文本后前端照旧 esc()，两层都不出问题。
+func plainTextFromSchoolHTML(s string) string {
+	if s == "" {
+		return ""
+	}
+	s = schoolScriptRe.ReplaceAllString(s, "")
+	s = strings.ReplaceAll(s, "<br>", "\n")
+	s = strings.ReplaceAll(s, "<br/>", "\n")
+	s = strings.ReplaceAll(s, "<br />", "\n")
+	s = strings.ReplaceAll(s, "</p>", "\n")
+	s = strings.ReplaceAll(s, "</li>", "\n")
+	s = schoolTagRe.ReplaceAllString(s, "")
+	s = html.UnescapeString(s)
+
+	lines := strings.Split(s, "\n")
+	out := make([]string, 0, len(lines))
+	blank := false
+	for _, line := range lines {
+		line = strings.Join(strings.Fields(line), " ")
+		if line == "" {
+			if blank || len(out) == 0 {
+				continue
+			}
+			blank = true
+			out = append(out, "")
+			continue
+		}
+		blank = false
+		out = append(out, line)
+	}
+	return strings.TrimSpace(strings.Join(out, "\n"))
 }
 type bookingRoom struct {
 	ID          int         `json:"id"`

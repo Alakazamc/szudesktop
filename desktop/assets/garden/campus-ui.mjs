@@ -1,5 +1,5 @@
 import {createNoticesUI} from './notices.mjs';
-import {createBookingUI} from './booking.mjs';
+import {createBookingUI,createVenueRulesUI} from './booking.mjs';
 import {pixelIcon} from './pixel.mjs';
 import {unverifiedBadge} from './labels.mjs';
 import {parseGrades,mergeGrades,makeStudyReminder,reminderICS,BOOKING_URL,GRADE_RULE_URL,PHONE_BOOK,PHONE_FALLBACK,PHONE_NOTE} from './campus.mjs';
@@ -7,6 +7,7 @@ import {gpa} from './engine.mjs';
 
 export function createCampusUI({getState,commit,toast,confirm,api,render}) {
  const booking=createBookingUI({api});
+ const venueRules=createVenueRulesUI({api});
  const notices=createNoticesUI({api});
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const link=(url,label,cls='button')=>`<a class="${cls}" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${label} ↗</a>`;
@@ -18,6 +19,7 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
  const formatTime=n=>new Date(n).toLocaleString('zh-CN',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
  function download(text,name,type){const url=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
  function services(){const reminders=getState().reminders||[];return `${booking.card()}
+ ${venueRules.card()}
  <section class="card campus-booking"><div class="card-head"><h2 class="icon-heading tone-info">${pixelIcon('i-mug','heading-icon')}图书馆与自习提醒</h2><span class="badge" data-tone="info">官方入口</span></div>
  <div class="actions">${link('https://webvpn.szu.edu.cn/','登录 WebVPN')}${link('https://www.lib.szu.edu.cn/space-and-facilities/discussion-room','图书馆研讨间')}</div>
  <p class="notice">图书馆研讨间与社区场地分属不同系统；阅览座位另按${link('https://www.lib.szu.edu.cn/space-and-facilities/seat','官方选座规则','')}签到选座。</p>
@@ -89,6 +91,7 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
  function previewHTML(){if(!preview)return '';return `<p>识别到 ${preview.courses.length} 门课程，${preview.errors.length} 行需要处理。相同课程代码（或名称）、学期、层次、学分和绩点的记录将跳过；不同成绩的重修记录保留。</p>${preview.errors.length?`<ul class="notice error">${preview.errors.map(x=>`<li>第 ${x.row} 行 ${esc(x.name)}：${esc(x.message)}</li>`).join('')}</ul><p>请修正以上行后重新预览，避免漏掉课程。</p>`:''}<div class="table-wrap"><table><thead><tr><th>课程</th><th>学期</th><th>学分</th><th>绩点</th></tr></thead><tbody>${preview.courses.slice(0,12).map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.term)}</td><td>${x.credit}</td><td>${x.point}</td></tr>`).join('')}</tbody></table></div>${preview.courses.length>12?'<p>仅展示前 12 门，确认后导入全部有效课程。</p>':''}${button('确认合并到课程记录','import',preview.errors.length||!preview.courses.length?'disabled':'class="primary"')}`}
  async function click(action,b){
   if(await booking.click(action,b))return true;
+  if(await venueRules.click(action))return true;
   if(await notices.click(action))return true;
   if(!action.startsWith('campus-'))return false;
   const a=action.slice(7);
