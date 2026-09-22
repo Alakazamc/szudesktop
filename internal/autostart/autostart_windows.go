@@ -27,6 +27,22 @@ const (
 // 用户可以随时双击程序手动开界面。
 const autostartArgs = " --no-open"
 
+// 命令行版开机自启的参数。
+//
+// 只放 szunet 真正认识的子命令：`szunet login` 本身就是非交互的——它按
+// 「命令行参数 > 环境变量 > 已保存凭据」取账号，失败只反映在退出码上，
+// 没有任何需要用户确认的提示，所以不需要额外的开关。
+//
+// 这里原来写的是 `login --auto`，而 login 从来没有 --auto 这个参数。szunet 的
+// flag 集用的是 ExitOnError，遇到未知参数会直接 os.Exit(2)：于是「用命令行版
+// 开机自启」这条路上程序什么都没做就退出了，用户看到的是一个静默失效的开关。
+// 注册的命令行必须能被 szunet 真的接受，改这里时请对着 cmd/szunet 的 flag 核对。
+const cliLoginArgs = " login"
+
+// CLILoginArgs 返回命令行版开机自启登记的参数。
+// 导出只为一件事：让 cmd/szunet 的测试能断言「登记的参数 login 一定认得」。
+func CLILoginArgs() string { return cliLoginArgs }
+
 // Status 读注册表里的登记情况。
 //
 // 读不到和没登记是两件事：没登记返回「未开启」，读不到返回状态未知，
@@ -158,15 +174,15 @@ func resolveTarget(preferCLI bool) (string, string, error) {
 
 	if preferCLI {
 		if cliPath != "" {
-			return cliPath, " login --auto", nil
+			return cliPath, cliLoginArgs, nil
 		}
-		return self, " login --auto", nil
+		return self, cliLoginArgs, nil
 	}
 	if guiPath != "" {
 		return guiPath, autostartArgs, nil
 	}
 	if cliPath != "" {
-		return cliPath, " login --auto", nil
+		return cliPath, cliLoginArgs, nil
 	}
 	// 两个都没找到（可能被改名了），就用自己
 	return self, autostartArgs, nil

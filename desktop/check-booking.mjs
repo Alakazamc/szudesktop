@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createBookingUI,bookingSlotsHTML,createVenueRulesUI} from './assets/garden/booking.mjs';
+import {createBookingUI,bookingSlotsHTML,createVenueRulesUI,createRoomsLoader,venueRulesHTML} from './assets/garden/booking.mjs';
 const panel={innerHTML:''},rulesPanel={innerHTML:''};
 globalThis.document={getElementById:id=>id==='booking-panel'?panel:id==='venue-rules-panel'?rulesPanel:null};
 const day={room:{id:1,name:'测试会议室',description:'<img src=x>',type:{samePersonMaxReservationPerDay:4}},date:'2026-09-21',fetched_at:'2026-09-20T08:00:00Z',slots:[{index:28,start:'14:00',end:'14:30',state:'available'},{index:29,start:'14:30',end:'15:00',state:'occupied'}]};
@@ -79,5 +79,42 @@ await check('rules card carries no photos and still routes booking to the school
 await check('rules failure is explicit and keeps the official page reachable',async()=>{
  failure=true;await rules.click('booking-rules');
  assert.match(rules.card(),/无法读取学校场地信息/);assert.match(rules.card(),/登录并预约/);failure=false;
+});
+// —— 回归防线：这几条对应「本轮新提交引入、但只会被真实校园网数据触发」的缺陷 ——
+await check('implausible school numbers degrade to — instead of throwing on the render path',()=>{
+ // 四个规则字段全部喂同一个敌意值，所以整句必须逐字变成全「—」。
+ // 这里刻意用精确匹配而不是「页面里出现过 —」：后者会被 openHours 单独产出的一个「—」蒙混过关，
+ // 漏掉「另外三个数字其实原样渲染了」这种半边修复（本轮的第一次修复就是这样漏的）。
+ const allDash='单日 — 格 · 可提前 — 天 · 每日开放 — 小时 · 爽约 — 天内不可再约';
+ for(const bad of ['abc','1,234',1.5,2**53,-1,0,1e30,null,undefined,'',{},[]]){
+  const html=venueRulesHTML([{id:9,typeId:9,name:'R',campus:'粤海',status:true,type:{name:'会议室',availableTimePeriod:bad,samePersonMaxReservationPerDay:bad,lastReservationDayBeforeAppointment:bad,blacklistValidDuration:bad}}]);
+  assert.equal(typeof html,'string','必须总是返回字符串，绝不抛');
+  assert.ok(html.includes(allDash),`${String(bad)} 下四个规则字段都必须降级成 —，实际渲染：${(/单日[^<]*/.exec(html)||['(没渲染出来)'])[0]}`);
+  assert.doesNotMatch(html,/undefined|NaN/,'不得把原始异常值渲染出来');
+ }
+ // 合法的学校数字仍然要照原样显示，别把功能修没了
+ const good=venueRulesHTML([{id:9,typeId:9,name:'R',campus:'粤海',status:true,type:{name:'会议室',availableTimePeriod:3,samePersonMaxReservationPerDay:4,lastReservationDayBeforeAppointment:3,blacklistValidDuration:1}}]);
+ assert.match(good,/单日 4 格 · 可提前 3 天 · 每日开放 1 小时 · 爽约 1 天内不可再约/);
+ for(const v of [null,undefined,{},0,'',[]])assert.equal(typeof venueRulesHTML(v),'string','非数组输入也必须安全降级');
+});
+await check('rooms of different types that share a name are not merged into one rule group',()=>{
+ const html=venueRulesHTML([
+  {id:1,typeId:101,name:'A',campus:'粤海',status:true,type:{name:'会议室',availableTimePeriod:3,samePersonMaxReservationPerDay:4,lastReservationDayBeforeAppointment:3,blacklistValidDuration:1}},
+  {id:2,typeId:202,name:'B',campus:'粤海',status:true,type:{name:'会议室',availableTimePeriod:3,samePersonMaxReservationPerDay:8,lastReservationDayBeforeAppointment:7,blacklistValidDuration:5}}]);
+ assert.equal((html.match(/venue-group/g)||[]).length,2,'同一名称的不同类型必须分成两组');
+ assert.match(html,/单日 4 格/);assert.match(html,/单日 8 格/,'两类的规则不得串台');
+ assert.match(html,/可提前 3 天/);assert.match(html,/可提前 7 天/);
+});
+await check('both cards share one rooms request, and a failed load is not cached',async()=>{
+ let n=0,failLoader=false;
+ const fake=async p=>{assert.equal(p,'/api/booking/rooms');n++;if(failLoader)throw Error('boom');return {rooms,today:'2026-09-20'}};
+ const load=createRoomsLoader(fake,60000);
+ const [a,b]=await Promise.all([load(),load()]);
+ assert.equal(n,1,'并发调用只应打一次接口');assert.equal(a,b,'并发调用应共享同一份结果');
+ assert.equal((await load()).rooms,rooms,'TTL 内复用缓存');assert.equal(n,1,'TTL 内不应再打接口');
+ failLoader=true;
+ const fresh=createRoomsLoader(fake,0); // TTL=0：每次都重新请求，用来验证失败不入缓存
+ await assert.rejects(()=>fresh(),/boom/);await assert.rejects(()=>fresh(),/boom/);
+ assert.equal(n,3,'失败的请求不能被缓存，下次必须重试');
 });
 console.log(`${count} booking checks passed`);

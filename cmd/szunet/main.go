@@ -35,6 +35,7 @@ type options struct {
 	serverIP  string
 	asJSON    bool
 	verbose   bool
+	auto      bool
 }
 
 func main() {
@@ -120,6 +121,12 @@ func addCommonFlags(fs *flag.FlagSet, o *options) {
 	fs.StringVar(&o.serverIP, "ip", "", "直接指定认证服务器 IP，绕过域名解析")
 	fs.BoolVar(&o.asJSON, "json", false, "以 JSON 输出")
 	fs.BoolVar(&o.verbose, "verbose", false, "打印服务端原始返回")
+	// 兼容开关，没有实际作用：login 本来就是非交互的（只用已保存的凭据，
+	// 失败只反映在退出码上）。早期版本的开机自启登记的是 `szunet login --auto`，
+	// 而那时 login 并不认识 --auto，flag 遇到未知参数会 os.Exit(2)，
+	// 于是那些已经写进用户注册表的启动项一直在静默失败。留着这个开关，
+	// 是为了让这些旧启动项不改注册表也能恢复正常。新登记不再带它。
+	fs.BoolVar(&o.auto, "auto", false, "兼容旧的「开机自启」登记项，无实际作用")
 }
 
 // resolveCredentials 按「命令行参数 > 环境变量 > 已保存的凭据」的顺序取账号密码。
