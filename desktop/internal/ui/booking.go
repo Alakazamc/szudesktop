@@ -36,6 +36,13 @@ type bookingType struct {
 	Announcement string `json:"announcement"`
 }
 
+// validate 把「学校字段是否还在我们的假设范围里」收成一处，供场地列表与单场地空位
+// 两条路径共用。之前只有 availability 做了这组边界检查，列表路径没做，于是越界的
+// Mask/Max/Days 会一路渲染到界面上（前端要对 64 位掩码做算术，越界值直接不可信）。
+func (t bookingType) validate() bool {
+	return t.Days >= 1 && t.Days <= 31 && t.Max >= 1 && t.Max <= 48 && t.Mask>>48 == 0
+}
+
 // UnmarshalJSON 在解码时就剥净 announcement。场地列表里内嵌的 type 与单独查
 // /boothType/info 键集相同，两条路径都走这里，不存在某条漏掉的情况。
 func (t *bookingType) UnmarshalJSON(b []byte) error {
@@ -54,10 +61,17 @@ var (
 	schoolTagRe = regexp.MustCompile(`</?[A-Za-z][^<>]*>`)
 	// schoolScriptRe 连内容一起丢掉，避免只剥标签却把脚本代码留在正文里。
 	schoolScriptRe = regexp.MustCompile(`(?is)<(script|style)\b[^>]*>.*?</(script|style)\s*>`)
+	// schoolCommentRe 去掉 HTML 注释，否则注释文字会原样混进正文。
+	schoolCommentRe = regexp.MustCompile(`(?s)<!--.*?-->`)
+	// schoolBrRe 换行标签，大小写与 `>` / `/>` / ` />` 几种写法都要认。
+	schoolBrRe = regexp.MustCompile(`(?i)<br\s*/?>`)
+	// schoolBlockCloseRe 块级元素结束标签一律换行。只换 </p></li> 是不够的：学校用
+	// <div>/<h3>/<tr> 排版时，整段文字会被挤成一行、失去原有的分段。
+	schoolBlockCloseRe = regexp.MustCompile(`(?i)</(p|div|li|ul|ol|tr|td|th|table|thead|tbody|section|article|header|footer|blockquote|pre|figure|h[1-6]|dd|dt|dl)\s*>`)
 )
 
 // plainTextFromSchoolHTML 把学校返回的富文本转成纯文本：块级标签和列表项换成
-// 换行，script / style 连内容一起丢，实体解码，行内空白收敛。
+// 换行，script / style 连内容一起丢，注释丢掉，实体解码，行内空白收敛。
 //
 // 为什么必须在服务端做：这些文本来自学校，直接渲染等于给外部内容开 HTML 通道。
 // 剥成纯文本后前端照旧 esc()，两层都不出问题。
@@ -66,13 +80,14 @@ func plainTextFromSchoolHTML(s string) string {
 		return ""
 	}
 	s = schoolScriptRe.ReplaceAllString(s, "")
-	s = strings.ReplaceAll(s, "<br>", "\n")
-	s = strings.ReplaceAll(s, "<br/>", "\n")
-	s = strings.ReplaceAll(s, "<br />", "\n")
-	s = strings.ReplaceAll(s, "</p>", "\n")
-	s = strings.ReplaceAll(s, "</li>", "\n")
+	s = schoolCommentRe.ReplaceAllString(s, "")
+	s = schoolBrRe.ReplaceAllString(s, "\n")
+	s = schoolBlockCloseRe.ReplaceAllString(s, "\n")
 	s = schoolTagRe.ReplaceAllString(s, "")
 	s = html.UnescapeString(s)
+	// 实体解码后可能又冒出换行或新的标签字符，再收敛一次空白。
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "\r", "\n")
 
 	lines := strings.Split(s, "\n")
 	out := make([]string, 0, len(lines))
@@ -92,6 +107,7 @@ func plainTextFromSchoolHTML(s string) string {
 	}
 	return strings.TrimSpace(strings.Join(out, "\n"))
 }
+
 type bookingRoom struct {
 	ID          int         `json:"id"`
 	TypeID      int         `json:"typeId"`
@@ -266,10 +282,17 @@ func (s *Server) handleBookingRooms(w http.ResponseWriter, r *http.Request) {
 		writeBookingError(w, errBookingFormat)
 		return
 	}
-	for _, room := range result.List {
+	for i := range result.List {
+		room := &result.List[i]
 		if room.ID <= 0 || room.Name == "" {
 			writeBookingError(w, errBookingFormat)
 			return
+		}
+		// 列表这条路上，字段异常只收敛不拒绝。availability 会硬校验 type，因为掩码错
+		// 一格就会显示错误的空位；而列表只用 type 展示规则，整份数据因一个场地被扣下
+		// 会让用户什么都看不到。收敛成零值后前端显示「—」，等于如实说「这项未知」。
+		if !room.Type.validate() {
+			room.Type = bookingType{Name: room.Type.Name, Announcement: room.Type.Announcement}
 		}
 	}
 	writeJSON(w, map[string]any{"rooms": result.List, "today": bookingToday(time.Now()).Format("2006-01-02"), "fetched_at": time.Now().UTC()})

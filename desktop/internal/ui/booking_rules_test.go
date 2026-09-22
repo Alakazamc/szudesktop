@@ -2,8 +2,12 @@ package ui
 
 import (
 	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"testing/fstest"
 )
 
 // 学校返回的 announcement 是带内联样式的 HTML，里面完全可能混着 <script> 和
@@ -90,5 +94,86 @@ func TestBookingAnnouncementWhitespaceStaysEmpty(t *testing.T) {
 		if strings.TrimSpace(bt.Announcement) != "" {
 			t.Fatalf("%q 应剥成空，得到 %q", in, bt.Announcement)
 		}
+	}
+}
+
+// 学校用 div / h3 / table 排版时也必须分段。只认 </p></li> 会让整段须知挤成一行，
+// 用户看到的是「第一段标题正文」这种连在一起的文本。
+func TestPlainTextFromSchoolHTMLBreaksBlocksAndDropsComments(t *testing.T) {
+	in := `<div>第一段</div><h3>标题</h3>正文<br>第二行<BR/>第三行` +
+		`<!-- 删掉我 --><table><tr><td>A</td><td>B</td></tr></table>`
+	got := plainTextFromSchoolHTML(in)
+	if schoolTagRe.MatchString(got) {
+		t.Fatalf("还留着 HTML 标签: %q", got)
+	}
+	if strings.Contains(got, "删掉我") {
+		t.Fatalf("HTML 注释没被丢掉: %q", got)
+	}
+	for _, want := range []string{"第一段", "标题", "正文", "第二行", "第三行", "A", "B"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("正文被吃掉了，少了 %q: %q", want, got)
+		}
+	}
+	if strings.Contains(got, "第一段标题") {
+		t.Fatalf("块级标签没有换行，段落粘在一起: %q", got)
+	}
+	if strings.Contains(got, "第二行第三行") {
+		t.Fatalf("大写 / 自闭合的 <BR> 没有换成换行: %q", got)
+	}
+}
+
+// validate 是 availability 与场地列表共用的边界。掩码超过 48 位、单日格数或可提前
+// 天数越界，都说明学校字段变了，不能再当成可信数字用。
+func TestBookingTypeValidateBoundaries(t *testing.T) {
+	if !(bookingType{Max: 1, Days: 1, Mask: 1}).validate() {
+		t.Fatal("边界内的最小合法值应通过校验")
+	}
+	for _, bad := range []bookingType{
+		{Max: 0, Days: 1, Mask: 1},
+		{Max: 49, Days: 1, Mask: 1},
+		{Max: 1, Days: 0, Mask: 1},
+		{Max: 1, Days: 32, Mask: 1},
+		{Max: 1, Days: 1, Mask: uint64(1) << 48},
+		{Max: 1, Days: 1, Mask: uint64(1) << 63},
+	} {
+		if bad.validate() {
+			t.Fatalf("越界的类型不该通过校验: %+v", bad)
+		}
+	}
+}
+
+// 列表这条路上，单个场地的规则数字异常不能连累其它场地：返回 200，越界数字收敛成
+// 零值（前端显示「—」），场地本身照旧出现。硬校验只属于 availability。
+func TestBookingRoomsSanitizesImplausibleTypeInsteadOfFailing(t *testing.T) {
+	s := bookingFixture(t)
+	// availableTimePeriod = 1<<50，掩码超过 48 位；单日格数与可提前天数也都是 0。
+	body := `{"status":200,"data":{"list":[{"id":1,"typeId":1,"name":"测试会议室","status":true,` +
+		`"type":{"id":1,"name":"会议室","availableTimePeriod":1125899906842624,` +
+		`"samePersonMaxReservationPerDay":0,"lastReservationDayBeforeAppointment":0,` +
+		`"blacklistValidDuration":0}}],"total":1}}`
+	s.booking.client.Transport = calendarTransport(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Request: r}, nil
+	})
+	mux := http.NewServeMux()
+	s.routes(mux, fstest.MapFS{})
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "http://127.0.0.1/api/booking/rooms", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("一个场地的规则越界不该让整份列表失败，得到 %d: %s", w.Code, w.Body.String())
+	}
+	var got struct {
+		Rooms []bookingRoom `json:"rooms"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("解析返回失败: %v", err)
+	}
+	if len(got.Rooms) != 1 {
+		t.Fatalf("场地数量不对: %d", len(got.Rooms))
+	}
+	if got.Rooms[0].Name != "测试会议室" || got.Rooms[0].Type.Name != "会议室" {
+		t.Fatalf("场地本身不该被丢掉: %+v", got.Rooms[0])
+	}
+	if t2 := got.Rooms[0].Type; t2.Mask != 0 || t2.Max != 0 || t2.Days != 0 {
+		t.Fatalf("越界的规则数字应被收敛成零值，得到 %+v", t2)
 	}
 }

@@ -1,32 +1,37 @@
 import {createNoticesUI} from './notices.mjs';
-import {createBookingUI,createVenueRulesUI} from './booking.mjs';
+import {createBookingUI,createVenueRulesUI,createRoomsLoader} from './booking.mjs';
 import {pixelIcon} from './pixel.mjs';
 import {unverifiedBadge} from './labels.mjs';
 import {parseGrades,mergeGrades,makeStudyReminder,reminderICS,BOOKING_URL,GRADE_RULE_URL,PHONE_BOOK,PHONE_FALLBACK,PHONE_NOTE} from './campus.mjs';
 import {gpa} from './engine.mjs';
 
 export function createCampusUI({getState,commit,toast,confirm,api,render}) {
- const booking=createBookingUI({api});
- const venueRules=createVenueRulesUI({api});
+ // 「学校场地列表」是两张卡片共用的同一次只读请求，共享一份带短 TTL 的结果。
+ const loadRooms=createRoomsLoader(api);
+ const booking=createBookingUI({api,loadRooms});
+ const venueRules=createVenueRulesUI({api,loadRooms});
  const notices=createNoticesUI({api});
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const link=(url,label,cls='button')=>`<a class="${cls}" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${label} ↗</a>`;
  const itemIcons={'reminder-ics':'i-calendar',feed:'i-bell','session-save':'i-chest','session-check':'i-shield','session-clear':'i-key','online-score':'i-medal',preview:'i-scroll',template:'i-scroll',import:'i-chest'};
  const button=(label,action,extra='')=>`<button data-action="campus-${action}" ${extra}>${itemIcons[action]?`<svg class="item-icon" aria-hidden="true"><use href="#${itemIcons[action]}"></use></svg>`:''}${label}</button>`;
+ // 每张卡片各自兜底。services() 的返回值会被整段赋给 #main，只要其中一块抛异常，
+ // 整页就静默不更新、也不报错。这里把失败收敛在单块卡片内。
+ function safeCard(title,build){try{return build()}catch(e){return `<section class="card"><div class="card-head"><h2 class="icon-heading tone-warning">${pixelIcon('i-scroll','heading-icon')}${esc(title)}</h2><span class="badge" data-tone="warning">暂时不可用</span></div><p class="notice error">这一块没能显示（${esc(e&&e.message||'渲染异常')}）。其他内容不受影响，可以稍后重试。</p></section>`}}
  let gradeText='',gradeLevel='undergrad',preview=null,filterLevel='',filterTerm='';
  // 学校系统（ehall）在线读取相关状态。会话本身不放在这里，只由后端保管。
  let sessionSaved=false,sessionDesc='',sessionErr='',sessionBusy=false,onlineScore=null,onlineErr='',onlineBusy=false,onlineLevel='undergrad';
  const formatTime=n=>new Date(n).toLocaleString('zh-CN',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
  function download(text,name,type){const url=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
- function services(){const reminders=getState().reminders||[];return `${booking.card()}
- ${venueRules.card()}
+ function services(){const reminders=getState().reminders||[];return `${safeCard('学习空间 · 预约与空位',()=>booking.card())}
+ ${safeCard('场地与琴房规则速查',()=>venueRules.card())}
  <section class="card campus-booking"><div class="card-head"><h2 class="icon-heading tone-info">${pixelIcon('i-mug','heading-icon')}图书馆与自习提醒</h2><span class="badge" data-tone="info">官方入口</span></div>
  <div class="actions">${link('https://webvpn.szu.edu.cn/','登录 WebVPN')}${link('https://www.lib.szu.edu.cn/space-and-facilities/discussion-room','图书馆研讨间')}</div>
  <p class="notice">图书馆研讨间与社区场地分属不同系统；阅览座位另按${link('https://www.lib.szu.edu.cn/space-and-facilities/seat','官方选座规则','')}签到选座。</p>
  <details><summary>添加自习提醒</summary><p class="muted">在官方系统确认预约后，可手动登记时间并导出日历。此处保存的是提醒，不会向学校提交预约。</p>
  <form id="campus-reminder-form" class="grid three"><div><label for="reminder-place">自习地点</label><input id="reminder-place" name="place" maxlength="80" placeholder="填写已预约的场地 / 房间" required></div><div><label for="reminder-start">开始时间</label><input id="reminder-start" name="start" type="datetime-local" required></div><div><label for="reminder-end">结束时间</label><input id="reminder-end" name="end" type="datetime-local" required></div><button>${pixelIcon('i-bell')}保存本机提醒</button></form></details>
  ${reminders.length?`<h3>自习提醒 · 手动登记</h3><ul class="campus-reminders">${[...reminders].sort((a,b)=>a.start-b.start).map(x=>`<li><div><strong>${esc(x.place)}</strong><p>${formatTime(x.start)} — ${formatTime(x.end)}${x.end<Date.now()?' · 已结束':''}</p></div><div class="actions">${button('导出日历','reminder-ics',`data-id="${esc(x.id)}"`)}${button('移除提醒','reminder-delete',`data-id="${esc(x.id)}"`)}</div></li>`).join('')}</ul><small>导入系统日历后可在开始前 15 分钟提醒；是否提醒由日历软件设置决定。</small>`:''}</section>
- ${notices.card()}
+ ${safeCard('校园通知',()=>notices.card())}
  <section class="card campus-phone"><div class="card-head"><h2 class="icon-heading tone-magic">${pixelIcon('i-mail','heading-icon')}常用联系与入口</h2><span class="badge">公开信息</span></div>
  <p>${esc(PHONE_NOTE)}</p>
  <ul class="campus-phones">${PHONE_BOOK.map(x=>`<li><span>${esc(x.name)}</span>${x.tel?`<a href="tel:${esc(x.tel)}">${esc(x.tel)}</a>`:`<a href="mailto:${esc(x.mail)}">${esc(x.mail)}</a>`}${link(x.source,'来源','')}</li>`).join('')}</ul>
