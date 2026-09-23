@@ -295,6 +295,27 @@ func statusOnline(zone portal.Zone, o *options, user, pass string) (*portal.Onli
 	return queryOnline(zone, o.srunHost, o.drcomHost, user, pass)
 }
 
+// statusReport 组装 `szunet status` 的报告字段。
+//
+// ⚠️ det 通常来自 portal.Detect()：它在「能上外网」时会提前返回，门户连通性
+// 与协议指纹根本没跑，那两个 bool 只是零值 false。把它们原样发出去，等于把
+// 「没测过」写成「探不到」—— 而同机 `detect --json` / `diag --json` 走的是
+// Probe()，会给出相反的真结论。所以只在真的探测过时才发门户字段：
+// 缺键 = 没测量，false = 测了但不通，两者不能混为一谈。
+func statusReport(zone portal.Zone, det *portal.DetectResult) map[string]any {
+	out := map[string]any{
+		"zone":        zone,
+		"zone_label":  zone.Label(),
+		"internet_ok": det.InternetOK, // 提前返回前就设好了，始终可信
+		"probed":      det.Probed,
+	}
+	if det.Probed {
+		out["dorm_portal_ok"] = det.DormPortalOK
+		out["teaching_portal"] = det.TeachPortalOK
+	}
+	return out
+}
+
 func cmdStatus(args []string) {
 	fs := flag.NewFlagSet("status", flag.ExitOnError)
 	var o options
@@ -304,13 +325,7 @@ func cmdStatus(args []string) {
 	user, pass, credErr := resolveCredentials(&o)
 	zone, det := pickZone(&o)
 
-	out := map[string]any{
-		"zone":            zone,
-		"zone_label":      zone.Label(),
-		"internet_ok":     det.InternetOK,
-		"dorm_portal_ok":  det.DormPortalOK,
-		"teaching_portal": det.TeachPortalOK,
-	}
+	out := statusReport(zone, det)
 
 	// 联网时也照查（QueryOnline 的注释里写了为什么），有没有账号都要查：
 	// 门户按出口 IP 回答，跟本机存没存账号无关。以前这里写的是
