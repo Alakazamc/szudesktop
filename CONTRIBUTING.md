@@ -95,9 +95,15 @@ python desktop/smoke_windows.py      # 整机冒烟（74 项）
   - 这道关卡是有来历的：beta0.7 发出去时正文只有一行自动生成的 compare 链接。
     本项目直接提交到 main、没有 PR，GitHub 的 `generate_release_notes`
     拿不到任何可分类的内容，所以说明必须自己写。
-- 打 `beta*` 或 `v*` 标签会触发 `.github/workflows/release.yml`：
-  test（ubuntu）→ test-macos（探针，不阻断）→ build-cli（5 平台）→
-  build-desktop-windows → release。
+- 打 `beta*` 或 `v*` 标签会触发 `.github/workflows/release.yml`。它不是一条直链，
+  而是两道并行的门：`test`（ubuntu，同步资源 + 10 个前端回归 + `check_release_notes.py` +
+  `go vet` + `go test`）与 `test-macos`（macOS 真机，同步资源 + `go vet` +
+  `internal/credential` 测试 + 对真实 `security` 命令的 stdin 探针）**并行**跑；两个都过了，`build-cli`（5 平台
+  交叉编译）与 `build-desktop-windows`（构建 + 冒烟 + 打包）才开始，最后 `release`
+  等 `[build-cli, build-desktop-windows, test-macos]` 全绿才发。
+- **`test-macos` 会阻断发布**——它在 `release.needs` 里。它曾经带 `continue-on-error`，
+  把真实的失败显示成 success，于是 beta0.7.1 / beta0.7.2 带着「macOS 上存不了凭据」
+  发了出去（F26）；修好之后那个开关就被摘掉了，原委见 `docs/STATUS.md` 第 39.4 节。
 - **不要在未发布的改动上跑 `python desktop/make_release.py`**：它会覆盖
   与 GitHub Release 对应的本地包，导致线上附件没法再和本地产物逐字节核对。
 - 发布后要核对附件：`sha256sum -c`、ZIP 内 exe 与独立 exe 是否逐字节一致、
