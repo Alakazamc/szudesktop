@@ -1,7 +1,7 @@
 # szuDesktop 项目总清单与当前状态
 
 > **唯一维护文档**：全部问题、功能计划、设计要求、执行顺序与验收记录统一在本文维护。
-> 更新：2026-09-21。合并原 STATUS、任务清单、界面重设计、本地任务副本及两轮代码/视觉审查。
+> 更新：2026-09-25。合并原 STATUS、任务清单、界面重设计、本地任务副本及两轮代码/视觉审查。
 > 原独立清单和设计方案已移除；本地原始调研只作为冻结的历史证据，不再维护另一套任务。
 > 本文是公开安全版本，不包含真实账号、内网拓扑或未公开接口细节；旧调研中的数量、规则、可达性和许可结论须在实际接入时重核。
 
@@ -16,7 +16,8 @@
 - 2026-09-22 把**发布说明接上单一来源** `CHANGELOG.md`：CI 抽取对应版本那一节作为 Release 正文，抽不到就不上传附件；`make_release.py` 打包前也拦一次。起因是查出 beta0.7 的 Release 正文只有一行 compare 链接。见第 38 节。
 - 2026-09-22 **第一个外部 PR 合并**：协作者 StrangeWh 的 [PR #5](https://github.com/SzuDesktopTeam/szudesktop/pull/5) 修掉了我引入的渲染静默失败（F28）与命令行版开机自启静默失效（F27），merge commit `97063da`。见第 41 节。
 - 2026-09-22 **协作权限放开**：rcwalter24 与 StrangeWh 均为 write；main 保护改为「0 批准 + 禁止直接推」；StrangeWh 是外部协作者，不在组织内。详见第 32.3 节。
-- **当前待办总入口是第 32 节**（2026-09-22 重写，含建议顺序）。
+- 2026-09-25 **Electron 外壳迁移阶段 0/1 完成**（分支 `feat/electron-shell`，未合并、未发布）：桌面窗口层迁往 Electron + Go sidecar，Windows NSIS 安装包已产出（约 85.8MB，未做真机安装验收），全量回归 14/14 绿；发布接入 go/no-go 待定。见第 43 节。
+- **当前待办总入口是第 32 节**；Electron 审查问题在第 44 节，修复与 beta0.8.0 安装包交付在第 45 节。
 - 2026-09-20 使用路径复核已修复 5 类问题，详见第 20 节；当时的候选包与公开附件分开记录。
 
 - beta0.5.1 阶段的预发布版 **荔枝庭院**，Windows x64。起点 `457353f`；PR #1 已合并到 main（`1644f09`），其测试及各平台构建通过；按用户要求恢复原有星露谷式界面，该阶段已合并并发布 beta0.5 预发布。会话与成绩安全修复见第 17 节；beta0.5.1 已发布到 GitHub，交付记录见第 18 节。
@@ -1657,3 +1658,149 @@ merge commit `97063da` 合入 main。**PR 描述本身按本项目的验收格�
 - **合并方式用了 merge commit 而非 squash**，历史上多了一个 `Merge pull request #5` 提交。
   本项目此前一直是线性历史，今后要不要限定只允许 squash，是待决定项
 - StrangeWh 进组织的邀请未发出（gh 缺 `admin:org` 范围），需要用户在网页上操作
+
+## 43. Electron 外壳迁移：阶段 0/1 完成（2026-09-25，分支 `feat/electron-shell`，未合并未发布）
+
+桌面版的窗口层正在从「浏览器 `--app` 窗口」迁到 **Electron 外壳**：Electron 主进程把现有 Go
+桌面 exe 当 sidecar 子进程拉起（`--no-open`），解析其 stdout 里的回环地址，主窗口加载现有 UI，
+退出时清理进程树。设计 spec 与执行计划见 `docs/superpowers/plans/2026-09-24-electron-phase-0-1-shell.md`
+（已于 `809070f` 入库）。本节记录阶段 0（可行性）与阶段 1（落地）的完成证据、与 spec 的偏差、未决事项。
+过渡期内**旧版单 exe 桌面版仍在构建和发布**，两者并存（README 已按此改写）。
+
+### 43.1 落地内容（提交 `ce9b45b..4a53ec8`）
+
+- `desktop/electron/listen-url.mjs`：`parseListenUrl` 纯函数，把 sidecar stdout 归一成回环 URL（`ce9b45b`）
+- `desktop/electron/sidecar.mjs`：sidecar 监督器 `startSidecar` / `stopSidecar` —— 拉起、解析端口、
+  `/api/status` 健康探测、失败路径先杀子进程再抛（不泄漏孤儿），win32 用 `taskkill /T` 清进程树兜底（`3607c95`、`c4c7198`）
+- `desktop/electron/main.mjs`：应用入口 —— Electron 单实例锁、起 sidecar、主窗口加载现有 UI；
+  外链只放行 http/https（`external-url.mjs`），杜绝 `file:` / `search-ms:` 之类任意 URI 交给系统处理器（`39445be`、`e9cc7e3`）
+- `desktop/electron/build.mjs` + `electron-builder.yml`：一键构建 —— 先用 `desktop/build-windows.py`
+  编出 Go sidecar，再把 `internal/version/VERSION` 去掉 `beta` 前缀后经 `--config.extraMetadata.version`
+  注入版本（仓库里的 `package.json` 恒为 0.0.0，不再被构建改写），electron-builder 出 NSIS 包（`abb010a`、`12974d0`）
+- `desktop/electron/check-sidecar.mjs`：8 项回归（端口解析、监督器拉起/健康/失败清理、外链白名单），
+  用 node 替身而不是真实 exe，ubuntu CI 可跑
+- CI（`.github/workflows/release.yml`）：test job 增加一步 `node desktop/electron/check-sidecar.mjs`（`4bfe7b1`）；
+  新增 `build-desktop-electron-windows` job（windows-latest，npm ci + electron-builder，产出安装包 artifact；
+  **未接入 `release.needs`**）（`4a53ec8`）
+
+### 43.2 完成证据
+
+- **sidecar 机制对真实 exe 成立**（阶段 0 的核心问题）：用 1.2 的真实监督器拉起真实构建产物
+  `dist/szudesktop-windows-amd64.exe`（9.6MB，beta0.7.3，windowsgui 子系统、无控制台）→
+  `RESOLVED http://127.0.0.1:54597`、`/api/status` 返回 200 与真实 JSON、`STOPPED_OK`、退出码 0。
+  结论：windowsgui 子进程的 stdout 能被 Node 管道捕获并解析出端口，机制不是只对替身成立。
+- **Electron dev 应用截图验证渲染出真实 UI**（Task 1.3）：经 `webContents.capturePage()` 存
+  `.scratch_probe/main-shot.png`（保留，约 400KB）；控制方独立读图确认渲染出真实荔枝庭院界面：
+  顶栏 beta0.7.3、导航、首启引导弹窗、校园连接卡、宠物卡。**只声明「渲染」**——透明合成 / 始终置顶
+  这类性质截图验证不了，本阶段也未涉及。
+- **Windows NSIS 安装包已产出**（Task 1.4）：`desktop/electron/release/szuDesktop-Setup-0.7.3.exe`，
+  **85,801,230 bytes（约 85.8MB）**；包内 `resources/szudesktop-windows-amd64.exe` 与 dist 构建产物
+  字节一致，app.asar 五个模块齐全，图标字节确认嵌入。**未安装、未运行**——「安装 → 启动 → 主窗口」
+  的真机验收留给人工检查点，本节只声明「产出且内容清单符合预期」，不声明「装上去可用」。
+- **全量回归 14/14 绿**（Task 1.7，2026-09-25）：前端 10 个 check-* 加 check-sidecar 合计 83 项断言全过；
+  `go vet ./...` 无输出；`go test ./...`（另以 `-count=1` 重跑确认非缓存）8 个含测试包全部 ok；
+  `python desktop/smoke_windows.py` 74 项 PASS、0 FAIL。无头 / 冒烟路径与迁移前一致，无回归。
+
+### 43.3 与 spec 的偏差（有意为之，逐条记录）
+
+1. **阶段 0 的一次性 Electron 尖峰（原 Task 0.2）取消了**。尖峰三个目标里「spawn + 解析端口 + 加载 UI」
+   已被 1.2 的真实探针与 1.3 的正式外壳覆盖；唯一独有价值「透明置顶宠物窗」属阶段 2。省掉重复的
+   ~150MB 下载与一次性重建代码，Electron 只装一次（`desktop/electron/`）。
+2. **删除 `openBrowser` / autostart 登记改指 Electron / 单实例改用 Electron 锁 —— 挪到阶段 2**。
+   spec 原要求删掉浏览器开窗代码，但过渡期旧版单 exe 仍在构建、发布（Releases 的 zip 还是它），
+   提前删会破坏现状。因此单实例目前是「Go 引擎层的同存档复用」与「Electron
+   `requestSingleInstanceLock`」双锁并存，阶段 2 退役旧 exe 时一并收敛。
+3. **宠物窗整体推迟到阶段 2**（spec 本就把它排在后续阶段，这里明确阶段 0 也不再为它做尖峰）。
+
+### 43.4 未决事项
+
+- **mac / linux 的 Electron 打包推迟**：本轮只做 Windows NSIS；mac / linux 桌面维持旧形态。
+- **发布接入 go/no-go：PENDING（未决定）**。是否把 `build-desktop-electron-windows` 接入
+  `release.needs`、让安装包随下一个 tag 公开，交作者决定；目前意图仅产 artifact，但 release 的全量产物下载仍可能将它混入公开附件，见第 44 节 EL02。
+  安装包未签名（electron-builder 明确 `signing is skipped`），用户首次运行会有 SmartScreen 提示；
+  是否购代码签名证书同属发布决策。**未获明确同意不接入 release、不打 tag、不推送。**
+- **winCodeSign 符号链接的 CI caveat**：electron-builder 下载的 winCodeSign-2.6.0 包内含 macOS
+  符号链接，某些 Windows 环境（非管理员且未开开发者模式）7za 建链接无权限，报
+  `ERR_ELECTRON_BUILDER_CANNOT_EXECUTE`——本机复现过，靠手动预置 `%LOCALAPPDATA%/electron-builder/Cache`
+  解决（缺的 2 个 darwin 链接只服务 mac 签名，Windows NSIS 用不到）。GitHub 的 windows runner
+  通常允许建符号链接、预计不炸，caveat 与绕法已写进 release.yml 该 job 的注释；以 CI 真跑为准。
+- **setup-node 标签已核实存在**：2026-09-25 通过 GitHub API 确认 `actions/setup-node@v6.0.0`；Electron job 本身仍待首次 CI 运行验收。
+- `desktop/electron/package.json` 的 `description` / `author` 已在 `3b13ce7` 补齐；现有安装包早于该提交，包内 metadata 尚未包含这些字段，需要修复收尾后重建。
+- 监督器尚不覆盖「sidecar 中途崩溃后的重启」；阶段 2 常驻宠物使长会话成常态时单独立任务。
+- 本机安装 electron / winCodeSign 等二进制需 npmmirror 镜像环境变量（直连 GitHub CDN 会 ECONNRESET，
+  典型中国网络问题）；镜像配置只在本地用，**不进 lock / .npmrc / 仓库**，CI（美国 runner）走 npmjs 官方源。
+
+
+## 44. Electron 发布前审查与优化顺序（2026-09-25）
+
+审查基线：`feat/electron-shell` / `809070f`。**本节保留审查当时的发现与完成标准；随后按用户授权实施的修复见第 45 节**。审查当时未安装、合并、推送、打标签或公开发布。第 43 节证明基础外壳已经实现，不等于 Electron 可直接公开发行。所有新增任务只在本节维护，不另建问题清单。
+
+### 44.1 结论与已成立的基础
+
+- 暂不直接公开当前 Electron 安装包，先关闭下表 P1 项，再通过安装验收。保留像素校园、木框和纸张风格，无需为迁移重做整套前端。
+- 当前公开版仍是 beta0.7.3 的旧单 EXE；Electron 分支有 14 个相对本地 main 的提交，远端尚无该分支。公开 Release 8 个附件中没有 Electron 安装包。
+- 现有安装包确实包含 Go 引擎和四个运行模块加 package.json；上轮核对包内 Go 引擎与当前 dist 字节一致，归档截图显示真实荔枝庭院。安装、升级、卸载以及高 DPI 窗口操作没有据此获得验收。
+- 保留了回环监听、API 来源/方法校验、关闭 Node integration、context isolation、外链协议白名单、本机存档和安全凭据存储。没有发现必须重写 Go 引擎或迁移存档格式的理由。
+
+### 44.2 唯一新增任务清单
+
+难度沿用第 2 节 S/M/L，是工作范围估计，不是工时承诺。P1 为这次 Electron 公开发布前必做；P2 为近期体验/安全加固；P3 可后置。复现和代码审查结论分别标注。
+
+| 编号 | 优先级 | 难度 | 问题、证据与影响 | 完成标准 |
+| --- | --- | --- | --- | --- |
+| EL01 | P1 | M | **运行时停止支持**：package-lock.json 锁定 Electron 33.4.11，官方列出 33 系列于 2025-04-29 结束支持。不是已证明存在某个可利用漏洞，但不宜用停止维护的浏览器内核新发处理校园会话的应用。 | 升级到仍受支持的稳定版本，复核相关破坏性变更，并验证打包、启动、外链和退出。 |
+| EL02 | P1 | S | **未授权发行的配置竞态**：release.yml:236 的 download-artifact 不限定名称，随后上传 dist/*。不加入 release.needs 只是不等待 Electron job；它若先完成，安装包仍可能被收进公开附件。代码配置确认。 | 用明确的产物允许列表；未开启 Electron 发布时，模拟其 artifact 已存在也不会上传。决定公开时再明确接入依赖和附件。 |
+| EL03 | P1 | M | **已有 Go 实例导致 Electron 打不开**：main.mjs 固定 spawn；server.go:154-159 复用旧实例后退出且不打印地址。设置自启登记 Go exe --no-open，所以新版用户开启自启也会触发。真实 Go exe 隔离复现：第一实例健康、第二次报“sidecar 提前退出，码 0”、第一实例仍返回 200。 | 明确已有引擎的接管/所有权与窗口激活策略，修正 Electron 的自启目标或暂时禁用该入口；覆盖自启后打开、旧单 EXE 在后台、双击两次，不能误杀共享实例。 |
+| EL04 | P1 | S | **启动失败未进入正常错误处理**：sidecar.mjs:6-9 未监听 child.error。不存在的 exe 已复现 Unhandled error / ENOENT，调用方 catch 接不住。 | 缺失文件、无权执行等错误返回受控拒绝，清理计时器与监听，并给用户明确的失败原因和退出入口。 |
+| EL05 | P1 | S | **健康检查超时不约束请求**：sidecar.mjs:13-19 的 fetch 无取消。隔离替身设置 100ms 超时，实际到替身 1.5 秒后退出才解除等待，总计 1771ms。 | 给请求绑定剩余超时，达到期限就取消并回收本次启动的子进程；用不返回响应的替身验证。 |
+| EL06 | P1 | S | **stdout 分块时截错端口**：listen-url.mjs:3-4 在收到数字前缀时立即匹配；隔离替身先输出端口前四位、120ms 后输出末位，监督器请求错误端口并启动失败。 | 等完整行或明确边界再解析；覆盖在端口中间拆分的一条真实格式日志。 |
+| EL07 | P1 | M | **进程树退出缺少可靠等待**：sidecar.mjs:42-45 先 kill 父进程，再发 taskkill /T，后者可能找不到父 PID；错误被丢弃。main.mjs 的 async before-quit 也没有阻止并等待退出。当前测试只证明父进程消失，不能证明进程树全部退出。代码审查，未宣称已复现真实孤儿。 | 正常退出先请求 Go 有序关闭，再有期限地清理本次拥有的进程树；Windows 优先等待树清理。用自己的父/子替身验证不同退出入口，不按进程名杀用户实例。 |
+| EL08 | P2 | S/M | **引擎中途退出无主动反馈**：main.mjs 启动后未处理 child.exit；旧页面留着，重新双击只聚焦故障窗口。启动失败也只 console.error，安装版用户难以诊断。代码路径确认，未制造用户 GUI 崩溃。 | 显示“引擎已停止”及重新打开/完整退出入口，保留可脱敏诊断；本期无需复杂的自动重启循环。 |
+| EL09 | P2 | M | **窗口导航与权限策略尚未收紧**：目前只限制新开窗口；未设 will-navigate/重定向来源限制、会话权限处理器，HTML/响应无 CSP。属于加固缺口，不代表已验证攻击链。sandbox 未显式写出也不能直接等同于关闭。 | 主窗口保留在自己的回环来源，远端 http/https 外链交系统浏览器；权限按实际功能明确处理，配置符合现有资源的 CSP，验证正常跳转/导出不受影响。 |
+| EL10 | P2 | M | **单次学校查询锁住全应用**：app.mjs:88 的全局 busy 禁用正文控件，:89 导航也直接忽略；只读公告/空位查询期间不能转去庭院。前端请求上限 45 秒，场地后端 20 秒。代码路径确认，未额外模拟 GUI 弱网。 | 只读加载状态限定到卡片，允许切页或取消；沿用已有结果防串页机制，存档写入仍按需串行。 |
+| EL11 | P3 | S | **启动后持续保留全部 stdout**：sidecar.mjs:6-9 的 data listener 在成功后仍追加和扫描 buf。替身继续输出 16,388 字节后监听仍在。不会重复发健康请求；当前日志量不大。 | 启动 Promise 成功/失败后都移除解析监听和 timer；若需诊断日志，明确限定保存量。 |
+| EL12 | P2 | S | **引导/包说明落后于外壳**：index.html:149 和 app.mjs:63 仍说关闭后约 10 秒退出，Electron 却立即开始清理；现有安装包没带最后补的作者信息。README 原来写“CI 也产出 artifact”，但实际新 job 尚未首跑。 | 按运行方式同步首启、设置、中英 README；重建包后核对实际 metadata、版本与发布说明，候选包不能冒充现行 Release。 |
+| EL13 | P1 | M | **安装产品尚未验收**：已有证据是 dev 截图、替身回归及归档检查；CI 没运行 Electron 打包后的安装/启动测试，本地也未安装。不是已经证明安装失败。 | 用修复后的最终安装包走安装→启动→关闭→再开、旧进程共存、升级保留存档、卸载清理入口；核对安装路径含空格/中文，确保只清理本次测试的配置和进程。先完成本分支 CI 首跑。 |
+
+### 44.3 建议执行顺序
+
+1. 先处理低成本而影响直接的 EL02、EL04、EL05、EL06；EL11 可随启动监听清理一并完成，不额外造框架。
+2. 升级运行时 EL01，并统一引擎所有权、自启及退出（EL03、EL07）。EL08 的故障提示适合一并落地。
+3. 做 EL09、EL10、EL12 的边界和体验优化；保持现有视觉风格。EL10 可以独立开展。
+4. 重建最终安装包并做 EL13，README 与 STATUS 同步记录实际通过项，再决定公开发布。宠物悬浮窗、托盘、多平台安装包和自动更新另按后续阶段推进，不混入此次必修范围。
+
+### 44.4 验证范围与参考
+
+- 复用了上轮 8/8 外壳回归及安装包字节核对，没有为了填写表格再跑全量 Go/前端测试。
+- 本轮新增验证仅为隔离实例冲突、悬挂健康请求、分块端口日志和监听生命周期；不使用校园凭据、不修改注册表、不执行真实预约，相关探针均已退出。
+- 未新做 GUI、高 DPI、安装/升级/卸载、云端 Electron job 或网络故障恢复验收；第 43 节的 14/14 属当时记录，不能替代本节新增问题的回归。
+- 官方依据：[Electron 支持周期](https://releases.electronjs.org/schedule)、[Electron 安全建议](https://www.electronjs.org/docs/latest/tutorial/security)、[会话权限接口](https://www.electronjs.org/docs/latest/api/session)。2026-09-25 核对；选具体升级目标时再确认版本状态。
+
+## 45. beta0.8.0：Electron 发布前修复与安装包交付（2026-09-25）
+
+用户已明确授权“修复 → 提 PR → 合并 PR → 发布安装包 → 更新 README”，替代第 43 节的待定发布决定。继续使用 `feat/electron-shell` 汇总，版本唯一来源更新为 `beta0.8.0`，不覆盖旧 beta0.7.3 附件。
+
+### 45.1 第 44 节问题的处理
+
+- **EL01**：Electron 固定为 **44.4.5**，electron-builder 为 **26.15.3**；lock 使用 npmjs 地址，本地镜像环境变量不入库。运行时和构建依赖不再停留在 Electron 33。
+- **EL02**：Electron 构建/安装验收加入 release.needs；只下载七个明确命名的发行 artifact、只上传十个发行文件。验收截图和日志单独保存，不会混入公开发行附件。
+- **EL03**：Go 验证已运行实例后输出明确复用协议行；Electron 获得 `owned:false`，退出时不停止共享引擎。安装版暂不新建 Go 自启项，可关闭旧项；便携版和 CLI 行为保留，不提前引入托盘/后台新架构。
+- **EL04/EL05/EL06/EL11**：捕获 spawn error；健康探测绑定总超时取消；只接受完整就绪行和合法端口；Promise 完成后释放解析监听与计时器并排空 stdout。
+- **EL07**：主进程阻止默认退出，等待自己的引擎有序关闭；无响应时先 taskkill /T /F 并等待。复用引擎 stop 不发送 shutdown、不杀进程。正常 Go 退出和异常父子树回收分别验证，不承诺清理一个早已退出父进程遗留的任意后代。
+- **EL08**：启动失败显示可读对话框；自己启动的引擎意外退出或复用服务失联，提示重新打开/退出。无自动无限重启。
+- **EL09**：sandbox 显式启用；主窗口限制在本机服务来源，外链走浏览器；拒绝未声明权限；增加 CSP。preload 只暴露外壳标记与退出，IPC 校验发送窗口、主 frame 和来源。移除内联 onclick。
+- **EL10**：公开学校查询使用明确只读动作清单和卡片内加载，不禁用导航；场地条件带版本防止旧响应覆盖。存档/凭据写入仍串行。
+- **EL12**：首启、设置、中英文 README 与包内说明区分 Electron/便携版；新包 metadata 带作者和描述，版本由 VERSION 注入。保留旧便携版，不宣称本次完成课表/成绩真实验收或应用内预约。
+- **EL13**：新增仅在 GitHub 干净 Windows runner 运行的安装闭环检查，检查失败就阻止发行。中文/空格路径、隔离配置、安装包内引擎比对、真实 DOM 与截图、正常退出/重开、便携后台共存、覆盖安装保留存档、卸载不删存档/不改启动项均有检查。此前没有公开 Electron 安装版，所以覆盖安装测试使用同版本包，不虚构跨版本验收。
+
+### 45.2 验证与发布门禁
+
+- 本地 `go vet ./...`、`go test ./...` 通过；Go 单实例复用测试通过。
+- 外壳 12 项回归通过：含缺失 EXE、分块端口、挂起健康请求、有序 shutdown、复用后退出、Windows 真父子进程树回收。窗口来源/IPC/CSP 检查和发布说明 12 项检查通过。
+- UI 相关 10 组回归共 80 项通过，新增交互 7 项已加入 CI，原 Windows 单 EXE 整机冒烟继续保留。
+- 已运行新 Electron + 真实 Go beta0.8.0 的隔离启动/退出探针；打包后程序报告 packageVersion=0.8.0、Electron=44.4.5，截图确认真实荔枝庭院与新的退出说明。Windows 便携版整机冒烟 74 项通过。最终安装产物的验证结果以本 PR 与 beta0.8.0 标签流水线为准，不能用此截图替代安装验收。
+- 本地旧 release/win-unpacked 目录被占用，不终止已有程序；本地候选构建改放 release/beta0.8.0，云端干净构建仍使用标准输出目录。本机随后在 NSIS 辅助工具下载遇到网络超时，最终安装包由通过完整验收的 CI 构建提供。
+- PR #8 首轮 CI（36044329419）已通过安装到中文/空格路径、引擎字节比对与受控卸载，但抓到真实启动问题：外壳用 `/api/status` 判断就绪，该接口还会探测外网与学校门户，云端首开超过 8 秒。新增纯本机 `/api/health`，启动、存活与安装探针统一改用它；页面网络查询继续后台运行。旧引擎没有该接口时提示先退出旧版，不误杀共享服务、不回退到慢业务接口。安装脚本保留原始启动错误，不让“存档尚未创建”掩盖原因。
+- 第二轮 CI（36045656691）本机健康检查已通过，但干净 Windows 的页面未完成渲染；本机独立中文配置首开通过。安装探针新增失败截图、页面状态、模块响应类型与控制台错误取证，仅在隔离测试模式记录，便于定位实际差异；未放宽真实页面通过条件。
+- 第三轮 CI（36046559987）取证确认 `.mjs` 被返回为 `text/plain; charset=utf-8`，浏览器严格模块类型检查拒绝执行；preload 正常，页面停在“正在打开你的庭院”。Go 在 Windows 会读取注册表覆盖默认 MIME，本机开发环境没有这一覆盖。资源路由改为明确返回 JavaScript 模块类型，并用模拟错误类型的回归覆盖两条静态路径；修复同时惠及便携版。
+- 发布说明由 CHANGELOG.md 唯一提供；发行内容为安装 EXE + SHA256、便携 EXE / ZIP + SHA256、五个平台 CLI。发布成功后应核对 Release 附件及摘要与 CI 结果。

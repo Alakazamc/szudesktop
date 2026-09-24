@@ -61,16 +61,17 @@ protocol at an endpoint that isn't there.
 
 ## Download
 
-Grab `szudesktop-<version>-windows-amd64.zip` from the
-[Releases](https://github.com/SzuDesktopTeam/szudesktop/releases) page, unzip it anywhere,
-and double-click `szudesktop.exe`. **No installer — just unzip and run.**
+Download **`szuDesktop-Setup-0.8.0.exe`** from [Releases](https://github.com/SzuDesktopTeam/szudesktop/releases), run the installer, then open szuDesktop. The Windows installer includes its window runtime and Go engine. Available downloads are listed on the release page.
 
 | Item | Detail |
 | :--- | :----- |
-| Desktop app | Windows x64 (`szudesktop.exe`) |
-| Command line | Windows / macOS / Linux, single binary `szunet` |
-| Current version | [beta0.7.3](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.7.3) · public beta (pre-release); Windows download published |
-| Runtime | No dependencies to install; the window is provided by your browser (Edge / Chrome app window) |
+| Windows installer | An independent Electron window; a matching `.sha256` file verifies the download |
+| Windows portable | `szudesktop-beta0.8.0-windows-amd64.zip`; unzip and run `szudesktop.exe`, using the local Edge / Chrome browser |
+| Command line | Windows / macOS / Linux `szunet` binaries remain available |
+| Source version | `beta0.8.0` public beta; see [Releases](https://github.com/SzuDesktopTeam/szudesktop/releases) for published files |
+| Saved data | Both Windows editions use the same local garden and study records; export a backup from Settings before updating |
+
+The installer reuses an existing engine, handles startup failures and timeouts, and cleans up the engine it starts. It uses Electron 44.4.5. Startup checks only the local engine, so the garden opens even when campus or internet access is unavailable; network status loads in the background. Both Windows editions fix a script-loading issue that could leave the garden stuck on its opening screen. Public school queries now allow navigation while the relevant card loads. Acceptance evidence is maintained in [STATUS](STATUS.md); CI installation tests retain page screenshots and failure details. A floating pet window, tray and installer autostart remain future work.
 
 ### First run
 
@@ -84,16 +85,14 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 
 ### Opening and exiting
 
-- Starting it twice with the same save file reuses the running local service instead of
-  opening a second copy
-- Closing **all** app windows exits automatically after about 10 seconds; to quit
-  immediately use **Settings → Exit**
+- Starting the installer edition twice focuses the existing window; it can also reuse an already running portable engine of the same version. If an older engine is reported, exit the old edition before reopening
+- Closing the installer window or choosing **Settings → Exit** stops only the engine it started; a reused service remains running. The portable edition exits about 10 seconds after all its windows close
 - Reloading the page does not stop the service
 - To start the service without a window, launch `szudesktop.exe` with `--no-open`
+  (meant for headless / sidecar use — the Electron shell starts the Go engine the same way)
 - A short, skippable guide appears on first launch; it explains where your data lives,
   how to quit, and what to try first
-- Autostart can be toggled in **Settings** (the CLI equivalent is `szunet autostart`).
-  If its state cannot be read, the app says so instead of showing "off"
+- The installer edition can disable an existing autostart entry but does not create one in this release. Portable and CLI autostart remain available; unreadable status is reported explicitly
 
 ### Where my data lives
 
@@ -116,7 +115,7 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | Campus network sign-in | ✅ | Teaching area (SRun) / dorm area (Dr.COM), zone detected automatically; sign-out and manual zone override |
 | Access point ID (`ac_id`) discovery | ✅ | Tries in order: your manual value → what worked on this port before → the gateway redirect → a guess. Guesses are labelled as such |
 | Connection diagnostics | ✅ | Lists zone decision, portal reachability, protocol fingerprint and the conclusion |
-| Credential storage | ✅ | Windows DPAPI / macOS Keychain / Linux Secret Service; saved **only after a successful sign-in and only if you ticked "remember"**. Without a system secure store it refuses to save and says why — **no plain-text fallback** (F24, fixed). The macOS save path has not been validated on real hardware (F25) |
+| Credential storage | ✅ | Windows DPAPI / macOS Keychain / Linux Secret Service; saved **only after a successful sign-in and only if you ticked "remember"**. Without a system secure store it refuses to save and says why — **no plain-text fallback** (F24, fixed). The macOS save path was validated on a real CI runner for beta0.7.3 |
 | Notices | Partial | Current source groups notices by college or department: 28 academic-unit links, 17 readable college columns, plus Academic Affairs and the Graduate School. Dates and original links are preserved with a 10-minute cache; other units link to their official sites |
 | Room availability and booking | Partial | Live community rooms and half-hour availability on the campus network (read-only). The interface opens the official school page for login and booking and never asks users to copy booking cookies. The server has **no booking write endpoints left** (F23, removed). Library services use a separate official system |
 | Calendar and timetables | Partial | Official calendar updates and manual week overrides. Undergraduate personal timetable reading and graduate login are **pending full live account validation** |
@@ -126,9 +125,9 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 | Todo and focus timer | ✅ | Todo list plus 5 / 25 / 45-minute focus sessions |
 | Lychee Garden | ✅ | Companion care and growth, crops, plots, watering, harvest, decorations, daily goals, achievements and a field guide. No purchases, no real-money trading |
 | Save file | ✅ | Fixed local file, survives restarts and port changes, supports export / import and multi-window conflict protection |
-| Launch at login | ✅ (Windows only) | Starts the service silently after Windows login and connects once, without opening a window; toggle and real registered state in Settings. macOS / Linux are unsupported and say so instead of failing silently |
+| Launch at login | Partial (Windows only) | Portable and CLI editions retain silent autostart; the installer can disable old entries but does not create new ones. macOS / Linux explicitly report unsupported |
 
-beta0.7.3 is a public prerelease. Score reading remains limited to the first page; balance is not integrated. Timetables require manual queries and still await full live account validation. In the current source, reservations are completed on the official school page; embedding that page inside the app is not yet implemented. See [STATUS.md](STATUS.md).
+beta0.8.0 is a public prerelease. Score reading remains limited to the first page; balance is not integrated. Timetables require manual queries and still await full live account validation. In the current source, reservations are completed on the official school page; embedding that page inside the app is not yet implemented. See [STATUS.md](STATUS.md).
 
 **College notice filtering:** selecting a college automatically reads its public column. Unsupported units have an official-site link; authenticated internal notices are not included. This update is included in beta0.6.1.
 
@@ -211,16 +210,17 @@ If you see "authentication failed: wrong ac_id", run `szunet detect` to see what
 <details>
 <summary><b>My antivirus flags it</b></summary>
 
-It's a single-file program without a code-signing certificate, which triggers common
-false positives. That said, **don't dismiss every warning as a false positive** — the code
+The portable executable and Electron installer currently lack a code-signing certificate
+and may trigger a SmartScreen prompt on first run. That said, **don't dismiss
+every warning as a false positive** — the code
 is open source, so you can read it or build it yourself (`go build`) and compare behaviour.
 </details>
 
 <details>
 <summary><b>Does it keep running after I close the window?</b></summary>
 
-It exits about 10 seconds after you close **all** app windows. Reloading doesn't stop the
-service. Use **Settings → Exit** to quit immediately.
+Closing the installer window exits and cleans up its own engine; a reused service stays running.
+The portable edition exits about 10 seconds after all its windows close. **Settings → Exit** is also available.
 </details>
 
 <details>
@@ -283,9 +283,13 @@ node   desktop/check-booking.mjs
 node   desktop/check-network-ui.mjs
 node   desktop/check-workspace-ui.mjs
 node   desktop/check-autostart-ui.mjs
+node   desktop/electron/check-sidecar.mjs # Electron startup, shutdown and reuse regression
+node   desktop/electron/check-window-policy.mjs
+node   desktop/check-interactions.mjs
 go vet ./... && go test ./...      # static checks and unit tests
 python desktop/check_release_notes.py # release-notes extraction regression
-python desktop/build-windows.py    # build the Windows desktop app
+python desktop/build-windows.py    # build the Windows desktop exe (also the Electron Go sidecar)
+node   desktop/electron/build.mjs  # build the Windows Electron installer (run `npm ci` in desktop/electron first)
 python desktop/smoke_windows.py    # end-to-end smoke test
 python desktop/make_release.py     # produce the release package (only when actually releasing; it overwrites same-named local artifacts)
 ```

@@ -18,10 +18,10 @@ test('settings page exposes the autostart card',()=>{
 
 const paint=app.slice(app.indexOf('function paintAutostart(){'),app.indexOf('\n',app.indexOf('function paintAutostart(){')));
 
-function paintWith(state){
+function paintWith(state,shell){
   const nodes={'#autostart-state':{textContent:''}};
   const button={disabled:false,innerHTML:''};
-  const ctx=vm.createContext({$:s=>nodes[s],document:{querySelector:()=>button},sprite:()=>'',autostartState:state});
+  const ctx=vm.createContext({$:s=>nodes[s],document:{querySelector:()=>button},sprite:()=>'',autostartState:state,szuDesktop:shell});
   vm.runInContext(paint,ctx);
   vm.runInContext('paintAutostart()',ctx);
   return {text:nodes['#autostart-state'].textContent,button};
@@ -48,10 +48,10 @@ test('unsupported platform disables the button instead of pretending',()=>{
 // 切换开关走的是真实点击分支：必须按当前状态取反、失败时不得报成功。
 const click=app.slice(app.indexOf("document.addEventListener('click'"),app.indexOf("document.addEventListener('submit'"));
 
-async function clickAutostart(initial,response){
+async function clickAutostart(initial,response,shell){
   const calls=[];let message='',painted=0;
   const ctx=vm.createContext({
-    probing:false,autostartState:initial,
+    probing:false,autostartState:initial,szuDesktop:shell,
     schoolUI:{click:async()=>false},campusUI:{click:async()=>false},
     document:{addEventListener:(_,handler)=>{ctx.clickHandler=handler}},
     run:fn=>{ctx.work=fn()},toast:t=>{message=t},paintAutostart:()=>{painted++},
@@ -86,6 +86,18 @@ test('a failed toggle reports the reason and keeps the old state',async()=>{
   assert.doesNotMatch(res.message,/已打开|已关掉/);
   assert.equal(res.state.enabled,false);
   assert.equal(res.painted,1,'失败后也要重画，否则按钮文字和真实状态不一致');
+});
+
+test('Electron cannot register a new Go autostart but may turn off an existing one',async()=>{
+  const shell={shell:'electron'};
+  const off=paintWith({supported:true,enabled:false,detail:'未开启'},shell);
+  assert.equal(off.button.disabled,true);assert.match(off.text,/安装版暂不支持开机自启/);
+  const blocked=await clickAutostart({supported:true,enabled:false},null,shell);
+  assert.equal(blocked.calls.length,0,'安装版不得新增 Go 自启登记');
+  const on=paintWith({supported:true,enabled:true,detail:'已开启'},shell);
+  assert.equal(on.button.disabled,false);assert.match(on.button.innerHTML,/关闭旧版开机自启/);
+  const result=await clickAutostart({supported:true,enabled:true},{supported:true,enabled:false,detail:'已关闭'},shell);
+  assertCall(result.calls,'/api/autostart',false);
 });
 
 for(const [name,fn] of tests){await fn();console.log('PASS',name)}

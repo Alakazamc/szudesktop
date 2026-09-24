@@ -10,6 +10,7 @@ CHANGELOG.md 是 GitHub Release 正文的唯一来源。抽不到、正文是空
 当时没有任何关卡拦着。
 """
 import os
+import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -26,6 +27,8 @@ DOWNLOADS = """### 下载
 - `szudesktop-windows-amd64.exe` — 单文件版，与 ZIP 里的程序逐字节一致
 - 命令行版：`szunet-windows-amd64.exe`、`szunet-darwin-amd64`、`szunet-darwin-arm64`、`szunet-linux-amd64`、`szunet-linux-arm64`
 """
+
+ELECTRON_DOWNLOAD = "- `szuDesktop-Setup-__SEMVER__.exe` — Windows 安装版（Electron 窗口），旁边是同名 `.sha256` 校验文件\n"
 
 
 class NotesError(Exception):
@@ -66,7 +69,13 @@ def extract(text, version):
 
 def render(text, version):
     """正文 + 下载清单。清单由版本号生成，所以 CHANGELOG 里不要自己写。"""
-    return extract(text, version) + "\n\n---\n\n" + DOWNLOADS.replace("__VERSION__", version)
+    downloads = DOWNLOADS.replace("__VERSION__", version)
+    match = re.fullmatch(r"(?:beta|v)?(\d+)\.(\d+)\.(\d+)", version)
+    # beta0.8.0 开始正式分发安装版，回看旧版本时不能虚构不存在的附件。
+    if match and tuple(map(int, match.groups())) >= (0, 8, 0):
+        installer = ELECTRON_DOWNLOAD.replace("__SEMVER__", ".".join(match.groups()))
+        downloads = downloads.replace("### 下载\n\n", "### 下载\n\n" + installer)
+    return extract(text, version) + "\n\n---\n\n" + downloads
 
 
 def load(path=CHANGELOG):

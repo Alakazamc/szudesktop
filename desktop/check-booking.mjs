@@ -117,4 +117,25 @@ await check('both cards share one rooms request, and a failed load is not cached
  await assert.rejects(()=>fresh(),/boom/);await assert.rejects(()=>fresh(),/boom/);
  assert.equal(n,3,'失败的请求不能被缓存，下次必须重试');
 });
+await check('room loading stays local and disables only its own request button',async()=>{
+ let finish;const pending=new Promise(resolve=>{finish=resolve});
+ const card=createBookingUI({api:()=>pending});
+ const reading=card.click('booking-rooms');
+ assert.match(card.card(),/data-action="booking-rooms" disabled/);
+ assert.match(card.card(),/正在读取学校场地信息/);
+ assert.match(card.card(),/href="https:/,'学校原页始终可打开');
+ finish({rooms,today:'2026-09-20'});await reading;
+ assert.doesNotMatch(card.card(),/data-action="booking-rooms" disabled/);
+});
+await check('changing venue conditions ignores a late old response or failure',async()=>{
+ for(const fail of [false,true]){
+  let finish,reject;const pending=new Promise((resolve,no)=>{finish=resolve;reject=no});
+  const card=createBookingUI({api:async path=>path.endsWith('/rooms')?{rooms,today:'2026-09-20'}:pending});
+  await card.click('booking-rooms');const query=card.click('booking-query');
+  card.change({target:{id:'booking-date',value:'2026-09-24'}});
+  if(fail)reject(Error('旧日期失败'));else finish(day);
+  await query;assert.match(card.card(),/value="2026-09-24"/);
+  assert.match(card.card(),/条件已更改/);assert.doesNotMatch(card.card(),/14:00|旧日期失败/);
+ }
+});
 console.log(`${count} booking checks passed`);

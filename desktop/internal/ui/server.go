@@ -156,6 +156,7 @@ func (s *Server) Run() error {
 		return err
 	}
 	if existing {
+		fmt.Printf("szuDesktop 已复用: %s\n", instance.URL)
 		return nil
 	}
 	s.instance = instance
@@ -246,7 +247,15 @@ func (s *Server) Run() error {
 // 解法：/assets/ 前缀在服务端统一剥掉再交给静态服务，两条路都通，
 // 页面里那套相对路径一个字符都不用改。
 func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
-	fileServer := http.FileServer(http.FS(static))
+	staticFiles := http.FileServer(http.FS(static))
+	fileServer := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Windows file associations may override .mjs to text/plain. Chromium
+		// rejects that type for ES modules, so embedded modules own their MIME.
+		if strings.HasSuffix(r.URL.Path, ".mjs") {
+			w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+		}
+		staticFiles.ServeHTTP(w, r)
+	})
 
 	// /assets/xxx -> 剥掉前缀 -> 当 xxx 处理
 	// 剥完 r.URL.Path 就是 assets 里那一层的路径，正好对上 embed 的根
@@ -281,6 +290,7 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 	mux.HandleFunc("/api/window", protectAPI(s.handleWindow, http.MethodPost))
 	mux.HandleFunc("/api/window-stream", protectAPI(s.handleWindowStream, http.MethodGet))
 	mux.HandleFunc("/api/instance", protectAPI(s.handleInstance, http.MethodPost))
+	mux.HandleFunc("/api/health", protectAPI(s.handleHealth, http.MethodGet))
 	mux.HandleFunc("/api/status", protectAPI(s.handleStatus, http.MethodGet))
 	mux.HandleFunc("/api/login", protectAPI(s.handleLogin, http.MethodPost))
 	mux.HandleFunc("/api/logout", protectAPI(s.handleLogout, http.MethodPost))
@@ -312,6 +322,11 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 }
 
 /* ---------- 接口 ---------- */
+
+// handleHealth reports local server readiness without network or credential I/O.
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, map[string]any{"ok": true, "app": "szuDesktop", "app_version": version.Current})
+}
 
 type statusResp struct {
 	AppVersion  string   `json:"app_version"` // 页面顶栏与关于页的版本号来自这里，不再各写一份
