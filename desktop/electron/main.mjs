@@ -3,6 +3,7 @@ import {writeFileSync} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {startSidecar, stopSidecar} from './sidecar.mjs';
+import {isSafeExternalUrl} from './external-url.mjs';
 
 // dev: 仓库里 dist/ 的 exe；打包后: resources 里的 extraResource
 function sidecarCommand(){
@@ -20,8 +21,8 @@ async function boot(){
   handle=await startSidecar({command,args});
   mainWin=new BrowserWindow({width:1200,height:820,title:'szuDesktop',
     webPreferences:{contextIsolation:true,nodeIntegration:false}});
-  // 外链交给系统浏览器，不在应用内开新窗
-  mainWin.webContents.setWindowOpenHandler(({url})=>{shell.openExternal(url);return {action:'deny'};});
+  // 外链交给系统浏览器（仅 http/https），不在应用内开新窗
+  mainWin.webContents.setWindowOpenHandler(({url})=>{ if(isSafeExternalUrl(url)) shell.openExternal(url); return {action:'deny'}; });
   await mainWin.loadURL(handle.baseUrl);
   if (process.env.SZU_SHOT) {
     await new Promise((r) => setTimeout(r, 1500)); // 等 SPA 首屏渲染

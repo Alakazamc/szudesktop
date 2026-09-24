@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {parseListenUrl} from './listen-url.mjs';
 import {startSidecar} from './sidecar.mjs';
+import {isSafeExternalUrl} from './external-url.mjs';
 import path from 'node:path';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -61,6 +62,22 @@ test('startSidecar: 健康探测失败时杀掉子进程，不留孤儿',async()
     try{fs.unlinkSync(marker);}catch{}
     try{fs.unlinkSync(pidFile);}catch{}
   }
+});
+
+test('isSafeExternalUrl: 放行 http/https（含大小写混写）',async()=>{
+  assert.equal(isSafeExternalUrl('http://example.com'),true);
+  assert.equal(isSafeExternalUrl('https://example.com'),true);
+  assert.equal(isSafeExternalUrl('HTTPS://Example.COM'),true);
+});
+test('isSafeExternalUrl: 拒绝非 http(s) 的危险/相对/空 URI',async()=>{
+  assert.equal(isSafeExternalUrl('file:///C:/x'),false);
+  assert.equal(isSafeExternalUrl('search-ms:query'),false);
+  assert.equal(isSafeExternalUrl('ms-msdt:x'),false);
+  assert.equal(isSafeExternalUrl('javascript:alert(1)'),false);
+  assert.equal(isSafeExternalUrl('data:text/html,x'),false);
+  assert.equal(isSafeExternalUrl(''),false);
+  assert.equal(isSafeExternalUrl('relative/path'),false);
+  assert.equal(isSafeExternalUrl('//example.com'),false);
 });
 
 // 顶层 await：node 直接跑 .mjs 支持
