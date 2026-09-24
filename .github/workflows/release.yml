@@ -199,8 +199,14 @@ jobs:
       - name: 装 Electron 依赖
         run: npm ci
         working-directory: desktop/electron
+      # 版本号从 internal/version/VERSION 注入（与 desktop/electron/build.mjs 一致）：
+      # 提交进仓库的 package.json 固定是 0.0.0，不注入的话安装包文件属性会显示 0.0.0。
+      # 文件内容只在 pwsh 变量里流转，不用 ${{ }} 插值进脚本文本，避免注入面。
       - name: 打 Windows 安装包
-        run: npx electron-builder --win --config electron-builder.yml
+        shell: pwsh
+        run: |
+          $v = (Get-Content ../../internal/version/VERSION -Raw).Trim() -replace '^beta',''
+          npx electron-builder --win --config electron-builder.yml --config.extraMetadata.version=$v
         working-directory: desktop/electron
       - uses: actions/upload-artifact@v7.0.1
         with:
