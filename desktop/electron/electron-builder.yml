@@ -1,0 +1,21 @@
+appId: com.szudesktop.app
+productName: szuDesktop
+directories:
+  output: release
+  buildResources: build
+files:
+  - main.mjs
+  - sidecar.mjs
+  - listen-url.mjs
+  - external-url.mjs
+  - package.json
+extraResources:
+  - from: ../../dist/szudesktop-windows-amd64.exe
+    to: szudesktop-windows-amd64.exe
+win:
+  target: nsis
+  icon: ../assets/szudesktop.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  artifactName: szuDesktop-Setup-${version}.exe
