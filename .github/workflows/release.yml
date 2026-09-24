@@ -170,6 +170,44 @@ jobs:
             dist/szudesktop-*-windows-amd64.zip.sha256
           if-no-files-found: error
 
+  # Electron 外壳的 Windows 安装包构建。目前只产出 artifact、不进 release 的 needs——
+  # 先让作者本机验证安装包可用，再由人工决定是否随 tag 公开发布（见 Task 1.9 的 go/no-go）。
+  #
+  # 两条环境事实（controller 已核实）：
+  # 1) GitHub 托管 runner 访问 GitHub/npm 正常，CI 里不需要任何国内镜像 env
+  #    （本机装 electron 时的 ECONNRESET 是作者本地网络问题，不进 CI、不进 lock/.npmrc）。
+  # 2) electron-builder 解包 winCodeSign 时，在某些 Windows 环境会因创建符号链接
+  #    （7za / darwin 链接）失败而报 ERR_ELECTRON_BUILDER_CANNOT_EXECUTE / symlink 错误——
+  #    若本 job 在 runner 上撞到，就是这个已知原因。
+  build-desktop-electron-windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.13'
+      # setup-node 的确切主版本以第一次 CI 运行为准（此处按 brief 用 v6.0.0）
+      - uses: actions/setup-node@v6.0.0
+        with:
+          node-version: '22'
+      - name: 构建 Go sidecar
+        run: python desktop/build-windows.py
+      - name: 装 Electron 依赖
+        run: npm ci
+        working-directory: desktop/electron
+      - name: 打 Windows 安装包
+        run: npx electron-builder --win --config electron-builder.yml
+        working-directory: desktop/electron
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: szudesktop-electron-windows
+          path: desktop/electron/release/*.exe
+          if-no-files-found: error
+
   release:
     # test-macos 也在里面：它守着 macOS 凭据这条路。beta0.7.1 / beta0.7.2 之所以
     # 带着「macOS 存不了凭据」发出去，就是因为当时这个 job 失败不阻断发布（F26）。
