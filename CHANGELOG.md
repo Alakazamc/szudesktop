@@ -48,6 +48,15 @@
   就是非交互的，只用已保存的凭据），同时保留了 `--auto` 兼容开关，**已经开过这个开关的用户不必
   手动改注册表**。桌面端（`szudesktop`）的开机自启不受影响，一直是好的。
 
+- **桌面版窗口层开始迁移到 Electron 外壳**：Go 引擎改由 Electron 主进程作为 sidecar 子进程拉起
+  并监督（只监听本机回环），主窗口不再依赖本机浏览器。目前是过渡期：旧版单 exe（浏览器 `--app`
+  窗口）仍在构建和发布，两者并存，旧形态的退役安排在后续阶段。
+- **新增 Windows Electron 安装包构建**：NSIS 安装程序，约 85MB，内含 Chromium 运行时与 Go 引擎
+  sidecar。本地 `node desktop/electron/build.mjs` 可构建，CI 以 artifact 形式产出；
+  **尚未接入公开 release**（是否随下一个 tag 发布待定），安装包未签名。
+- **CI 新增 Electron sidecar 回归**：test job 会跑 `desktop/electron/check-sidecar.mjs`
+  （端口解析、sidecar 拉起 / 健康探测 / 失败清理、外链 http/https 白名单，共 8 项）。
+
 （下一批改动写在这里，发版时把标题改成新版本号）
 
 ## beta0.7.3

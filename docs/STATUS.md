@@ -16,6 +16,7 @@
 - 2026-09-22 把**发布说明接上单一来源** `CHANGELOG.md`：CI 抽取对应版本那一节作为 Release 正文，抽不到就不上传附件；`make_release.py` 打包前也拦一次。起因是查出 beta0.7 的 Release 正文只有一行 compare 链接。见第 38 节。
 - 2026-09-22 **第一个外部 PR 合并**：协作者 StrangeWh 的 [PR #5](https://github.com/SzuDesktopTeam/szudesktop/pull/5) 修掉了我引入的渲染静默失败（F28）与命令行版开机自启静默失效（F27），merge commit `97063da`。见第 41 节。
 - 2026-09-22 **协作权限放开**：rcwalter24 与 StrangeWh 均为 write；main 保护改为「0 批准 + 禁止直接推」；StrangeWh 是外部协作者，不在组织内。详见第 32.3 节。
+- 2026-09-25 **Electron 外壳迁移阶段 0/1 完成**（分支 `feat/electron-shell`，未合并、未发布）：桌面窗口层迁往 Electron + Go sidecar，Windows NSIS 安装包已产出（约 85.8MB，未做真机安装验收），全量回归 14/14 绿；发布接入 go/no-go 待定。见第 43 节。
 - **当前待办总入口是第 32 节**（2026-09-22 重写，含建议顺序）。
 - 2026-09-20 使用路径复核已修复 5 类问题，详见第 20 节；当时的候选包与公开附件分开记录。
 
@@ -1657,3 +1658,77 @@ merge commit `97063da` 合入 main。**PR 描述本身按本项目的验收格�
 - **合并方式用了 merge commit 而非 squash**，历史上多了一个 `Merge pull request #5` 提交。
   本项目此前一直是线性历史，今后要不要限定只允许 squash，是待决定项
 - StrangeWh 进组织的邀请未发出（gh 缺 `admin:org` 范围），需要用户在网页上操作
+
+## 43. Electron 外壳迁移：阶段 0/1 完成（2026-09-25，分支 `feat/electron-shell`，未合并未发布）
+
+桌面版的窗口层正在从「浏览器 `--app` 窗口」迁到 **Electron 外壳**：Electron 主进程把现有 Go
+桌面 exe 当 sidecar 子进程拉起（`--no-open`），解析其 stdout 里的回环地址，主窗口加载现有 UI，
+退出时清理进程树。设计 spec 与执行计划见 `docs/superpowers/plans/2026-09-24-electron-phase-0-1-shell.md`
+（工作文档，尚未入库）。本节记录阶段 0（可行性）与阶段 1（落地）的完成证据、与 spec 的偏差、未决事项。
+过渡期内**旧版单 exe 桌面版仍在构建和发布**，两者并存（README 已按此改写）。
+
+### 43.1 落地内容（提交 `ce9b45b..4a53ec8`）
+
+- `desktop/electron/listen-url.mjs`：`parseListenUrl` 纯函数，把 sidecar stdout 归一成回环 URL（`ce9b45b`）
+- `desktop/electron/sidecar.mjs`：sidecar 监督器 `startSidecar` / `stopSidecar` —— 拉起、解析端口、
+  `/api/status` 健康探测、失败路径先杀子进程再抛（不泄漏孤儿），win32 用 `taskkill /T` 清进程树兜底（`3607c95`、`c4c7198`）
+- `desktop/electron/main.mjs`：应用入口 —— Electron 单实例锁、起 sidecar、主窗口加载现有 UI；
+  外链只放行 http/https（`external-url.mjs`），杜绝 `file:` / `search-ms:` 之类任意 URI 交给系统处理器（`39445be`、`e9cc7e3`）
+- `desktop/electron/build.mjs` + `electron-builder.yml`：一键构建 —— 先用 `desktop/build-windows.py`
+  编出 Go sidecar，再把 `internal/version/VERSION` 去掉 `beta` 前缀后经 `--config.extraMetadata.version`
+  注入版本（仓库里的 `package.json` 恒为 0.0.0，不再被构建改写），electron-builder 出 NSIS 包（`abb010a`、`12974d0`）
+- `desktop/electron/check-sidecar.mjs`：8 项回归（端口解析、监督器拉起/健康/失败清理、外链白名单），
+  用 node 替身而不是真实 exe，ubuntu CI 可跑
+- CI（`.github/workflows/release.yml`）：test job 增加一步 `node desktop/electron/check-sidecar.mjs`（`4bfe7b1`）；
+  新增 `build-desktop-electron-windows` job（windows-latest，npm ci + electron-builder，产出安装包 artifact；
+  **未接入 `release.needs`**）（`4a53ec8`）
+
+### 43.2 完成证据
+
+- **sidecar 机制对真实 exe 成立**（阶段 0 的核心问题）：用 1.2 的真实监督器拉起真实构建产物
+  `dist/szudesktop-windows-amd64.exe`（9.6MB，beta0.7.3，windowsgui 子系统、无控制台）→
+  `RESOLVED http://127.0.0.1:54597`、`/api/status` 返回 200 与真实 JSON、`STOPPED_OK`、退出码 0。
+  结论：windowsgui 子进程的 stdout 能被 Node 管道捕获并解析出端口，机制不是只对替身成立。
+- **Electron dev 应用截图验证渲染出真实 UI**（Task 1.3）：经 `webContents.capturePage()` 存
+  `.scratch_probe/main-shot.png`（保留，约 400KB）；控制方独立读图确认渲染出真实荔枝庭院界面：
+  顶栏 beta0.7.3、导航、首启引导弹窗、校园连接卡、宠物卡。**只声明「渲染」**——透明合成 / 始终置顶
+  这类性质截图验证不了，本阶段也未涉及。
+- **Windows NSIS 安装包已产出**（Task 1.4）：`desktop/electron/release/szuDesktop-Setup-0.7.3.exe`，
+  **85,801,230 bytes（约 85.8MB）**；包内 `resources/szudesktop-windows-amd64.exe` 与 dist 构建产物
+  字节一致，app.asar 五个模块齐全，图标字节确认嵌入。**未安装、未运行**——「安装 → 启动 → 主窗口」
+  的真机验收留给人工检查点，本节只声明「产出且内容清单符合预期」，不声明「装上去可用」。
+- **全量回归 14/14 绿**（Task 1.7，2026-09-25）：前端 10 个 check-* 加 check-sidecar 合计 83 项断言全过；
+  `go vet ./...` 无输出；`go test ./...`（另以 `-count=1` 重跑确认非缓存）8 个含测试包全部 ok；
+  `python desktop/smoke_windows.py` 74 项 PASS、0 FAIL。无头 / 冒烟路径与迁移前一致，无回归。
+
+### 43.3 与 spec 的偏差（有意为之，逐条记录）
+
+1. **阶段 0 的一次性 Electron 尖峰（原 Task 0.2）取消了**。尖峰三个目标里「spawn + 解析端口 + 加载 UI」
+   已被 1.2 的真实探针与 1.3 的正式外壳覆盖；唯一独有价值「透明置顶宠物窗」属阶段 2。省掉重复的
+   ~150MB 下载与一次性重建代码，Electron 只装一次（`desktop/electron/`）。
+2. **删除 `openBrowser` / autostart 登记改指 Electron / 单实例改用 Electron 锁 —— 挪到阶段 2**。
+   spec 原要求删掉浏览器开窗代码，但过渡期旧版单 exe 仍在构建、发布（Releases 的 zip 还是它），
+   提前删会破坏现状。因此单实例目前是「Go 引擎层的同存档复用」与「Electron
+   `requestSingleInstanceLock`」双锁并存，阶段 2 退役旧 exe 时一并收敛。
+3. **宠物窗整体推迟到阶段 2**（spec 本就把它排在后续阶段，这里明确阶段 0 也不再为它做尖峰）。
+
+### 43.4 未决事项
+
+- **mac / linux 的 Electron 打包推迟**：本轮只做 Windows NSIS；mac / linux 桌面维持旧形态。
+- **发布接入 go/no-go：PENDING（未决定）**。是否把 `build-desktop-electron-windows` 接入
+  `release.needs`、让安装包随下一个 tag 公开，交作者决定；在此之前该 job 只产 artifact。
+  安装包未签名（electron-builder 明确 `signing is skipped`），用户首次运行会有 SmartScreen 提示；
+  是否购代码签名证书同属发布决策。**未获明确同意不接入 release、不打 tag、不推送。**
+- **winCodeSign 符号链接的 CI caveat**：electron-builder 下载的 winCodeSign-2.6.0 包内含 macOS
+  符号链接，某些 Windows 环境（非管理员且未开开发者模式）7za 建链接无权限，报
+  `ERR_ELECTRON_BUILDER_CANNOT_EXECUTE`——本机复现过，靠手动预置 `%LOCALAPPDATA%/electron-builder/Cache`
+  解决（缺的 2 个 darwin 链接只服务 mac 签名，Windows NSIS 用不到）。GitHub 的 windows runner
+  通常允许建符号链接、预计不炸，caveat 与绕法已写进 release.yml 该 job 的注释；以 CI 真跑为准。
+- **setup-node 版本待第一次 CI 运行确认**：新 job 按计划写 `actions/setup-node@v6.0.0`，
+  离线无法核实该主版本存在；若 CI 报 unknown action，退到仓库内其他 setup-* 的同代版本。
+- `desktop/electron/package.json` 缺 `description` / `author`（electron-builder 只 warn；NSIS
+  安装包文件属性对应字段为空），收尾时补。
+- 监督器尚不覆盖「sidecar 中途崩溃后的重启」；阶段 2 常驻宠物使长会话成常态时单独立任务。
+- 本机安装 electron / winCodeSign 等二进制需 npmmirror 镜像环境变量（直连 GitHub CDN 会 ECONNRESET，
+  典型中国网络问题）；镜像配置只在本地用，**不进 lock / .npmrc / 仓库**，CI（美国 runner）走 npmjs 官方源。
+
