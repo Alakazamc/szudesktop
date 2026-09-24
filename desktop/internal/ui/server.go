@@ -247,7 +247,15 @@ func (s *Server) Run() error {
 // 解法：/assets/ 前缀在服务端统一剥掉再交给静态服务，两条路都通，
 // 页面里那套相对路径一个字符都不用改。
 func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
-	fileServer := http.FileServer(http.FS(static))
+	staticFiles := http.FileServer(http.FS(static))
+	fileServer := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Windows file associations may override .mjs to text/plain. Chromium
+		// rejects that type for ES modules, so embedded modules own their MIME.
+		if strings.HasSuffix(r.URL.Path, ".mjs") {
+			w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+		}
+		staticFiles.ServeHTTP(w, r)
+	})
 
 	// /assets/xxx -> 剥掉前缀 -> 当 xxx 处理
 	// 剥完 r.URL.Path 就是 assets 里那一层的路径，正好对上 embed 的根
