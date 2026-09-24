@@ -1,6 +1,8 @@
 {
   "name": "szudesktop-desktop",
   "productName": "szuDesktop",
+  "description": "深大校园生活手帐桌面端：Electron 外壳 + Go 引擎 sidecar",
+  "author": "SzuDesktopTeam",
   "version": "0.0.0",
   "private": true,
   "type": "module",
