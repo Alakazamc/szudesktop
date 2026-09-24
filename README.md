@@ -62,10 +62,14 @@ szuDesktop 同时对付这两件事：**一个按钮完成认证，一个按钮�
 
 | 项 | 说明 |
 | :-- | :---- |
-| 桌面端 | Windows x64（`szudesktop.exe`） |
-| 命令行 | Windows / macOS / Linux，单文件 `szunet` |
+| 桌面端（现行发布） | Windows x64 单 exe（`szudesktop.exe`），窗口由本机浏览器提供（Edge / Chrome 应用窗口） |
+| 桌面端（迁移中，未发布） | Electron 应用：Windows NSIS 安装包，约 85MB，内含 Chromium 运行时，Go 引擎作为 sidecar 随包分发。本地用 `node desktop/electron/build.mjs` 构建（产物在 `desktop/electron/release/`），CI 也以 artifact 形式产出；**尚未接入公开 release**，是否随下一个 tag 发布待作者决定 |
+| 命令行 | Windows / macOS / Linux，单文件 `szunet`，无依赖（不受本次迁移影响） |
 | 当前版本 | [beta0.7.3](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.7.3) · 公开测试版（预发布），Windows 下载包已发布 |
-| 运行环境 | 无需安装依赖；窗口由本机浏览器提供（Edge / Chrome 应用窗口） |
+| 运行环境 | 无需安装依赖：单 exe 用本机浏览器开窗；Electron 安装包自带 Chromium 运行时 |
+
+桌面版正处在**过渡期**：Electron 外壳是窗口层的新方向——已能构建，dev 模式下验证过界面渲染，
+但安装包尚未做真机安装验收；旧版单 exe 仍在构建和发布，它的退役安排在后续阶段，目前两者并存。
 
 ### 首次使用
 
@@ -191,7 +195,8 @@ macOS 上保存凭据（`config set`）走系统钥匙串：写入前会先用�
 <details>
 <summary><b>杀毒软件报警</b></summary>
 
-这是个没有数字签名的单文件程序，属于常见误报。但**不要把安全软件的所有提示都笼统当成误报**：
+现行发布的桌面版是没有数字签名的单文件程序，属于常见误报（迁移中的 Electron 安装包同样未签名，
+首次运行会有 SmartScreen 提示）。但**不要把安全软件的所有提示都笼统当成误报**：
 代码是开源的，可以自己看、自己编译（`go build`）后比对行为。
 </details>
 
@@ -199,7 +204,8 @@ macOS 上保存凭据（`config set`）走系统钥匙串：写入前会先用�
 <summary><b>关掉浏览器窗口，程序还在跑吗</b></summary>
 
 关掉**所有**应用窗口约 10 秒后自动退出；期间刷新页面不会结束服务。想立即退出用
-「设置 → 退出应用」。想只起服务、不弹窗口，启动 `szudesktop.exe` 时加 `--no-open`。
+「设置 → 退出应用」。想只起服务、不弹窗口，启动 `szudesktop.exe` 时加 `--no-open`
+（面向无头 / sidecar 场景；Electron 外壳也是用它在后台拉起 Go 引擎的）。
 </details>
 
 <details>
@@ -249,9 +255,11 @@ node   desktop/check-booking.mjs
 node   desktop/check-network-ui.mjs
 node   desktop/check-workspace-ui.mjs
 node   desktop/check-autostart-ui.mjs
+node   desktop/electron/check-sidecar.mjs # Electron sidecar 回归，CI 也会跑
 go vet ./... && go test ./...      # 静态检查与单元测试
 python desktop/check_release_notes.py # 发布说明抽取回归
-python desktop/build-windows.py    # 构建 Windows 桌面版
+python desktop/build-windows.py    # 构建 Windows 桌面版单 exe（也是 Electron 包里的 Go sidecar）
+node   desktop/electron/build.mjs  # 构建 Windows Electron 安装包（先在 desktop/electron 下 npm ci）
 python desktop/smoke_windows.py    # 整机冒烟
 python desktop/make_release.py     # 生成发布包（只在真的要发布时跑，会覆盖同名本地产物）
 ```

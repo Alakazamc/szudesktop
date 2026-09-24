@@ -67,10 +67,16 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
 
 | Item | Detail |
 | :--- | :----- |
-| Desktop app | Windows x64 (`szudesktop.exe`) |
-| Command line | Windows / macOS / Linux, single binary `szunet` |
+| Desktop app (currently published) | Windows x64 single exe (`szudesktop.exe`); the window is provided by your browser (Edge / Chrome app window) |
+| Desktop app (migrating, not yet released) | Electron app: a Windows NSIS installer (~85 MB) bundling the Chromium runtime, with the Go engine shipped as a sidecar. Build it locally with `node desktop/electron/build.mjs` (output under `desktop/electron/release/`); CI also produces it as an artifact. **Not yet wired into a public release** — whether it ships with the next tag is a pending go/no-go decision |
+| Command line | Windows / macOS / Linux, single binary `szunet` — still one dependency-free file, unaffected by the migration |
 | Current version | [beta0.7.3](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.7.3) · public beta (pre-release); Windows download published |
-| Runtime | No dependencies to install; the window is provided by your browser (Edge / Chrome app window) |
+| Runtime | Nothing to install: the single exe uses your browser for the window; the Electron installer ships its own Chromium runtime |
+
+The desktop app is in a **transitional period**: the Electron shell is where the window layer is
+heading — it builds, and the dev-mode app was screenshot-verified rendering the real UI, but the
+installer has not been acceptance-tested on a user machine yet. The legacy single-exe build is
+still produced and published; retiring it is deferred to a later phase, so the two coexist for now.
 
 ### First run
 
@@ -90,6 +96,7 @@ and double-click `szudesktop.exe`. **No installer — just unzip and run.**
   immediately use **Settings → Exit**
 - Reloading the page does not stop the service
 - To start the service without a window, launch `szudesktop.exe` with `--no-open`
+  (meant for headless / sidecar use — the Electron shell starts the Go engine the same way)
 - A short, skippable guide appears on first launch; it explains where your data lives,
   how to quit, and what to try first
 - Autostart can be toggled in **Settings** (the CLI equivalent is `szunet autostart`).
@@ -211,8 +218,10 @@ If you see "authentication failed: wrong ac_id", run `szunet detect` to see what
 <details>
 <summary><b>My antivirus flags it</b></summary>
 
-It's a single-file program without a code-signing certificate, which triggers common
-false positives. That said, **don't dismiss every warning as a false positive** — the code
+The currently published desktop build is a single-file program without a code-signing
+certificate, which triggers common false positives (the migrating Electron installer is
+unsigned as well — expect a SmartScreen prompt on first run). That said, **don't dismiss
+every warning as a false positive** — the code
 is open source, so you can read it or build it yourself (`go build`) and compare behaviour.
 </details>
 
@@ -283,9 +292,11 @@ node   desktop/check-booking.mjs
 node   desktop/check-network-ui.mjs
 node   desktop/check-workspace-ui.mjs
 node   desktop/check-autostart-ui.mjs
+node   desktop/electron/check-sidecar.mjs # Electron sidecar regression, also runs in CI
 go vet ./... && go test ./...      # static checks and unit tests
 python desktop/check_release_notes.py # release-notes extraction regression
-python desktop/build-windows.py    # build the Windows desktop app
+python desktop/build-windows.py    # build the Windows desktop exe (also the Electron Go sidecar)
+node   desktop/electron/build.mjs  # build the Windows Electron installer (run `npm ci` in desktop/electron first)
 python desktop/smoke_windows.py    # end-to-end smoke test
 python desktop/make_release.py     # produce the release package (only when actually releasing; it overwrites same-named local artifacts)
 ```
