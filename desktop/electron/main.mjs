@@ -45,7 +45,7 @@ async function recordSmoke(){
     await new Promise(r=>setTimeout(r,100));
   }
   if(!rendered)throw Error('安装版主界面或隔离接口没有就绪');
-  const response=await fetch(handle.baseUrl+'/api/status',{signal:AbortSignal.timeout(5000)});
+  const response=await fetch(handle.baseUrl+'/api/health',{signal:AbortSignal.timeout(5000)});
   if(!response.ok)throw Error('安装版引擎健康检查失败');
   const status=await response.json();
   if(process.env.SZU_SMOKE_SCREENSHOT && path.isAbsolute(process.env.SZU_SMOKE_SCREENSHOT)){
@@ -86,7 +86,7 @@ async function boot(){
     healthTimer=setInterval(async()=>{
       if(checking||quitting)return;
       checking=true;
-      try{const r=await fetch(handle.baseUrl+'/',{signal:AbortSignal.timeout(2500)});if(!r.ok)throw Error();}
+      try{const r=await fetch(handle.baseUrl+'/api/health',{signal:AbortSignal.timeout(2500)});if(!r.ok)throw Error();const health=await r.json();if(!health.ok||health.app!=='szuDesktop')throw Error();}
       catch{void engineFailed('此前已运行的后台服务已停止');}
       finally{checking=false;}
     },5000);

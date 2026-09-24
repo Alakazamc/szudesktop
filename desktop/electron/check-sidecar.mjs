@@ -67,7 +67,7 @@ test('startSidecar: 分块输出端口时等待换行',async()=>{
   try{assert.equal((await fetch(handle.baseUrl+'/api/status')).status,200);}finally{await handle.stop();}
 });
 
-for(const mode of ['unhealthy','hanging'])test('startSidecar: '+mode+' 健康请求有总截止时间且回收进程',async()=>{
+for(const mode of ['unhealthy','hanging','hanging-body','wrong-app'])test('startSidecar: '+mode+' 健康请求有总截止时间且回收进程',async()=>{
   await withFixtureFiles(async dir=>{
     const started=Date.now();
     let watchdog;
@@ -83,7 +83,7 @@ for(const mode of ['unhealthy','hanging'])test('startSidecar: '+mode+' 健康请
 });
 
 test('startSidecar: 已有服务通过明确复用行接管，停止不杀已有引擎',async()=>{
-  const server=http.createServer((req,res)=>res.end('{}'));
+  const server=http.createServer((req,res)=>res.end(JSON.stringify({ok:true,app:'szuDesktop',app_version:'test'})));
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const baseUrl='http://127.0.0.1:'+server.address().port;
   try{
@@ -92,6 +92,24 @@ test('startSidecar: 已有服务通过明确复用行接管，停止不杀已有
     assert.equal(handle.baseUrl,baseUrl);
     assert.equal(handle.child.exitCode,0);
     await handle.stop();
+    assert.equal((await fetch(baseUrl+'/api/status')).status,200);
+  }finally{await new Promise(resolve=>server.close(resolve));}
+});
+
+test('startSidecar: 外网状态挂起时本机健康接口仍能就绪',async()=>{
+  const handle=await startSidecar({command:process.execPath,args:[fixture,'offline'],healthTimeoutMs:500});
+  try{
+    assert.equal((await (await fetch(handle.baseUrl+'/api/health')).json()).app,'szuDesktop');
+    await assert.rejects(fetch(handle.baseUrl+'/api/status',{signal:AbortSignal.timeout(100)}));
+  }finally{await handle.stop();}
+});
+
+test('startSidecar: 旧版共享引擎缺少健康接口时提示退出旧版，且不关它',async()=>{
+  const server=http.createServer((req,res)=>{res.statusCode=req.url==='/api/health'?404:200;res.end('{}');});
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const baseUrl='http://127.0.0.1:'+server.address().port;
+  try{
+    await assert.rejects(startSidecar({command:process.execPath,args:[fixture,'reuse',baseUrl]}),/请先退出旧版/);
     assert.equal((await fetch(baseUrl+'/api/status')).status,200);
   }finally{await new Promise(resolve=>server.close(resolve));}
 });

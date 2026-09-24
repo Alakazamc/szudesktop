@@ -282,6 +282,7 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 	mux.HandleFunc("/api/window", protectAPI(s.handleWindow, http.MethodPost))
 	mux.HandleFunc("/api/window-stream", protectAPI(s.handleWindowStream, http.MethodGet))
 	mux.HandleFunc("/api/instance", protectAPI(s.handleInstance, http.MethodPost))
+	mux.HandleFunc("/api/health", protectAPI(s.handleHealth, http.MethodGet))
 	mux.HandleFunc("/api/status", protectAPI(s.handleStatus, http.MethodGet))
 	mux.HandleFunc("/api/login", protectAPI(s.handleLogin, http.MethodPost))
 	mux.HandleFunc("/api/logout", protectAPI(s.handleLogout, http.MethodPost))
@@ -313,6 +314,11 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 }
 
 /* ---------- 接口 ---------- */
+
+// handleHealth reports local server readiness without network or credential I/O.
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, map[string]any{"ok": true, "app": "szuDesktop", "app_version": version.Current})
+}
 
 type statusResp struct {
 	AppVersion  string   `json:"app_version"` // 页面顶栏与关于页的版本号来自这里，不再各写一份

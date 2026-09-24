@@ -54,8 +54,15 @@ async function waitHealthy(baseUrl, readyPath, timeoutMs, child){
     while(!controller.signal.aborted){
       try{
         const response=await fetch(baseUrl+readyPath,{signal:controller.signal});
-        response.body?.cancel().catch(()=>{});
-        if(response.ok)return;
+        if(!child&&response.status===404){
+          response.body?.cancel().catch(()=>{});
+          controller.abort(new Error('当前后台引擎版本较旧，请先退出旧版 szuDesktop 再打开'));
+          throw controller.signal.reason;
+        }
+        if(response.ok){
+          const identity=await response.json();
+          if(identity.ok===true&&identity.app==='szuDesktop')return;
+        }else response.body?.cancel().catch(()=>{});
       }catch(err){if(controller.signal.aborted)throw controller.signal.reason;}
       try{await delay(150,undefined,{signal:controller.signal});}catch{throw controller.signal.reason;}
     }
@@ -66,7 +73,7 @@ async function waitHealthy(baseUrl, readyPath, timeoutMs, child){
   }
 }
 
-export async function startSidecar({command,args=[],env,cwd,readyPath='/api/status',readyTimeoutMs=15000,healthTimeoutMs=8000}){
+export async function startSidecar({command,args=[],env,cwd,readyPath='/api/health',readyTimeoutMs=15000,healthTimeoutMs=8000}){
   const child=spawn(command,args,{env:env||process.env,cwd,stdio:['ignore','pipe','inherit'],windowsHide:true});
   let endpoint;
   try{

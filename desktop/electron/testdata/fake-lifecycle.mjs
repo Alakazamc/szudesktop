@@ -14,13 +14,17 @@ if(mode==='reuse'||mode==='reuse-failed'){
   }
   const server=http.createServer((req,res)=>{
     if(mode==='hanging')return;
+    if(mode==='offline'&&req.url==='/api/status')return;
+    if(mode==='offline'&&req.url==='/api/shutdown'){res.statusCode=404;res.end();return;}
+    if(mode==='hanging-body'&&req.url==='/api/health'){res.writeHead(200,{'content-type':'application/json'});res.write('{"ok":');return;}
     if(mode==='graceful'&&req.url==='/api/shutdown'&&req.method==='POST'){
       fs.writeFileSync(path.join(value,'graceful.marker'),'shutdown accepted');
       req.resume();
       req.on('end',()=>res.end('{}',()=>server.close(()=>process.exit(0))));
       return;
     }
-    res.statusCode=mode==='unhealthy'?500:200;res.end('{}');
+    res.statusCode=mode==='unhealthy'?500:200;
+    res.end(req.url==='/api/health'?JSON.stringify({ok:true,app:mode==='wrong-app'?'other-app':'szuDesktop',app_version:'test'}):'{}');
   });
   server.listen(0,'127.0.0.1',()=>{
     const port=String(server.address().port);

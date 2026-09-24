@@ -178,11 +178,11 @@ def coexist_with_portable(exe, sidecar, cfg, version):
                     break
                 time.sleep(.2)
             check("isolated portable engine reports URL", base_url is not None)
-            check("portable engine is healthy", local_request(base_url, "/api/status")["app_version"] == version)
+            check("portable engine is healthy", local_request(base_url, "/api/health")["app_version"] == version)
             result = launch(exe, cfg, version, "reuse-portable", owned=False)
             check("installer reuses the pre-existing engine", result["baseUrl"].rstrip("/") == base_url)
             check("closing installer leaves portable engine alive", proc.poll() is None
-                  and local_request(base_url, "/api/status")["app_version"] == version)
+                  and local_request(base_url, "/api/health")["app_version"] == version)
             local_request(base_url, "/api/shutdown", "POST")
             check("test's portable engine shuts down normally", proc.wait(timeout=10) == 0)
         finally:
@@ -213,6 +213,7 @@ def main():
         install_dir = (test_root / "安装 测试" / "szuDesktop").resolve()
         cfg = (test_root / "独立 用户配置").resolve()
         cfg.mkdir()
+        workspace = cfg / "workspace-v1.json"
         exe = install_dir / "szuDesktop.exe"
         uninstaller = install_dir / "Uninstall szuDesktop.exe"
         installed = False
@@ -227,7 +228,6 @@ def main():
             first = launch(exe, cfg, version, "first-open")
             launch(exe, cfg, version, "reopen")
             coexist_with_portable(exe, sidecar, cfg, version)
-            workspace = cfg / "workspace-v1.json"
             check("real garden save created", workspace.is_file())
             saved = workspace.read_bytes()
             check("real garden save is nonempty", bool(json.loads(saved)["data"]))
@@ -247,6 +247,9 @@ def main():
             }, ensure_ascii=False, indent=2), encoding="utf-8")
         finally:
             if installed:
+                # Startup may fail before the first save exists. Do not obscure
+                # that primary failure by asserting it was created during cleanup.
+                saved_before_uninstall = workspace.read_bytes() if workspace.is_file() else None
                 # The uninstaller recursively removes INSTDIR: verify the exact
                 # canonical location and registry ownership immediately beforehand.
                 check("uninstall target is inside this test root", install_dir.is_relative_to(test_root))
@@ -258,7 +261,9 @@ def main():
                       and not (install_dir / "resources").exists())
                 check("uninstall removes its registration", not installation()
                       and not reg_values(winreg.HKEY_CURRENT_USER, UNINSTALL_KEY, winreg.KEY_WOW64_64KEY))
-                check("uninstall keeps user garden save", (cfg / "workspace-v1.json").is_file())
+                if saved_before_uninstall is not None:
+                    check("uninstall keeps user garden save byte for byte", workspace.is_file()
+                          and workspace.read_bytes() == saved_before_uninstall)
                 check("uninstall leaves startup entries unchanged", startup_before
                       == reg_values(winreg.HKEY_CURRENT_USER, RUN_KEY, winreg.KEY_WOW64_64KEY))
     summary = json.loads((EVIDENCE / "summary.json").read_text(encoding="utf-8"))

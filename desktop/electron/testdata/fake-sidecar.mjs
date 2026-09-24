@@ -1,6 +1,6 @@
 import http from 'node:http';
 const srv=http.createServer((req,res)=>{
-  if(req.url==='/api/status'){res.writeHead(200,{'content-type':'application/json'});res.end('{"ok":true}');return;}
+  if(req.url==='/api/status'||req.url==='/api/health'){res.writeHead(200,{'content-type':'application/json'});res.end('{"ok":true,"app":"szuDesktop","app_version":"test"}');return;}
   res.writeHead(404);res.end();
 });
 srv.listen(0,'127.0.0.1',()=>{
