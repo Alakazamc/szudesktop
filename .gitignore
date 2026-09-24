@@ -52,6 +52,10 @@ design/vpn-ref-*.go.txt
 # 临时打包产物
 /outputs/
 
+# Electron 外壳：依赖与打包输出（体积大、可重建，不进库）
+desktop/electron/node_modules/
+desktop/electron/release/
+
 # 内部规划 / 设计稿：只留本地，不进公开仓库
 # （这类文档会写服务器地址、账号、内网拓扑，公开出去是事故）
 .local-docs/

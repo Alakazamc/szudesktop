@@ -1,0 +1,17 @@
+{
+  "name": "szudesktop-desktop",
+  "productName": "szuDesktop",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "main.mjs",
+  "scripts": {
+    "start": "electron .",
+    "dist": "node build.mjs",
+    "check": "node check-sidecar.mjs"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}
