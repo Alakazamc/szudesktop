@@ -2,9 +2,12 @@ import assert from 'node:assert/strict';
 import {parseListenUrl} from './listen-url.mjs';
 import {startSidecar} from './sidecar.mjs';
 import path from 'node:path';
+import fs from 'node:fs';
+import os from 'node:os';
 import {fileURLToPath} from 'node:url';
 const here=path.dirname(fileURLToPath(import.meta.url));
 const fake=path.join(here,'testdata','fake-sidecar.mjs');
+const fakeUnhealthy=path.join(here,'testdata','fake-unhealthy.mjs');
 let checks=0;const queue=[];
 function test(name,fn){queue.push((async()=>{await fn();checks++;console.log('PASS',name)})());}
 
@@ -29,6 +32,35 @@ test('startSidecar: 拉起替身、解析端口、健康探测通过、可停止
     const r=await fetch(handle.baseUrl+'/api/status');
     assert.equal(r.status,200);
   } finally { await handle.stop(); }
+});
+test('startSidecar: 健康探测失败时杀掉子进程，不留孤儿',async()=>{
+  const marker=path.join(os.tmpdir(),`szu-fake-unhealthy-exit-${process.pid}-${Date.now()}.marker`);
+  const pidFile=marker+'.pid';
+  try{
+    await assert.rejects(
+      startSidecar({
+        command:process.execPath,
+        args:[fakeUnhealthy],
+        env:{...process.env,FAKE_EXIT_MARKER:marker,FAKE_PID_FILE:pidFile},
+        healthTimeoutMs:300,
+      }),
+      /健康探测超时/
+    );
+    // 启动失败必须回收子进程：POSIX 上子进程退出会写 marker；
+    // Windows 上 SIGKILL/taskkill /F 不跑用户代码（marker 不会写出来），改用 PID 存活探测。
+    const childPid=Number(fs.readFileSync(pidFile,'utf8'));
+    const alive=()=>{try{process.kill(childPid,0);return true;}catch{return false;}};
+    const deadline=Date.now()+3000;
+    let killed=false;
+    while(Date.now()<deadline){
+      if(fs.existsSync(marker)||!alive()){killed=true;break;}
+      await new Promise(r=>setTimeout(r,100));
+    }
+    assert.ok(killed,`失败启动后子进程仍存活（孤儿 sidecar），pid=${childPid}`);
+  } finally {
+    try{fs.unlinkSync(marker);}catch{}
+    try{fs.unlinkSync(pidFile);}catch{}
+  }
 });
 
 // 顶层 await：node 直接跑 .mjs 支持

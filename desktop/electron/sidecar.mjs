@@ -21,8 +21,16 @@ async function waitHealthy(baseUrl, readyPath, timeoutMs){
 
 export async function startSidecar({command,args=[],env,cwd,readyPath='/api/status',readyTimeoutMs=15000,healthTimeoutMs=8000}){
   const child=spawn(command,args,{env:env||process.env,cwd,stdio:['ignore','pipe','inherit']});
-  const baseUrl=await waitForUrl(child,readyTimeoutMs);
-  await waitHealthy(baseUrl,readyPath,healthTimeoutMs);
+  let baseUrl;
+  try{
+    baseUrl=await waitForUrl(child,readyTimeoutMs);
+    await waitHealthy(baseUrl,readyPath,healthTimeoutMs);
+  }catch(err){
+    // 启动失败（没打印监听地址 / 提前退出 / 健康探测超时）时必须回收子进程：
+    // 否则调用方拿不到 child，慢启动或挂死的 sidecar 会变成占着端口的孤儿进程。
+    await stopSidecar(child);
+    throw err;
+  }
   return {baseUrl,child,stop:()=>stopSidecar(child)};
 }
 
