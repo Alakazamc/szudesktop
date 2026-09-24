@@ -71,7 +71,7 @@ Download **`szuDesktop-Setup-0.8.0.exe`** from [Releases](https://github.com/Szu
 | Source version | `beta0.8.0` public beta; see [Releases](https://github.com/SzuDesktopTeam/szudesktop/releases) for published files |
 | Saved data | Both Windows editions use the same local garden and study records; export a backup from Settings before updating |
 
-The installer reuses an existing engine, handles startup failures and timeouts, and cleans up the engine it starts. It uses Electron 44.4.5. Startup checks only the local engine, so the garden opens even when campus or internet access is unavailable; network status loads in the background. Public school queries now allow navigation while the relevant card loads. Acceptance evidence is maintained in [STATUS](STATUS.md). A floating pet window, tray and installer autostart remain future work.
+The installer reuses an existing engine, handles startup failures and timeouts, and cleans up the engine it starts. It uses Electron 44.4.5. Startup checks only the local engine, so the garden opens even when campus or internet access is unavailable; network status loads in the background. Public school queries now allow navigation while the relevant card loads. Acceptance evidence is maintained in [STATUS](STATUS.md); CI installation tests retain page screenshots and failure details. A floating pet window, tray and installer autostart remain future work.
 
 ### First run
 

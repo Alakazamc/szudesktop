@@ -20,6 +20,7 @@ function sidecarCommand(){
 }
 let handle=null,mainWin=null,quitting=false,quitReady=false,shutdownPromise=null,healthTimer=null,failureShown=false;
 let startup=null;
+const smokeErrors=[];
 
 async function engineFailed(message){
   if(quitting||failureShown)return;
@@ -67,6 +68,10 @@ async function boot(){
     webPreferences:{preload:path.join(here,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   mainWin.setMenuBarVisibility(false);
   const wc=mainWin.webContents;
+  if(smoke){
+    wc.on('preload-error',(_event,_file,error)=>{if(smokeErrors.length<10)smokeErrors.push('preload: '+error.message);});
+    wc.on('console-message',details=>{if(details.level==='error'&&smokeErrors.length<10)smokeErrors.push(details.message);});
+  }
   wc.session.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));
   wc.session.setPermissionCheckHandler(()=>false);
   wc.session.webRequest.onHeadersReceived((details,callback)=>{
@@ -110,8 +115,19 @@ else{
   app.whenReady().then(()=>{
     startup=boot();
     return startup;
-  }).catch(e=>{
-    if(smoke){mkdirSync(path.dirname(smokeReport),{recursive:true});writeFileSync(smokeReport,JSON.stringify({error:e.message}));}
+  }).catch(async e=>{
+    if(smoke){
+      const report={error:e.message,consoleErrors:smokeErrors};
+      try{
+        if(mainWin&&!mainWin.isDestroyed()){
+          report.page=await mainWin.webContents.executeJavaScript(`({url:location.href,shell:window.szuDesktop?.shell,navCount:document.querySelectorAll('#nav [data-action="navigate"]').length,mainText:document.querySelector('#main')?.innerText.slice(0,1500)})`);
+          report.moduleType=await mainWin.webContents.executeJavaScript(`fetch('/assets/garden/app.mjs').then(r=>({status:r.status,type:r.headers.get('content-type')}))`);
+          const shotPath=process.env.SZU_SMOKE_SCREENSHOT;
+          if(shotPath&&path.isAbsolute(shotPath))writeFileSync(shotPath,(await mainWin.webContents.capturePage()).toPNG());
+        }
+      }catch(snapshotError){report.snapshotError=snapshotError.message;}
+      mkdirSync(path.dirname(smokeReport),{recursive:true});writeFileSync(smokeReport,JSON.stringify(report,null,2));
+    }
     else if(!quitting)dialog.showErrorBox('szuDesktop 启动失败',e.message+'。请重新打开应用；若仍失败，请重新安装。');
     app.quit();
   });
