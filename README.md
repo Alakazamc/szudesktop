@@ -57,19 +57,17 @@ szuDesktop 同时对付这两件事：**一个按钮完成认证，一个按钮�
 
 ## 下载
 
-到 [Releases](https://github.com/SzuDesktopTeam/szudesktop/releases) 页面下载 `szudesktop-<版本>-windows-amd64.zip`，
-解压到任意位置，双击 `szudesktop.exe`。**解压就能用，不用安装。**
+推荐从 [Releases](https://github.com/SzuDesktopTeam/szudesktop/releases) 下载 **`szuDesktop-Setup-0.8.0.exe`**，运行安装程序后打开 szuDesktop。安装版自带窗口运行时，无需额外安装浏览器或开发环境。具体可下载版本以发布页为准。
 
 | 项 | 说明 |
 | :-- | :---- |
-| 桌面端（现行发布） | Windows x64 单 exe（`szudesktop.exe`），窗口由本机浏览器提供（Edge / Chrome 应用窗口） |
-| 桌面端（迁移中，未发布） | Electron 应用：Windows NSIS 安装包，约 85MB，内含 Chromium 运行时，Go 引擎作为 sidecar 随包分发。本地用 `node desktop/electron/build.mjs` 构建（产物在 `desktop/electron/release/`），CI 也以 artifact 形式产出；**尚未接入公开 release**，是否随下一个 tag 发布待作者决定 |
-| 命令行 | Windows / macOS / Linux，单文件 `szunet`，无依赖（不受本次迁移影响） |
-| 当前版本 | [beta0.7.3](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.7.3) · 公开测试版（预发布），Windows 下载包已发布 |
-| 运行环境 | 无需安装依赖：单 exe 用本机浏览器开窗；Electron 安装包自带 Chromium 运行时 |
+| Windows 安装版 | Electron 独立窗口，内含 Go 引擎；同名 `.sha256` 文件可用于校验下载 |
+| Windows 便携版 | `szudesktop-beta0.8.0-windows-amd64.zip`，解压后双击 `szudesktop.exe`，使用本机 Edge / Chrome 开窗 |
+| 命令行 | Windows / macOS / Linux 单文件 `szunet`，继续提供 |
+| 当前源码版本 | `beta0.8.0` · 公开测试版；发行文件与说明见 [Releases](https://github.com/SzuDesktopTeam/szudesktop/releases) |
+| 存档 | 两种 Windows 版本使用同一份本机庭院与学习记录，更新前可在设置中导出备份 |
 
-桌面版正处在**过渡期**：Electron 外壳是窗口层的新方向——已能构建，dev 模式下验证过界面渲染，
-但安装包尚未做真机安装验收；旧版单 exe 仍在构建和发布，它的退役安排在后续阶段，目前两者并存。
+安装版修复了已有后台引擎的复用、启动超时和退出清理，并升级至 Electron 44.4.5。公开查询现在只在对应卡片等待，查询时可以切换页面。完整验证记录见 [STATUS](docs/STATUS.md)。常驻宠物窗、托盘与安装版开机自启仍属后续阶段。
 
 ### 首次使用
 
@@ -80,11 +78,11 @@ szuDesktop 同时对付这两件事：**一个按钮完成认证，一个按钮�
 
 ### 打开与退出
 
-- 同一份存档重复启动会复用本机服务，不会开出第二个程序
-- 关闭所有应用窗口约 10 秒后自动退出；想立即退出走「设置 → 退出应用」
+- 安装版重复启动会聚焦已有窗口；已有便携版后台服务时复用该服务
+- 安装版关闭窗口或选择「设置 → 退出应用」即退出；只清理本次启动的引擎，复用的已有后台服务保留。便携版仍在所有窗口关闭约 10 秒后退出
 - 刷新页面不会结束服务
 - 首次打开会给一张可跳过的短引导，说明数据存在哪、怎么退出、先做什么
-- 开机自启可在「设置」里开关（命令行对应 `szunet autostart`），状态读不到时会明说「状态未知」，不会显示成未开启
+- 安装版本期不新建开机自启项，可在设置中关闭旧项。便携版的自启开关和命令行 `szunet autostart` 继续可用；状态读取失败会明确提示
 
 ### 我的数据存在哪
 
@@ -97,14 +95,14 @@ szuDesktop 同时对付这两件事：**一个按钮完成认证，一个按钮�
 
 ## 功能
 
-beta0.7.3 为公开测试版。已验证的查询与待验收的账号业务分别标明，详细状态统一见 STATUS.md。
+beta0.8.0 为公开测试版。已验证的查询与待验收的账号业务分别标明，详细状态统一见 STATUS.md。
 
 | 能力 | 状态 | 说明 |
 | :--- | :--- | :---- |
 | 校园网认证 | ✅ | 教学区深澜 / 宿舍区 Dr.COM，自动判区；支持注销与手动指定区域 |
 | 接入点编号（`ac_id`）自动发现 | ✅ | 按「手动指定 → 本机在这个网口的记录 → 网关跳转 → 猜测」依次取，猜的会标注 |
 | 断线诊断 | ✅ | 列出区域判定、门户可达性、协议指纹与结论 |
-| 凭据保管 | ✅ | Windows DPAPI / macOS 钥匙串 / Linux Secret Service；**认证成功且你勾选记住后**才保存。没有系统安全设施时拒绝保存并明确报错，**不落明文文件**（F24 已修）。macOS 的保存路径尚未经真机验收（F25） |
+| 凭据保管 | ✅ | Windows DPAPI / macOS 钥匙串 / Linux Secret Service；**认证成功且你勾选记住后**才保存。没有系统安全设施时拒绝保存并明确报错，**不落明文文件**（F24 已修）。macOS 保存路径已随 beta0.7.3 在 CI 真机验证 |
 | 校园服务 · 公告 | 部分 | 当前源码支持按学院／部门查看：28 个院系入口，17 个学院栏目可直接读取，另保留教务部、研究生院。日期与原文链接保留，10 分钟缓存；其余院系提供官网入口 |
 | 校园服务 · 场地查询与预约 | 部分 | 校内可查社区真实场地和半小时空位（只读）；预约交给学校官方页面，用户直接在原页登录和提交，不要求复制预约 Cookie。服务端**不再有任何预约写操作端点**（F23 已删）。图书馆使用独立官方入口 |
 | 学习 · 校历与课表 | 部分 | 官方校历自动更新、教学周可手动调整；本科个人课表和研究生登录读取已接入，**仍待真实账号完整验收** |
@@ -114,7 +112,7 @@ beta0.7.3 为公开测试版。已验证的查询与待验收的账号业务分�
 | 学习 · 待办与专注 | ✅ | 待办清单与 5 / 25 / 45 分钟专注 |
 | 荔枝庭院 | ✅ | 伙伴照料与成长、作物、农田、浇水收获、装饰、每日目标、成就与图鉴；无充值与现金交易 |
 | 存档 | ✅ | 固定本机文件，跨端口重启恢复，支持导出导入与多窗口冲突保护 |
-| 开机自启 | ✅（仅 Windows） | 登录 Windows 后静默起服务并自动连一次校园网，不弹窗口；设置里可开关，并显示登记的真实状态。macOS / Linux 不支持，会明确报「不支持」而不是静默失败 |
+| 开机自启 | 部分（仅 Windows） | 便携版与 CLI 保留静默自启；安装版本期只允许关闭旧项，不新建自启项。macOS / Linux 明确提示不支持 |
 
 **当前限制**：成绩只读第一页；余额未接入；课表仍需手动读取并等待真实账号完整验收。当前源码的预约在学校原页面办理，应用内承载官方页面尚未完成。
 现状、真实验收结果与待办统一记在 [docs/STATUS.md](docs/STATUS.md)。
@@ -195,7 +193,7 @@ macOS 上保存凭据（`config set`）走系统钥匙串：写入前会先用�
 <details>
 <summary><b>杀毒软件报警</b></summary>
 
-现行发布的桌面版是没有数字签名的单文件程序，属于常见误报（迁移中的 Electron 安装包同样未签名，
+桌面便携版与 Electron 安装包目前都没有数字签名，可能触发系统提示（
 首次运行会有 SmartScreen 提示）。但**不要把安全软件的所有提示都笼统当成误报**：
 代码是开源的，可以自己看、自己编译（`go build`）后比对行为。
 </details>
@@ -203,8 +201,8 @@ macOS 上保存凭据（`config set`）走系统钥匙串：写入前会先用�
 <details>
 <summary><b>关掉浏览器窗口，程序还在跑吗</b></summary>
 
-关掉**所有**应用窗口约 10 秒后自动退出；期间刷新页面不会结束服务。想立即退出用
-「设置 → 退出应用」。想只起服务、不弹窗口，启动 `szudesktop.exe` 时加 `--no-open`
+安装版关闭窗口即退出并清理自己启动的引擎；复用的已有服务保留。便携版关闭**所有**窗口约 10 秒后退出；
+刷新页面不会结束服务。也可选择「设置 → 退出应用」。只启动便携版后台服务时，给 `szudesktop.exe` 加 `--no-open`
 （面向无头 / sidecar 场景；Electron 外壳也是用它在后台拉起 Go 引擎的）。
 </details>
 
@@ -255,7 +253,9 @@ node   desktop/check-booking.mjs
 node   desktop/check-network-ui.mjs
 node   desktop/check-workspace-ui.mjs
 node   desktop/check-autostart-ui.mjs
-node   desktop/electron/check-sidecar.mjs # Electron sidecar 回归，CI 也会跑
+node   desktop/electron/check-sidecar.mjs # Electron 启动/退出与复用回归
+node   desktop/electron/check-window-policy.mjs
+node   desktop/check-interactions.mjs
 go vet ./... && go test ./...      # 静态检查与单元测试
 python desktop/check_release_notes.py # 发布说明抽取回归
 python desktop/build-windows.py    # 构建 Windows 桌面版单 exe（也是 Electron 包里的 Go sidecar）

@@ -49,7 +49,9 @@ func acquireInstance(dir string, open bool) (*desktopInstance, bool, error) {
 		if data, err := os.ReadFile(path); err == nil {
 			var record instanceRecord
 			if json.Unmarshal(data, &record) == nil && activateInstance(record, open) == nil {
-				return nil, true, nil
+				// Return the authenticated endpoint for an enclosing desktop shell.
+				// This borrowed record owns neither the lock nor the running service.
+				return &desktopInstance{instanceRecord: record}, true, nil
 			}
 		}
 		time.Sleep(100 * time.Millisecond)

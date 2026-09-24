@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {isAppUrl,isTrustedSender,contentSecurityPolicy} from './window-policy.mjs';
+const base='http://127.0.0.1:45678';
+assert.equal(isAppUrl(base+'/#garden',base),true);
+for(const url of ['https://szu.edu.cn', 'http://127.0.0.1:45679/', 'http://127.0.0.1.evil.test:45678/', 'file:///a', 'javascript:alert(1)', 'http://user@127.0.0.1:45678']) assert.equal(isAppUrl(url,base),false,url);
+const frame={url:base+'/'},wc={mainFrame:frame},win={webContents:wc};
+assert.equal(isTrustedSender({sender:wc,senderFrame:frame},win,base),true);
+assert.equal(isTrustedSender({sender:wc,senderFrame:{url:base+'/' }},win,base),false);
+assert.equal(isTrustedSender({sender:{},senderFrame:frame},win,base),false);
+frame.url='https://szu.edu.cn/';
+assert.equal(isTrustedSender({sender:wc,senderFrame:frame},win,base),false);
+assert.match(contentSecurityPolicy,/script-src 'self';/);
+assert.doesNotMatch(contentSecurityPolicy,/unsafe-eval/);
+console.log('Window policy: local navigation, IPC sender and CSP checks passed');

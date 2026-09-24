@@ -8,6 +8,8 @@ files:
   - sidecar.mjs
   - listen-url.mjs
   - external-url.mjs
+  - window-policy.mjs
+  - preload.cjs
   - package.json
 extraResources:
   - from: ../../dist/szudesktop-windows-amd64.exe
@@ -18,4 +20,5 @@ win:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
   artifactName: szuDesktop-Setup-${version}.exe

@@ -156,6 +156,7 @@ func (s *Server) Run() error {
 		return err
 	}
 	if existing {
+		fmt.Printf("szuDesktop 已复用: %s\n", instance.URL)
 		return nil
 	}
 	s.instance = instance

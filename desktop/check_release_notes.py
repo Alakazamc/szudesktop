@@ -89,12 +89,22 @@ def test_render_keeps_body_before_download_list():
     assert out.index("修复版") < out.index("szudesktop-beta0.7.1-windows-amd64.zip"), "顺序不对"
 
 
+def test_installer_download_versions():
+    current = release_notes.render("## beta0.8.0\n\n- Electron 安装版\n", "beta0.8.0")
+    assert "szuDesktop-Setup-0.8.0.exe" in current, "安装包名不符合 semver 命名"
+    assert "szudesktop-beta0.8.0-windows-amd64.zip" in current, "旧版便携包必须保留"
+    assert ".sha256" in current, "缺少安装包校验说明"
+    assert "__SEMVER__" not in current, "安装包版本占位符没有替换"
+    assert "szuDesktop-Setup" not in release_notes.render(SAMPLE, "beta0.7.1"), "旧版本不应凭空多出安装包"
+
+
 check("抽取到对应版本那一节的正文", test_extracts_section)
 check("在下一个版本标题处停下，不带进 beta0.7 的内容", test_stops_at_next_version)
 check("返回的正文不含标题行本身", test_excludes_heading_itself)
 check("版本号必须精确匹配，beta0.7 不会命中 beta0.7.1", test_version_must_match_exactly)
 check("render 把版本号填进下载清单", test_render_fills_download_list)
 check("render 保留正文，再追加下载清单", test_render_keeps_body_before_download_list)
+check("新版本包含安装包，旧版本不虚构附件", test_installer_download_versions)
 
 check("CHANGELOG 里没有这个版本时报错",
       lambda: expect_error(lambda: release_notes.extract(SAMPLE, "beta0.8"), "缺版本"))

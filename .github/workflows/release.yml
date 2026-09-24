@@ -38,10 +38,13 @@ jobs:
         run: |
           node desktop/check-network-ui.mjs
           node desktop/check-workspace-ui.mjs
+          node desktop/check-interactions.mjs
       - name: Settings autostart UI regression
         run: node desktop/check-autostart-ui.mjs
       - name: Electron sidecar 回归
-        run: node desktop/electron/check-sidecar.mjs
+        run: |
+          node desktop/electron/check-sidecar.mjs
+          node desktop/electron/check-window-policy.mjs
       - name: 发布说明抽取回归
         run: python desktop/check_release_notes.py
       - name: 静态检查
@@ -170,18 +173,12 @@ jobs:
             dist/szudesktop-*-windows-amd64.zip.sha256
           if-no-files-found: error
 
-  # Electron 外壳的 Windows 安装包构建。目前只产出 artifact、不进 release 的 needs——
-  # 先让作者本机验证安装包可用，再由人工决定是否随 tag 公开发布（见 Task 1.9 的 go/no-go）。
-  #
-  # 两条环境事实（controller 已核实）：
-  # 1) GitHub 托管 runner 访问 GitHub/npm 正常，CI 里不需要任何国内镜像 env
-  #    （本机装 electron 时的 ECONNRESET 是作者本地网络问题，不进 CI、不进 lock/.npmrc）。
-  # 2) electron-builder 解包 winCodeSign 时，在某些 Windows 环境会因创建符号链接
-  #    （7za / darwin 链接）失败而报 ERR_ELECTRON_BUILDER_CANNOT_EXECUTE / symlink 错误——
-  #    若本 job 在 runner 上撞到，就是这个已知原因。
+  # 最终 NSIS 安装包必须在干净 runner 完成安装/重开/覆盖安装/卸载才可发布。
+  # 本机镜像与缓存设置不进仓库；CI 从官方 npm/GitHub 下载依赖。
   build-desktop-electron-windows:
     needs: test
     runs-on: windows-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-go@v7.0.0
@@ -190,7 +187,6 @@ jobs:
       - uses: actions/setup-python@v7.0.0
         with:
           python-version: '3.13'
-      # setup-node 的确切主版本以第一次 CI 运行为准（此处按 brief 用 v6.0.0）
       - uses: actions/setup-node@v6.0.0
         with:
           node-version: '22'
@@ -199,25 +195,30 @@ jobs:
       - name: 装 Electron 依赖
         run: npm ci
         working-directory: desktop/electron
-      # 版本号从 internal/version/VERSION 注入（与 desktop/electron/build.mjs 一致）：
-      # 提交进仓库的 package.json 固定是 0.0.0，不注入的话安装包文件属性会显示 0.0.0。
-      # 文件内容只在 pwsh 变量里流转，不用 ${{ }} 插值进脚本文本，避免注入面。
       - name: 打 Windows 安装包
-        shell: pwsh
-        run: |
-          $v = (Get-Content ../../internal/version/VERSION -Raw).Trim() -replace '^beta',''
-          npx electron-builder --win --config electron-builder.yml --config.extraMetadata.version=$v
+        run: node build.mjs --skip-sidecar
         working-directory: desktop/electron
+      - name: 安装版闭环冒烟（隔离目录与配置）
+        run: python desktop/electron/smoke_installer.py
+      - name: 保存安装验收证据（不作为发布附件）
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: electron-install-smoke-evidence
+          path: desktop/electron/release/smoke-evidence/*
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v7.0.1
         with:
           name: szudesktop-electron-windows
-          path: desktop/electron/release/*.exe
+          path: |
+            desktop/electron/release/szuDesktop-Setup-*.exe
+            desktop/electron/release/szuDesktop-Setup-*.exe.sha256
           if-no-files-found: error
 
   release:
     # test-macos 也在里面：它守着 macOS 凭据这条路。beta0.7.1 / beta0.7.2 之所以
     # 带着「macOS 存不了凭据」发出去，就是因为当时这个 job 失败不阻断发布（F26）。
-    needs: [build-cli, build-desktop-windows, test-macos]
+    needs: [build-cli, build-desktop-windows, build-desktop-electron-windows, test-macos]
     if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/beta')
     runs-on: ubuntu-latest
     steps:
@@ -227,7 +228,6 @@ jobs:
           python-version: '3.13'
       # 发布说明必须来自 CHANGELOG.md 里对应版本的那一节。抽不到就在这里失败，
       # 附件一个都不会上传——beta0.7 那次只发了一行 compare 链接，就是因为没有这道关卡。
-      # 本项目直接提交到 main、没有 PR，GitHub 的自动分类拿不到任何内容。
       - name: 从 CHANGELOG.md 抽取发布说明
         env:
           # 不在 run: 里直接插值 ${{ }}，避免标签名成为脚本注入面
@@ -235,13 +235,48 @@ jobs:
         run: python desktop/release_notes.py "$TAG" -o "$RUNNER_TEMP/notes.md"
       - uses: actions/download-artifact@v8.0.1
         with:
+          name: szudesktop-windows-amd64
           path: dist
-          merge-multiple: true
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: szudesktop-electron-windows
+          path: dist
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: szunet-windows-amd64.exe
+          path: dist
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: szunet-darwin-amd64
+          path: dist
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: szunet-darwin-arm64
+          path: dist
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: szunet-linux-amd64
+          path: dist
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: szunet-linux-arm64
+          path: dist
       - uses: softprops/action-gh-release@v3.0.3
         with:
           name: szuDesktop ${{ github.ref_name }}
           body_path: ${{ runner.temp }}/notes.md
-          files: dist/*
+          files: |
+            dist/szuDesktop-Setup-*.exe
+            dist/szuDesktop-Setup-*.exe.sha256
+            dist/szudesktop-windows-amd64.exe
+            dist/szudesktop-${{ github.ref_name }}-windows-amd64.zip
+            dist/szudesktop-${{ github.ref_name }}-windows-amd64.zip.sha256
+            dist/szunet-windows-amd64.exe
+            dist/szunet-darwin-amd64
+            dist/szunet-darwin-arm64
+            dist/szunet-linux-amd64
+            dist/szunet-linux-arm64
+          fail_on_unmatched_files: true
           # 按 action 文档：提供了 body 时，body 在前，自动生成的 compare 链接追加在后
           generate_release_notes: true
           prerelease: ${{ startsWith(github.ref_name, 'beta') }}

@@ -3,7 +3,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const official='https://swzx.webvpn.szu.edu.cn/#/pages/booth/szu-booth-list';
 const labels={available:'空闲',occupied:'已预约',closed:'不可选',past:'已开始',unknown:'未确认'};
 const tones={available:'success',occupied:'muted',closed:'muted',past:'muted',unknown:'warning'};
-const button=(text,key)=>`<button type="button" data-action="booking-${key}">${text}</button>`;
+const button=(text,key,disabled=false)=>`<button type="button" data-action="booking-${key}"${disabled?' disabled':''}>${text}</button>`;
 const officialLink=(text,cls='button primary')=>`<a class="${cls}" href="${official}" target="_blank" rel="noopener noreferrer">${pixelIcon('i-key')}${text} ↗</a>`;
 export function bookingSlotsHTML(day){
  if(!day)return '<p class="empty">选择场地和日期，点击「查询空位」。</p>';
@@ -71,11 +71,12 @@ export function createVenueRulesUI({api,loadRooms}){
  const fetchRooms=loadRooms||(()=>api('/api/booking/rooms'));
  let rooms=[],error='',busy=false;
  function content(){
-  return `<div class="actions">${button(pixelIcon('i-compass')+'读取学校场地规则','rules')}</div>
+  return `<div class="card-head"><h2 class="icon-heading tone-info">${pixelIcon('i-book','heading-icon')}场地与琴房规则速查</h2><span class="badge" data-tone="info">只读 · 学校返回原文</span></div><div class="actions">${button(pixelIcon('i-compass')+'读取学校场地规则','rules',busy)}</div>
+ ${busy?'<p role="status">正在读取学校场地规则…</p>':''}
  ${error?`<p role="status" class="notice error">${esc(error)}</p><div class="actions">${officialLink('登录并预约')}</div>`:''}
  ${rooms.length?venueRulesHTML(rooms):'<p class="muted">规则来自学校场地接口，不需要登录。读取后可看每类场地的时段上限、可提前天数与爽约限制。</p>'}`;
  }
- function card(){return `<section class="card campus-booking" id="venue-rules-panel"><div class="card-head"><h2 class="icon-heading tone-info">${pixelIcon('i-book','heading-icon')}场地与琴房规则速查</h2><span class="badge" data-tone="info">只读 · 学校返回原文</span></div>${content()}</section>`}
+ function card(){return `<section class="card campus-booking" id="venue-rules-panel">${content()}</section>`}
  function paint(){const el=document.getElementById('venue-rules-panel');if(el)el.innerHTML=content()}
  async function click(a){
   if(a!=='booking-rules')return false;
@@ -91,12 +92,12 @@ export function createVenueRulesUI({api,loadRooms}){
 export function createBookingUI({api,loadRooms}){
  // 同上：优先用上层共享的请求，单独使用时直连。
  const fetchRooms=loadRooms||(()=>api('/api/booking/rooms'));
- let rooms=[],today='',room='',date='',day=null,error='',message='',busy=false;
+ let rooms=[],today='',room='',date='',day=null,error='',message='',busy=false,requestVersion=0;
  function content(){return `<div class="card-head"><h2 class="icon-heading tone-info">${pixelIcon('i-calendar','heading-icon')}学习空间 · 预约与空位</h2><span class="badge" data-tone="info">学校页面办理</span></div>
  <p>社区会议室、面试间与琴房。登录、选择时段、提交和查看预约结果，都在学校官方页面完成。</p>
- <div class="actions">${officialLink('登录并预约')}${button(pixelIcon('i-compass')+'查看场地空位','rooms')}</div>
+ <div class="actions">${officialLink('登录并预约')}${button(pixelIcon('i-compass')+'查看场地空位','rooms',busy)}</div>
  <p class="muted">点击「登录并预约」会在浏览器打开学校页面，按学校提示完成登录即可。图书馆使用独立预约系统。</p>
- ${rooms.length?`<h3>空位速览</h3><p>这里可以先查空位；具体预约资格与最终结果以学校系统为准。</p><div class="grid"><div><label for="booking-room">场地 · ${rooms.length} 处</label><select id="booking-room">${rooms.map(x=>`<option value="${esc(x.id)}" ${String(x.id)===room?'selected':''}>${esc(x.campus)} · ${esc(x.name)}${x.status?'':'（停用）'}</option>`).join('')}</select></div><div><label for="booking-date">使用日期</label><input id="booking-date" type="date" value="${esc(date)}" min="${esc(today)}"></div></div><div class="actions">${button('查询空位','query')}</div>`:''}
+ ${rooms.length?`<h3>空位速览</h3><p>这里可以先查空位；具体预约资格与最终结果以学校系统为准。</p><div class="grid"><div><label for="booking-room">场地 · ${rooms.length} 处</label><select id="booking-room">${rooms.map(x=>`<option value="${esc(x.id)}" ${String(x.id)===room?'selected':''}>${esc(x.campus)} · ${esc(x.name)}${x.status?'':'（停用）'}</option>`).join('')}</select></div><div><label for="booking-date">使用日期</label><input id="booking-date" type="date" value="${esc(date)}" min="${esc(today)}"></div></div><div class="actions">${button('查询空位','query',busy)}</div>`:''}
  <div role="status" aria-live="polite" class="notice" data-tone="${error?'error':'info'}">${esc(error||message||'校园网内可在这里直接查看场地空位，无需先登录。')}</div>
  ${rooms.length?bookingSlotsHTML(day):''}`}
  function card(){return `<section class="card campus-booking" id="booking-panel">${content()}</section>`}
@@ -104,25 +105,26 @@ export function createBookingUI({api,loadRooms}){
  async function click(a){
   if(!['booking-rooms','booking-query'].includes(a))return false;
   if(busy)return true;
-  busy=true;error='';message='正在读取学校场地信息…';paint();
+  const version=++requestVersion;busy=true;error='';message='正在读取学校场地信息…';day=null;paint();
   try{
    if(a==='booking-rooms'){
     rooms=[];day=null;
-    const data=await fetchRooms();rooms=data.rooms;today=data.today;date=today;room=String(rooms.find(x=>x.status)?.id||rooms[0]?.id||'');
+    const data=await fetchRooms();if(version!==requestVersion)return true;rooms=data.rooms;today=data.today;date=today;room=String(rooms.find(x=>x.status)?.id||rooms[0]?.id||'');
     message=rooms.length?`已从学校读取 ${rooms.length} 个场地`:'学校本次没有返回可查询的场地，请打开官方页面查看。';
    }else{
     day=null;
-    day=await api(`/api/booking/availability?room=${encodeURIComponent(room)}&date=${encodeURIComponent(date)}`);
+    const result=await api(`/api/booking/availability?room=${encodeURIComponent(room)}&date=${encodeURIComponent(date)}`);
+    if(version!==requestVersion)return true;day=result;
     message='已读取学校空位。预约请点击「去学校页面预约」。';
    }
-  }catch(e){error=e.message}
-  finally{busy=false;paint()}
+  }catch(e){if(version===requestVersion)error=e.message}
+  finally{if(version===requestVersion){busy=false;paint()}}
   return true;
  }
  function change(e){
   if(!['booking-room','booking-date'].includes(e.target.id))return false;
   if(e.target.id==='booking-room')room=e.target.value;else date=e.target.value;
-  day=null;error='';message='条件已更改，请重新查询空位';paint();return true;
+  requestVersion++;busy=false;day=null;error='';message='条件已更改，请重新查询空位';paint();return true;
  }
  return {card,click,change};
 }

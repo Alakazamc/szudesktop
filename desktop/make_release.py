@@ -5,9 +5,9 @@
   README-快速开始.txt   给不写代码的人看的，三句话说清怎么用
   LICENSE               MIT
 
-为什么不打成一个安装器（.msi / .exe installer）：
-  这个程序的卖点是"一个文件、双击就用、不需要安装"。
-  默认发行版只提供官方 WebVPN 入口，不修改系统代理。
+这是与 Electron 安装版并行保留的便携包；两者使用同一份 Go 引擎与庭院资源。
+Electron 安装版由 desktop/electron/build.mjs 另行打包。
+默认发行版只提供官方 WebVPN 入口，不修改系统代理。
 
 用法: python make_release.py
 """
@@ -30,7 +30,7 @@ DIST = os.path.join(ROOT, "dist")
 EXE = os.path.join(DIST, "szudesktop-windows-amd64.exe")
 VERSION_FILE = os.path.join(ROOT, "internal", "version", "VERSION")
 
-README = """szuDesktop __VERSION__ · 荔枝庭院（Windows x64）
+README = """szuDesktop __VERSION__ · 荔枝庭院（Windows x64 便携版）
 
 1. 解压后双击 szudesktop.exe，不需要安装，不会弹出命令行窗口。
 2. 校园网账号与密码默认留空；填写后点击登录。勾选记住，仅在认证成功后保存。
@@ -59,6 +59,7 @@ README = """szuDesktop __VERSION__ · 荔枝庭院（Windows x64）
 这是学生自制的非官方测试版。庭院币没有真实货币价值，无充值、交易和提现。
 本版尚无数字签名，校园认证仍需在实际教学区 / 宿舍网络验证。
 源码与反馈：https://github.com/SzuDesktopTeam/szudesktop
+如需独立桌面窗口，请在同一发布页下载 szuDesktop-Setup 安装版。
 """
 
 
