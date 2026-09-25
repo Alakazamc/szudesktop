@@ -65,7 +65,7 @@ await check('onboarding and settings explain the active shell exit behavior',()=
  assert.ok(from>=0&&to>from);const context=vm.createContext({});vm.runInContext(source.slice(from,to),context);
  assert.match(vm.runInContext('exitHint()',context),/10 秒/);
  context.szuDesktop={shell:'electron'};
- const installed=vm.runInContext('exitHint()',context);assert.match(installed,/关闭主窗口/);assert.doesNotMatch(installed,/10 秒/);
+ const installed=vm.runInContext('exitHint()',context);assert.match(installed,/关闭主窗口/);assert.match(installed,/常驻/);assert.match(installed,/托盘/);assert.doesNotMatch(installed,/10 秒/);
  const guide=source.slice(source.indexOf('function showGuide(){'),from);
  assert.match(guide,/hint.textContent=exitHint\(\)/);
  const settings=source.slice(source.indexOf('function settings(){'),source.indexOf('function render(){'));
