@@ -10,10 +10,17 @@ files:
   - external-url.mjs
   - window-policy.mjs
   - preload.cjs
+  - pet-policy.mjs
+  - pet.html
+  - pet-render.mjs
+  - pet-preload.cjs
   - package.json
 extraResources:
   - from: ../../dist/szudesktop-windows-amd64.exe
     to: szudesktop-windows-amd64.exe
+  # 托盘图标：打包后 main.mjs 从 process.resourcesPath 解析。
+  - from: ../assets/szudesktop.ico
+    to: szudesktop.ico
 win:
   target: nsis
   icon: ../assets/szudesktop.ico
