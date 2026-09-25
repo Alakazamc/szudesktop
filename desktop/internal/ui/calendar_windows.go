@@ -40,5 +40,8 @@ func recognizeCalendar(ctx context.Context, image []byte) (string, error) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 	cmd.Env = append(os.Environ(), "SZU_CALENDAR_IMAGE="+f.Name())
 	out, err := cmd.Output()
-	return strings.TrimPrefix(string(out), "\ufeff"), err
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimPrefix(string(out), "\ufeff"), nil
 }
