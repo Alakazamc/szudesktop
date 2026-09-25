@@ -64,6 +64,7 @@ type Server struct {
 	calendar      *calendarService
 	academic      *academicService
 	booking       *bookingService
+	piano         *pianoService
 	probe         func() *portal.DetectResult
 	detect        func() *portal.DetectResult
 	workspace     *workspaceStore
@@ -92,7 +93,7 @@ func New(opts Options) *Server {
 		campus = &campusGateway{}
 	}
 	workspace := newWorkspaceStore()
-	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager(), campus: campus, calendar: newCalendarService(filepath.Dir(workspace.path)), academic: newAcademicService(), booking: newBookingService(), probe: portal.Probe, detect: portal.Detect, workspace: workspace, windows: newWindowSessions()}
+	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager(), campus: campus, calendar: newCalendarService(filepath.Dir(workspace.path)), academic: newAcademicService(), booking: newBookingService(), piano: newPianoService(), probe: portal.Probe, detect: portal.Detect, workspace: workspace, windows: newWindowSessions()}
 }
 
 func parseZone(raw string) (portal.Zone, bool) {
@@ -319,6 +320,11 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 	mux.HandleFunc("/api/academic/undergrad/timetable", protectAPI(s.handleUndergradTimetable, http.MethodGet))
 	mux.HandleFunc("/api/booking/rooms", protectAPI(s.handleBookingRooms, http.MethodGet))
 	mux.HandleFunc("/api/booking/availability", protectAPI(s.handleBookingAvailability, http.MethodGet))
+	mux.HandleFunc("/api/piano/status", protectAPI(s.handlePianoStatus, http.MethodGet))
+	mux.HandleFunc("/api/piano/login", protectAPI(s.handlePianoLogin, http.MethodPost))
+	mux.HandleFunc("/api/piano/logout", protectAPI(s.handlePianoLogout, http.MethodPost))
+	mux.HandleFunc("/api/piano/rooms", protectAPI(s.handlePianoRooms, http.MethodGet))
+	mux.HandleFunc("/api/piano/my", protectAPI(s.handlePianoMy, http.MethodGet))
 }
 
 /* ---------- 接口 ---------- */
