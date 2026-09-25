@@ -37,7 +37,7 @@ assert.equal(nodes['#network-badge'].dataset.tone,'muted');
 assert.doesNotMatch(nodes['#network-summary'].innerHTML,/data-tone="success"/);
 assert.equal(vm.runInContext('net',ctx),null);
 let click,work,message;
-const pendingCtx=vm.createContext({probing:true,schoolUI:{click:async()=>false},campusUI:{click:async()=>false},document:{addEventListener:(_,handler)=>{click=handler}},run:fn=>{work=fn()},toast:t=>{message=t},refresh:()=>{throw Error('duplicate refresh')}});
+const pendingCtx=vm.createContext({probing:true,schoolUI:{click:async()=>false},campusUI:{click:async()=>false},pianoUI:{click:async()=>false},document:{addEventListener:(_,handler)=>{click=handler}},run:fn=>{work=fn()},toast:t=>{message=t},refresh:()=>{throw Error('duplicate refresh')}});
 vm.runInContext(app.slice(app.indexOf("document.addEventListener('click'"),app.indexOf("document.addEventListener('submit'")),pendingCtx);
 click({target:{closest:()=>({dataset:{action:'refresh'}})},preventDefault:()=>{}});
 await work;

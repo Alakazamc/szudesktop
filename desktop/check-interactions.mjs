@@ -13,6 +13,7 @@ function fixture(){
   document:{querySelectorAll:()=>controls,addEventListener:(_,fn)=>{click=fn}},
   schoolUI:{click:async()=>false,sync:()=>{}},
   campusUI:{click:async action=>{calls.push(action);if(jobs.has(action))await jobs.get(action).promise;return true}},
+  pianoUI:{click:async()=>false},
   academicUI:{load:async()=>{}},toast:message=>toasts.push(message),clocks:()=>{},
   navigate:p=>{context.page=p},networkResult:()=>{},
  });
