@@ -128,6 +128,28 @@ assert.equal(scaled.transparent,true);
 const partial=petWindowBounds({width:1920,height:1080},1);
 assert.deepEqual(partial,{x:1636,y:736,width:260,height:320});
 
+// 拖动后的位置恢复；放大或断开副屏后，整个窗口仍留在目标工作区。
+assert.deepEqual(petWindowBounds(wa,1,{x:200,y:300}),{x:200,y:300,width:260,height:320});
+assert.deepEqual(petWindowBounds(wa,2,{x:1700,y:900}),{x:1400,y:440,width:520,height:640});
+assert.deepEqual(petWindowBounds(wa,1,{x:-1200,y:-900}),{x:0,y:0,width:260,height:320});
+assert.deepEqual(petWindowBounds(wa2,1,{x:2100.4,y:-299.6}),{x:2100,y:-300,width:260,height:320});
+assert.equal(petWindowOptions(wa,1,{x:100,y:200}).x,100);
+assert.equal(petWindowOptions(wa,1,{x:100,y:200}).y,200);
+// 只接受完整的有限数坐标；旧配置和无效位置仍按默认停靠。
+for(const position of [undefined,null,{}, {x:5}, {x:5,y:Infinity}, {x:'5',y:6}]){
+  assert.deepEqual(petWindowBounds(wa,1,position),b1);
+}
+// 极小工作区按比例收缩有效尺寸，不能因 24px 留白或负坐标被挤出屏幕。
+const tiny={x:-100,y:50,width:100,height:80};
+assert.deepEqual(petWindowBounds(tiny,2,{x:999,y:-999}),{x:-65,y:50,width:65,height:80});
+for(const area of [tiny,{x:20,y:-40,width:260,height:320},{width:1,height:1},{}]){
+  const b=petWindowBounds(area,2,{x:-99999,y:99999});
+  const x=area.x||0,y=area.y||0,width=area.width||1,height=area.height||1;
+  assert.ok(b.x>=x&&b.y>=y,'窗口左上角在工作区内');
+  assert.ok(b.x+b.width<=x+width&&b.y+b.height<=y+height,'窗口右下角在工作区内');
+  assert.ok(b.width>=1&&b.height>=1,'窗口尺寸始终为正');
+}
+
 // 动作表：8 个，id 唯一，kind 只有 loop/once，duration 为正整数。
 const ACTION_IDS=Object.keys(PET_ACTIONS);
 assert.deepEqual(ACTION_IDS,['idle','happy','sad','sleep','blink','yawn','walk','react']);

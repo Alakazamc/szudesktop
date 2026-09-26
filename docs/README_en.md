@@ -61,21 +61,29 @@ protocol at an endpoint that isn't there.
 
 ## Download
 
-Download **[szuDesktop-Setup-0.9.0.exe](https://github.com/SzuDesktopTeam/szudesktop/releases/download/beta0.9.0/szuDesktop-Setup-0.9.0.exe)**, run the installer, then open szuDesktop. The Windows installer includes its window runtime and Go engine. Portable downloads, CLI binaries and checksums are on the [beta0.9.0 release page](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.9.0).
+The current published installer is **[szuDesktop-Setup-0.9.0.exe](https://github.com/SzuDesktopTeam/szudesktop/releases/download/beta0.9.0/szuDesktop-Setup-0.9.0.exe)**. Run it, then open szuDesktop. The Windows installer includes its window runtime and Go engine. Portable downloads, CLI binaries and checksums are on the [beta0.9.0 release page](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.9.0). This branch is preparing beta0.9.1; the new version is not yet available for download.
 
 | Item | Detail |
 | :--- | :----- |
 | Windows installer | An independent Electron window; a matching `.sha256` file verifies the download |
 | Windows portable | `szudesktop-beta0.9.0-windows-amd64.zip`; unzip and run `szudesktop.exe`, using the local Edge / Chrome browser |
 | Command line | Windows / macOS / Linux `szunet` binaries remain available |
-| Source version | `beta0.9.0` public beta; see [Releases](https://github.com/SzuDesktopTeam/szudesktop/releases) for published files |
+| Source version | `beta0.9.1` release candidate; runtime, PR and release checks remain pending. Published downloads are still beta0.9.0 |
 | Saved data | Both Windows editions use the same local garden and study records; export a backup from Settings before updating |
 
 beta0.9.0 adds a floating desktop pet, a system tray and 40%–200% scaling that persists across restarts. Closing the main window keeps the pet available; click it or the tray to reopen. Official school login and booking pages open inside the installer edition, without a cookie-copy workflow. Calendar OCR now prefers Chinese. See [STATUS](STATUS.md) for the limits of live account validation. Installer autostart is still not implemented.
 
 Published on 2026-09-26: [PR #13](https://github.com/SzuDesktopTeam/szudesktop/pull/13) is merged and the [release checks](https://github.com/SzuDesktopTeam/szudesktop/actions/runs/36220458700) passed, including installation, main window and pet, persistent size after restart, saved data after a same-version reinstall, and uninstall. A subsequent live check passed graduate alternative login and timetable reading. See section 47 of [STATUS](STATUS.md) for the remaining acceptance boundaries.
 
-**Visual update on the development branch, not yet in the downloads:** the pixel campus and timber navigation remain, with lighter paper surfaces, green primary buttons and clearer typography. The home page has a shorter welcome section, no duplicate network status and a new companion scene. Forms, service links and narrow layouts share the updated styling. Changes and verification remain in [STATUS](STATUS.md).
+**beta0.9.1 release candidate, not yet in the downloads:** the pet gains a left/right-click menu, wheel scaling, dragging and remembered position; care actions use the existing garden save. The pixel campus and timber navigation remain, with lighter paper surfaces, green primary buttons and clearer typography. The home page has a shorter welcome section, no duplicate network status and a new companion scene. Forms, service links and narrow layouts share the updated styling. The candidate also includes the school authentication redirect fix. Changes and verification remain in [STATUS](STATUS.md).
+
+### Desktop companion (beta0.9.1 candidate installer)
+
+- **Left-click or right-click** the pet to open its menu, view its current state, pat, feed, play or toggle sleep. Care uses the existing garden rules and local save; insufficient food, low energy and cooldowns are reported.
+- **Scroll while hovering over the pet** to change its size by 10 percentage points, from 40% to 200%. Menu controls, the Settings slider and tray presets are also available.
+- **Hold and drag the pet** to move it. Its size and position are restored after restart.
+- The menu opens the companion area, farm, Study tools or main window, and can hide the pet or quit the app. Use the tray to show a hidden pet again.
+- The floating pet and these desktop controls are part of the **Electron installer edition**. The portable edition keeps garden care inside its main window and has no separate pet window.
 
 ### First run
 
@@ -90,7 +98,7 @@ Published on 2026-09-26: [PR #13](https://github.com/SzuDesktopTeam/szudesktop/p
 ### Opening and exiting
 
 - Starting the installer edition twice focuses the existing window; it can also reuse an already running portable engine of the same version. If an older engine is reported, exit the old edition before reopening
-- Closing the main window keeps the pet and tray running. Click either to reopen; use **Tray → Exit** or **Settings → Exit** to quit fully. Only the engine started by this instance is stopped; a reused service remains running. The portable edition exits about 10 seconds after all its windows close
+- Closing the main window keeps the pet and tray running. In the beta0.9.1 candidate, choose **Open main window** from the pet menu, or click the tray. Use **Pet menu → Quit app**, **Tray → Exit** or **Settings → Exit** to quit fully. Only the engine started by this instance is stopped; a reused service remains running. The portable edition exits about 10 seconds after all its windows close
 - Reloading the page does not stop the service
 - To start the service without a window, launch `szudesktop.exe` with `--no-open`
   (meant for headless / sidecar use — the Electron shell starts the Go engine the same way)
@@ -114,6 +122,8 @@ Published on 2026-09-26: [PR #13](https://github.com/SzuDesktopTeam/szudesktop/p
 
 ## Features
 
+These entries describe the current source. beta0.9.1 is a release candidate; published downloads remain beta0.9.0. Verified queries and pending school-account workflows are distinguished below, with evidence in STATUS.md.
+
 | Capability | Status | Notes |
 | :--------- | :----- | :---- |
 | Campus network sign-in | ✅ | Teaching area (SRun) / dorm area (Dr.COM), zone detected automatically; sign-out and manual zone override |
@@ -127,13 +137,13 @@ Published on 2026-09-26: [PR #13](https://github.com/SzuDesktopTeam/szudesktop/p
 | Common contacts | Partial | Only numbers verifiable on official school pages (library help desks); other offices link to their official pages |
 | Grades and GPA | Partial | Paste or import CSV / TSV grade tables and calculate GPA locally. Manual school queries remain pending live account validation, read only the first page and do not update local GPA records automatically. **No PDF / image / XLSX parsing** |
 | Todo and focus timer | ✅ | Todo list plus 5 / 25 / 45-minute focus sessions |
-| Desktop pet (installer) | ✅ | Transparent pet window, mood and click animations, tray, presets and continuous scaling; size survives restart |
+| Desktop pet (installer) | Release candidate | Transparent pet window, left/right-click care menu, 40%–200% wheel/slider scaling, dragging and persistent size/position. This iteration's runtime and final installer checks remain pending |
 | College piano rooms | Experimental | Login, paginated rooms and read-only reservations; memory-only session, pending validation with an authorized account |
 | Lychee Garden | ✅ | Companion care and growth, crops, plots, watering, harvest, decorations, daily goals, achievements and a field guide. No purchases, no real-money trading |
 | Save file | ✅ | Fixed local file, survives restarts and port changes, supports export / import and multi-window conflict protection |
 | Launch at login | Partial (Windows only) | Portable and CLI editions retain silent autostart; the installer can disable old entries but does not create new ones. macOS / Linux explicitly report unsupported |
 
-beta0.9.0 is a public prerelease. Scores are limited to the first page and balance is not integrated. Graduate alternative login and the current timetable passed a live read. The undergraduate page returned 403 for the test account, the official graduate scores page did not render its list, and the college piano service could not be reached. The official browser allowed slot selection and opened the booking confirmation form; no reservation was submitted. The candidate installer still failed to load room details, and a later browser refresh also encountered a closed connection. The full booking flow and business-session handoff still require validation. See [STATUS.md](STATUS.md).
+**Current limitations:** scores are limited to the first page and balance is not integrated. Graduate alternative login and the current timetable passed a live read. The undergraduate page returned 403 for the test account, the official graduate scores page did not render its list, and the college piano service could not be reached. The official browser allowed slot selection and opened the booking confirmation form; no reservation was submitted. The candidate installer still failed to load room details, and a later browser refresh also encountered a closed connection. The full booking flow and business-session handoff still require validation. See [STATUS.md](STATUS.md).
 
 **College notice filtering:** selecting a college automatically reads its public column. Unsupported units have an official-site link; authenticated internal notices are not included. This update is included in beta0.6.1.
 
@@ -145,7 +155,7 @@ In the installer edition, select undergraduate/graduate timetable or scores at t
 
 The portable edition retains a collapsed alternative login workflow, including manual session import with OS-protected storage and no plaintext fallback. Never share passwords or cookies in feedback. Online scores are read manually and currently limited to the first page; incomplete results are labelled and are not automatically added to local GPA records. Undergraduate arrangements are preserved as school text, and graduate courses use the school's returned schedule.
 
-A real graduate account passed alternative login and displayed the school's current term and courses without arrangements in the app; the official page likewise returned no scheduled classes. This does not validate populated schedules, scores or undergraduate access. The development branch also fixes a blocked WebVPN authentication redirect and an outdated login hint; these fixes are not included in the beta0.9.0 downloads above.
+A real graduate account passed alternative login and displayed the school's current term and courses without arrangements in the app; the official page likewise returned no scheduled classes. This does not validate populated schedules, scores or undergraduate access. The beta0.9.1 candidate also fixes a blocked WebVPN authentication redirect and an outdated login hint; these fixes are not included in the beta0.9.0 downloads above.
 
 The official calendar is checked daily. Windows OCR prefers Simplified Chinese; failed refreshes preserve the cache and report the cause. Teaching weeks support manual overrides. College piano rooms use a separate campus system with read-only queries; its current HTTP service should only be used on a trusted campus network with its own credentials.
 
@@ -229,7 +239,7 @@ is open source, so you can read it or build it yourself (`go build`) and compare
 <details>
 <summary><b>Does it keep running after I close the window?</b></summary>
 
-Closing the main window keeps the pet and tray running. Quit from the tray or Settings to stop its own engine; a reused service stays running.
+Closing the main window keeps the pet and tray running. In the beta0.9.1 candidate, reopen from **Pet menu → Open main window** or the tray. Quit from the pet menu, tray or Settings to stop its own engine; a reused service stays running.
 The portable edition exits about 10 seconds after all its windows close. **Settings → Exit** is also available.
 </details>
 
@@ -283,7 +293,7 @@ You need Go (see `go.mod`), Python 3 and Node.js.
 
 ```text
 python desktop/sync-assets.py      # sync interface assets
-node   desktop/check-ui.mjs        # the 10 frontend regressions below all run in CI
+node   desktop/check-ui.mjs        # the regressions below all run in CI
 node   desktop/check-campus.mjs
 node   desktop/check-notices.mjs
 node   desktop/check-session-ui.mjs
@@ -295,7 +305,13 @@ node   desktop/check-workspace-ui.mjs
 node   desktop/check-autostart-ui.mjs
 node   desktop/electron/check-sidecar.mjs # Electron startup, shutdown and reuse regression
 node   desktop/electron/check-window-policy.mjs
+node   desktop/electron/check-pet-policy.mjs
+node   desktop/electron/check-pet-settings.mjs
+node   desktop/electron/check-pet-view.mjs
+node   desktop/electron/check-school-policy.mjs
 node   desktop/check-interactions.mjs
+node   desktop/check-pet-commands.mjs
+node   desktop/check-piano.mjs
 go vet ./... && go test ./...      # static checks and unit tests
 python desktop/check_release_notes.py # release-notes extraction regression
 python desktop/build-windows.py    # build the Windows desktop exe (also the Electron Go sidecar)
@@ -303,6 +319,8 @@ node   desktop/electron/build.mjs  # build the Windows Electron installer (run `
 python desktop/smoke_windows.py    # end-to-end smoke test
 python desktop/make_release.py     # produce the release package (only when actually releasing; it overwrites same-named local artifacts)
 ```
+
+`python desktop/electron/smoke_installer.py` installs, reopens, reinstalls and uninstalls the final package only on a disposable GitHub Windows runner. It must not be run as an installation check on a development machine. PR and tag workflows retain all build and installer checks; release assets are published only after they succeed.
 
 Release notes live in the root [CHANGELOG.md](../CHANGELOG.md): when bumping the version,
 rename the `## 未发布` ("unreleased") section to the new version. CI extracts that section as

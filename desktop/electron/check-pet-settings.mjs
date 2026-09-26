@@ -18,6 +18,21 @@ assert.deepEqual(readPetSettings(dir),{scale:1.5});
 const onDisk=JSON.parse(readFileSync(petSettingsPath(dir),'utf8'));
 assert.deepEqual(onDisk,{version:1,scale:1.5});
 
+// 新增位置仍使用 version 1，保留副屏负坐标，且只存实际需要的坐标字段。
+const positioned=writePetSettings(dir,1.2,{x:-1200,y:350,unused:'ignore'});
+assert.deepEqual(positioned,{version:1,scale:1.2,position:{x:-1200,y:350}});
+assert.deepEqual(readPetSettings(dir),{scale:1.2,position:{x:-1200,y:350}});
+assert.deepEqual(JSON.parse(readFileSync(petSettingsPath(dir),'utf8')),positioned);
+// 旧调用不写位置；非法位置被丢弃，但合法尺寸仍然保留。
+for(const position of [undefined,null,{}, {x:100}, {x:100,y:NaN}, {x:Infinity,y:200}, {x:'100',y:200}]){
+  assert.deepEqual(writePetSettings(dir,0.8,position),{version:1,scale:0.8});
+  assert.deepEqual(readPetSettings(dir),{scale:0.8});
+}
+for(const position of [null,{}, {x:100}, {x:'100',y:200}, {x:100,y:null}]){
+  writeFileSync(petSettingsPath(dir),JSON.stringify({version:1,scale:1.4,position}));
+  assert.deepEqual(readPetSettings(dir),{scale:1.4});
+}
+
 // 写入时会归一化：越界值夹紧后才落盘。
 writePetSettings(dir,9);
 assert.deepEqual(readPetSettings(dir),{scale:PET_SCALE_MAX});

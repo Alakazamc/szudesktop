@@ -33,24 +33,35 @@ export function petScaleClamp(value) {
   return Math.min(PET_SCALE_MAX, Math.max(PET_SCALE_MIN, Math.round(n * 100) / 100));
 }
 
-// 窗口几何的唯一来源：基准尺寸 × scale，贴 workArea 右下角。
-// 多显示器时 workArea.x/y 可能非 0；缺字段按 0 处理，绝不抛异常。
-export function petWindowBounds(workArea, scale) {
+// 窗口几何的唯一来源：基准尺寸 × scale；未保存位置时贴工作区右下角。
+// 整个窗口保持在工作区内；工作区小于宠物窗时按比例缩小有效尺寸，不改用户缩放设置。
+export function petWindowBounds(workArea, scale, position) {
   const s = petScaleClamp(scale);
-  const width = Math.max(1, Math.round(PET_WIDTH * s));
-  const height = Math.max(1, Math.round(PET_HEIGHT * s));
   const area = workArea || {};
-  const ax = Number.isFinite(area.x) ? area.x : 0;
-  const ay = Number.isFinite(area.y) ? area.y : 0;
-  const aw = Number.isFinite(area.width) ? area.width : 0;
-  const ah = Number.isFinite(area.height) ? area.height : 0;
-  return {x: ax + aw - width - PET_MARGIN, y: ay + ah - height - PET_MARGIN, width, height};
+  const ax = Number.isFinite(area.x) ? Math.round(area.x) : 0;
+  const ay = Number.isFinite(area.y) ? Math.round(area.y) : 0;
+  const aw = Number.isFinite(area.width) ? Math.max(1, Math.floor(area.width)) : 1;
+  const ah = Number.isFinite(area.height) ? Math.max(1, Math.floor(area.height)) : 1;
+  const requestedWidth = Math.round(PET_WIDTH * s);
+  const requestedHeight = Math.round(PET_HEIGHT * s);
+  const fit = Math.min(1, aw / requestedWidth, ah / requestedHeight);
+  const width = Math.max(1, Math.floor(requestedWidth * fit));
+  const height = Math.max(1, Math.floor(requestedHeight * fit));
+  const hasPosition = Number.isFinite(position?.x) && Number.isFinite(position?.y);
+  const x = hasPosition ? Math.round(position.x) : ax + aw - width - PET_MARGIN;
+  const y = hasPosition ? Math.round(position.y) : ay + ah - height - PET_MARGIN;
+  return {
+    x: Math.min(ax + aw - width, Math.max(ax, x)),
+    y: Math.min(ay + ah - height, Math.max(ay, y)),
+    width,
+    height,
+  };
 }
 
 // BrowserWindow 选项（不含 webPreferences，由 main.mjs 注入 preload 等安全配置）。
 // scale 缺省为 1，输出与本函数加缩放参数之前完全一致。
-export function petWindowOptions(workArea, scale = 1) {
-  const bounds = petWindowBounds(workArea, scale);
+export function petWindowOptions(workArea, scale = 1, position) {
+  const bounds = petWindowBounds(workArea, scale, position);
   return {
     width: bounds.width,
     height: bounds.height,

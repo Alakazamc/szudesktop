@@ -95,13 +95,51 @@ window.szuPet?.onState(setSprite);
 window.szuPet?.onSay(say);
 window.szuPet?.onAction(setBaseAction);
 window.szuPet?.onScale(setScale);
+window.szuPet?.onReaction(() => playOnce('react'));
 
-// 左键点宠物 → 本地播一个回应动作，并请主进程显示/聚焦主窗口。
-// （focusable:false 的窗也能收到指针事件。）
+// 单击/右键打开菜单；拖动超过阈值时只移动，不误触菜单。
+let pointer = null;
+let lastWheel = 0;
 pet.addEventListener('pointerdown', (event) => {
   if (event.button !== 0) return;
-  playOnce('react');
-  window.szuPet?.showMain();
+  event.preventDefault();
+  pointer = {id: event.pointerId, x: event.screenX, y: event.screenY, moved: false};
+  pet.setPointerCapture(event.pointerId);
+  window.szuPet?.drag('start', {x:event.screenX, y:event.screenY});
+});
+pet.addEventListener('pointermove', (event) => {
+  if (!pointer || event.pointerId !== pointer.id) return;
+  if (Math.hypot(event.screenX - pointer.x, event.screenY - pointer.y) > 5) pointer.moved = true;
+  if (pointer.moved) {
+    pet.classList.add('dragging');
+    window.szuPet?.drag('move', {x:event.screenX, y:event.screenY});
+  }
+});
+function endPointer(event) {
+  if (!pointer || event.pointerId !== pointer.id) return;
+  const open = !pointer.moved && event.type === 'pointerup';
+  pointer = null;
+  pet.classList.remove('dragging');
+  if (pet.hasPointerCapture(event.pointerId)) pet.releasePointerCapture(event.pointerId);
+  window.szuPet?.drag('end', {x:event.screenX, y:event.screenY});
+  if (open) {playOnce('react');window.szuPet?.openMenu();}
+}
+pet.addEventListener('pointerup', endPointer);
+pet.addEventListener('pointercancel', endPointer);
+pet.addEventListener('contextmenu', (event) => {
+  event.preventDefault();window.szuPet?.openMenu();
+});
+pet.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' || event.key === ' ') {event.preventDefault();window.szuPet?.openMenu();}
+});
+pet.addEventListener('wheel', (event) => {
+  event.preventDefault();
+  if (!event.deltaY || Date.now() - lastWheel < 100) return;
+  lastWheel = Date.now();
+  window.szuPet?.scaleStep(event.deltaY < 0 ? 1 : -1);
+}, {passive: false});
+pet.addEventListener('lostpointercapture', (event) => {
+  if (pointer) endPointer(event);
 });
 
 // 立绘就位后才开始随机待机，避免首帧就在动。

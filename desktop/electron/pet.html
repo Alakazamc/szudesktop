@@ -48,7 +48,10 @@
     image-rendering: pixelated;
     filter: drop-shadow(0 6px 6px rgba(40, 20, 10, .25));
     animation: pet-idle 3200ms ease-in-out infinite;
+    touch-action: none;
   }
+  #pet.dragging[data-action] { cursor: grabbing; animation: none; }
+  #pet:focus-visible { outline: 2px solid #6e1f35; outline-offset: 4px; }
   /* 动作全部由 CSS 播放；kind=once 的动作不写 infinite，播一次即停。
      荔宝暂无部件级分组，blink/yawn 用全身近似，已在设置页与文档中如实标注。 */
   #pet[data-action="idle"]  { animation: pet-idle 3200ms ease-in-out infinite; }
@@ -78,7 +81,7 @@
 <body>
 <div id="stage">
   <div id="bubble" role="status" aria-live="polite"><span id="bubble-text"></span></div>
-  <svg id="pet" viewBox="0 0 52 56" role="img" aria-label="桌面宠物 荔宝"><use id="pet-use" href="#libao"></use></svg>
+  <svg id="pet" viewBox="0 0 52 56" role="button" tabindex="0" aria-label="打开宠物菜单" aria-haspopup="menu"><title>点击打开菜单 · 拖动换位置 · 滚轮调大小</title><use id="pet-use" href="#libao"></use></svg>
 </div>
 <!-- 像素立绘内联在本文件里（复制自 desktop/assets/index.html 的 symbol），
      不从 Go 服务加载任何资源；宠物窗保持纯本地。 -->

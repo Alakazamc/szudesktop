@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const source=readFileSync(new URL('./assets/garden/app.mjs',import.meta.url),'utf8');
-const start=source.indexOf('async function run(work)'),end=source.indexOf("document.addEventListener('submit'",start);
+const start=source.indexOf('async function run('),end=source.indexOf("document.addEventListener('submit'",start);
 assert.ok(start>=0&&end>start);
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {promise,resolve}};

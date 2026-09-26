@@ -1,6 +1,6 @@
-// 宠物窗专用 preload：只暴露 IPC 订阅 + 一个「点开主窗口」的单向通知。
+// 宠物窗专用 preload：仅暴露状态订阅和受限的菜单、缩放步进、拖动通知。
 // 宠物渲染进程没有任何 fetch/Node 能力，数据全部由主进程推过来。
-// 注意：不暴露任何设置写入通道——宠物大小只能从主窗改。
+// 不接收路径或任意频道；拖动只传事件坐标，主进程将窗口限制在显示器工作区。
 const {contextBridge, ipcRenderer} = require('electron');
 contextBridge.exposeInMainWorld('szuPet', Object.freeze({
   onState: (cb) => {
@@ -24,5 +24,16 @@ contextBridge.exposeInMainWorld('szuPet', Object.freeze({
     if (typeof cb !== 'function') return;
     ipcRenderer.on('pet:scale', (_event, value) => cb(Number(value)));
   },
-  showMain: () => ipcRenderer.send('pet:show-main'),
+  onReaction: (cb) => {
+    if (typeof cb === 'function') ipcRenderer.on('pet:react', () => cb());
+  },
+  openMenu: () => ipcRenderer.send('pet:menu'),
+  scaleStep: (direction) => {
+    if (direction === 1 || direction === -1) ipcRenderer.send('pet:scale-step', direction);
+  },
+  drag: (phase, point) => {
+    if (['start', 'move', 'end'].includes(phase) && Number.isFinite(point?.x) && Number.isFinite(point?.y)) {
+      ipcRenderer.send('pet:drag', phase, {x:Math.round(point.x), y:Math.round(point.y)});
+    }
+  },
 }));
