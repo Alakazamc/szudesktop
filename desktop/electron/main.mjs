@@ -5,12 +5,16 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 import {startSidecar} from './sidecar.mjs';
 import {isSafeExternalUrl} from './external-url.mjs';
 import {contentSecurityPolicy,isAppUrl,isTrustedSender} from './window-policy.mjs';
-import {petWindowOptions,petWindowBounds,petScaleClamp,petPresetFor,petActionFor,petSay,petSpriteFor,activePetOf,isPetSender,PET_SCALE_DEFAULT,PET_SCALE_PRESETS} from './pet-policy.mjs';
+import {petWindowOptions,petWindowBounds,petScaleClamp,petPresetFor,petActionFor,petSay,petSpriteFor,activePetOf,isPetSender,PET_SCALE_DEFAULT,PET_SCALE_PRESETS,PET_WIDTH,PET_HEIGHT} from './pet-policy.mjs';
 import {readPetSettings,writePetSettings} from './pet-settings.mjs';
 import {createSchoolWindows} from './school-window.mjs';
 import {isSchoolURL} from './school-policy.mjs';
 
 const here=path.dirname(fileURLToPath(import.meta.url));
+// 菜单与主界面共用同一份庭院规则，包含离线成长；打包时直接复制源模块。
+const gardenEngine=import(pathToFileURL(app.isPackaged
+  ?path.join(process.resourcesPath,'garden-engine.mjs')
+  :path.resolve(here,'..','assets','garden','engine.mjs')).href);
 // Installation smoke runs use their own profile and Go state, never the user's account.
 const smokeReport=process.env.SZU_SMOKE_REPORT;
 const smoke=Boolean(smokeReport && path.isAbsolute(smokeReport)
@@ -24,6 +28,7 @@ function sidecarCommand(){
 }
 let handle=null,mainWin=null,quitting=false,quitReady=false,shutdownPromise=null,healthTimer=null,failureShown=false;
 let petWin=null,tray=null,trayMenu=null,petTimer=null,petGreeted=false,petHtmlUrl=null,petScale=PET_SCALE_DEFAULT;
+let petMenu=null,petGame=null,petPosition=null,petDrag=null;
 let startup=null,schoolWindows=null;
 const smokeErrors=[];
 
@@ -48,23 +53,26 @@ async function pushPetState(){
     const response=await fetch(handle.baseUrl+'/api/workspace',{signal:AbortSignal.timeout(5000)});
     if(!response.ok)return;
     const snapshot=await response.json();
-    const game=snapshot?.data?.game;
+    if(!snapshot.data)return;
+    const {settle,normalize}=await gardenEngine;
+    const game=settle(normalize(snapshot.data)).game;
     const pet=activePetOf(game);
     if(!pet)return;
+    petGame=game;
     sendPet('pet:state',petSpriteFor(pet));
     sendPet('pet:action',{id:petActionFor(pet,null),energy:Number(pet.energy),sleeping:Boolean(pet.sleeping)});
     if(!petGreeted){
       petGreeted=true;
       const name=pet.name||'伙伴';
-      sendPet('pet:say',petSay(pet.say||`嗨，我是${name}！`));
+      sendPet('pet:say',petSay(`我是${name}。点击我打开菜单，拖动我换个位置。`));
     }
   }catch{}
 }
 async function createPetWindow(){
   if(quitting)return;
-  const {workArea}=screen.getPrimaryDisplay();
+  const {workArea}=petPosition?screen.getDisplayNearestPoint(petPosition):screen.getPrimaryDisplay();
   petHtmlUrl=pathToFileURL(path.join(here,'pet.html')).href;
-  petWin=new BrowserWindow({...petWindowOptions(workArea,petScale),
+  petWin=new BrowserWindow({...petWindowOptions(workArea,petScale,petPosition),
     webPreferences:{preload:path.join(here,'pet-preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   petWin.setMenuBarVisibility(false);
   const pwc=petWin.webContents;
@@ -81,7 +89,7 @@ async function createPetWindow(){
   if(quitting||!petWin||petWin.isDestroyed())return;
   petWin.setAlwaysOnTop(true,'screen-saver');
   petWin.show();
-  sendPet('pet:scale',petScale);
+  syncPetGeometry();
   // 首帧推送：立绘 + 招呼台词，随后每 ~30s 刷新一次。
   await pushPetState();
   const petShot=process.env.SZU_PET_SHOT;
@@ -96,15 +104,65 @@ async function createPetWindow(){
 // 只走程序化 setBounds，绝不开原生 resizable（透明窗原生缩放在 Windows 上不可靠）。
 function applyPetScale(scale){
   const next=petScaleClamp(scale);
-  writePetSettings(app.getPath('userData'),next);
-  petScale=next;
   if(petWin&&!petWin.isDestroyed()){
-    const {workArea}=screen.getDisplayMatching(petWin.getBounds());
-    petWin.setBounds(petWindowBounds(workArea,petScale));
-    sendPet('pet:scale',petScale);
+    const previous=petWin.getBounds(),{workArea}=screen.getDisplayMatching(previous);
+    const size=petWindowBounds(workArea,next);
+    const position={x:previous.x+(previous.width-size.width)/2,y:previous.y+previous.height-size.height};
+    const bounds=petWindowBounds(workArea,next,position);
+    writePetSettings(app.getPath('userData'),next,{x:bounds.x,y:bounds.y});
+    petScale=next;
+    petWin.setBounds(bounds);
+    syncPetGeometry();
+  }else{
+    writePetSettings(app.getPath('userData'),next,petPosition);
+    petScale=next;
   }
   refreshTrayMenu();
+  if(mainWin&&!mainWin.isDestroyed())mainWin.webContents.send('szu:pet-scale',petScale);
   return petScale;
+}
+function syncPetGeometry(){
+  if(!petWin||petWin.isDestroyed())return;
+  const bounds=petWin.getBounds();
+  petPosition={x:bounds.x,y:bounds.y};
+  sendPet('pet:scale',Math.min(petScale,bounds.width/PET_WIDTH,bounds.height/PET_HEIGHT));
+}
+function changePetSize(scale){
+  try{applyPetScale(scale);}catch{sendPet('pet:say','大小没有保存成功，请检查本机配置目录后再试。');}
+}
+function dispatchPetCommand(command){
+  if(!mainWin||mainWin.isDestroyed())return;
+  if(['home','garden','farm','study'].includes(command))showMainWindow();
+  mainWin.webContents.send('szu:pet-command',command);
+}
+async function openPetMenu(){
+  if(!petWin||petWin.isDestroyed()||quitting)return;
+  await pushPetState();
+  if(!petWin||petWin.isDestroyed()||quitting)return;
+  const pet=activePetOf(petGame);
+  const care=(label,command)=>({id:command,label,enabled:Boolean(pet),click:()=>dispatchPetCommand(command)});
+  petMenu=Menu.buildFromTemplate([
+    {label:pet?`${pet.name} · Lv.${Math.min(20,1+Math.floor(pet.xp/50))}`:'伙伴状态读取中',enabled:false},
+    ...(pet?[{label:`饱腹 ${Math.round(pet.hunger)} · 心情 ${Math.round(pet.mood)} · 精力 ${Math.round(pet.energy)}`,enabled:false}]:[]),
+    {type:'separator'},
+    care('摸摸头','pat'),care(`喂食${petGame?`（剩余 ${petGame.food} 份）`:''}`,'feed'),care('陪它玩','play'),care(pet?.sleeping?'叫醒伙伴':'让它睡一会','sleep'),
+    {type:'separator'},
+    {id:'garden',label:'看看庭院',click:()=>dispatchPetCommand('garden')},
+    {id:'farm',label:'照看农田',click:()=>dispatchPetCommand('farm')},
+    {id:'study',label:'学习与专注',click:()=>dispatchPetCommand('study')},
+    {label:`宠物大小（${Math.round(petScale*100)}%）`,submenu:[
+      {label:'缩小一点',enabled:petScale>0.4,click:()=>changePetSize(petScale-0.1)},
+      {label:'放大一点',enabled:petScale<2,click:()=>changePetSize(petScale+0.1)},
+      {type:'separator'},...petSizeMenu(),
+      {label:'恢复默认大小',click:()=>changePetSize(1)},
+    ]},
+    {type:'separator'},
+    {id:'home',label:'打开主窗口',click:()=>dispatchPetCommand('home')},
+    {label:'隐藏宠物',click:()=>{petWin?.hide();refreshTrayMenu();}},
+    {label:'退出应用',click:()=>app.quit()},
+  ]);
+  petWin.setFocusable(true);
+  petMenu.popup({window:petWin,callback:()=>{if(petWin&&!petWin.isDestroyed())petWin.setFocusable(false);}});
 }
 function petSizeMenu(){
   const current=petPresetFor(petScale);
@@ -190,7 +248,7 @@ async function recordSmoke(){
   const status=await response.json();
   const {checkPetRuntime}=await import('./smoke-pet.mjs');
   const pet=await checkPetRuntime({mainWin,petWin,tray,getMenu:()=>trayMenu,screen,
-    initialScale:petScale,userData:app.getPath('userData'),evidenceDir:path.dirname(smokeReport)});
+    getPetMenu:()=>petMenu,initialScale:petScale,userData:app.getPath('userData'),evidenceDir:path.dirname(smokeReport),baseUrl:handle.baseUrl});
   if(smokeErrors.length)throw Error(smokeErrors.join('; '));
   if(process.env.SZU_SMOKE_SCREENSHOT && path.isAbsolute(process.env.SZU_SMOKE_SCREENSHOT)){
     await mainWin.webContents.executeJavaScript('document.fonts.ready.then(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))');
@@ -248,7 +306,8 @@ async function boot(){
   mainWin.on('closed',()=>{mainWin=null;});
   await mainWin.loadURL(handle.baseUrl);
   mainWin.show();
-  petScale=readPetSettings(app.getPath('userData')).scale;
+  const petSettings=readPetSettings(app.getPath('userData'));
+  petScale=petSettings.scale;petPosition=petSettings.position||null;
   if(!quitting)await startPet();
   await recordSmoke();
 }
@@ -261,9 +320,7 @@ else{
     setImmediate(()=>app.quit());
     return true;
   });
-  // 宠物窗左键 → 显示/聚焦主窗口。校验方式与 szu:quit 同款：
-  // 只认宠物窗自己的主 frame，且 frame URL 恰好是本地 pet.html。
-  // 主窗是唯一能改宠物大小的入口；宠物窗自己没有写入通道。
+  // 主窗设置和宠物菜单共用缩放；所有 IPC 只接受对应本地窗口的主 frame。
   ipcMain.handle('szu:pet-scale-get',event=>{
     if(!isTrustedSender(event,mainWin,handle?.baseUrl))throw Error('请求来源不匹配');
     return petScale;
@@ -278,16 +335,40 @@ else{
       return schoolWindows[method](value);
     });
   }
-ipcMain.on('pet:show-main',(event)=>{
+  ipcMain.on('szu:pet-result',async(event,result)=>{
+    if(!isTrustedSender(event,mainWin,handle?.baseUrl)||typeof result?.ok!=='boolean'||typeof result.message!=='string')return;
+    await pushPetState();
+    sendPet('pet:say',petSay(result.message));
+    if(result.ok)sendPet('pet:react');
+  });
+  ipcMain.on('pet:menu',(event)=>{
     if(!petHtmlUrl||!isPetSender(event,petWin,petHtmlUrl))return;
-    showMainWindow();
+    void openPetMenu();
+  });
+  ipcMain.on('pet:scale-step',(event,direction)=>{
+    if(!petHtmlUrl||!isPetSender(event,petWin,petHtmlUrl)||![1,-1].includes(direction))return;
+    changePetSize(petScale+direction*0.1);
+  });
+  ipcMain.on('pet:drag',(event,phase,point)=>{
+    if(!petHtmlUrl||!isPetSender(event,petWin,petHtmlUrl)||!Number.isFinite(point?.x)||!Number.isFinite(point?.y))return;
+    if(phase==='start')petDrag={cursor:point,bounds:petWin.getBounds(),moved:false};
+    else if(phase==='move'&&petDrag){
+      const {workArea}=screen.getDisplayNearestPoint(point);
+      const position={x:petDrag.bounds.x+point.x-petDrag.cursor.x,y:petDrag.bounds.y+point.y-petDrag.cursor.y};
+      petWin.setBounds(petWindowBounds(workArea,petScale,position));
+      petDrag.moved=true;syncPetGeometry();
+    }else if(phase==='end'&&petDrag){
+      if(petDrag.moved){try{writePetSettings(app.getPath('userData'),petScale,petPosition);}catch{sendPet('pet:say','位置没有保存成功，下次打开可能回到原处。');}}
+      petDrag=null;
+    }
   });
   app.on('second-instance',showMainWindow);
   app.whenReady().then(()=>{
     const reposition=()=>{
       if(petWin&&!petWin.isDestroyed()){
         const {workArea}=screen.getDisplayMatching(petWin.getBounds());
-        petWin.setBounds(petWindowBounds(workArea,petScale));
+        petWin.setBounds(petWindowBounds(workArea,petScale,petPosition));
+        syncPetGeometry();
       }
     };
     screen.on('display-metrics-changed',reposition);

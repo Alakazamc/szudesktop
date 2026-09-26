@@ -39,6 +39,7 @@ jobs:
           node desktop/check-network-ui.mjs
           node desktop/check-workspace-ui.mjs
           node desktop/check-interactions.mjs
+          node desktop/check-pet-commands.mjs
       - name: Settings autostart UI regression
         run: node desktop/check-autostart-ui.mjs
       - name: Electron sidecar 回归

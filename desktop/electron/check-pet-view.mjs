@@ -35,10 +35,14 @@ assert.doesNotMatch(render, /\bfetch\s*\(/, '宠物窗渲染层不得发网络�
 // 一次性动作播放期间不得被主进程轮询打断。
 assert.match(render,/if \(Date\.now\(\) < oneShotUntil\) return;/);
 
-// preload 面：新增 onScale/onAction，且不得暴露任何设置写入通道。
+// preload 不暴露任意设置值或 IPC；仅允许固定的缩放步进、拖动阶段和菜单请求。
 assert.match(preload,/onScale: \(cb\) =>/);
 assert.match(preload,/onAction: \(cb\) =>/);
-assert.doesNotMatch(preload,/setPetScale|pet-scale-set/, '宠物窗不得拥有改写宠物大小的能力');
+assert.doesNotMatch(preload,/setPetScale|pet-scale-set/, '宠物窗不得拥有任意设置写入能力');
+assert.match(preload,/direction === 1 \|\| direction === -1/);
+assert.match(preload,/\['start', 'move', 'end'\]\.includes\(phase\)/);
+assert.match(render,/pointer\.moved/,'拖动后不得误开菜单');
+assert.match(html,/aria-haspopup="menu"/);
 
 // 设置页滑杆必须被 electron 门禁，浏览器模式下不得出现。
 const app=read('../assets/garden/app.mjs');
@@ -51,13 +55,13 @@ assert.ok(settings.includes('min="0.4"')&&settings.includes('max="2"'),'滑杆�
 // 主进程必须把动作与精力/睡眠一起推给渲染层，否则加权待机永远用默认权重。
 const main=read('main.mjs');
 assert.match(main,/sendPet\('pet:action',\{id:petActionFor\(pet,null\)/,'主进程必须推送动作载荷');
-assert.match(main,/sendPet\('pet:scale',petScale\)/,'主进程必须推送缩放');
+assert.match(main,/sendPet\('pet:scale',Math\.min\(petScale/,'主进程必须推送适合当前屏幕的缩放');
 assert.match(main,/ipcMain\.handle\('szu:pet-scale-get'/);
 assert.match(main,/ipcMain\.handle\('szu:pet-scale-set'/);
 assert.match(main,/screen\.on\('display-metrics-changed'/,'DPI 变化必须重算布局');
 // 绝不开启原生缩放。
 assert.doesNotMatch(main,/resizable:\s*true/);
-assert.match(main,/petWin\.setBounds\(petWindowBounds\(workArea,petScale\)\)/,'改大小必须走 setBounds');
+assert.match(main,/petWin\.setBounds\(petWindowBounds\(workArea,petScale,petPosition\)\)/,'显示器变化必须保持可见位置');
 
 // 主窗桥：读回当前值 + 写回归一化值，且不得把宠物大小写进 Go workspace。
 const mainPreload=read('preload.cjs');

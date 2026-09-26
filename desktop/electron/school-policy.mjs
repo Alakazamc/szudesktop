@@ -5,7 +5,7 @@ export const schoolTargets=Object.freeze({
   'graduate-scores':'https://ehall.szu.edu.cn/gsapp/sys/xscjglapp/*default/index.do',
   booking:'https://swzx.webvpn.szu.edu.cn/#/pages/booth/szu-booth-list',
 });
-const hosts=new Set(['ehall.szu.edu.cn','authserver.szu.edu.cn','webvpn.szu.edu.cn',
+const hosts=new Set(['ehall.szu.edu.cn','authserver.szu.edu.cn','webvpn.szu.edu.cn','authserver-443.webvpn.szu.edu.cn',
   'swzx.webvpn.szu.edu.cn','swzx.szu.edu.cn']);
 export function isSchoolURL(raw){
   try{const u=new URL(raw);return u.protocol==='https:'&&!u.username&&!u.password&&(!u.port||u.port==='443')&&hosts.has(u.hostname);}
