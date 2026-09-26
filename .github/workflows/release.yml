@@ -180,7 +180,7 @@ jobs:
             dist/szudesktop-*-windows-amd64.zip.sha256
           if-no-files-found: error
 
-  # 最终 NSIS 安装包必须在干净 runner 完成安装/重开/覆盖安装/卸载才可发布。
+  # 最终 NSIS 安装包必须在干净 runner 完成已发布旧版升级/重开/卸载才可发布。
   # 本机镜像与缓存设置不进仓库；CI 从官方 npm/GitHub 下载依赖。
   build-desktop-electron-windows:
     needs: test
@@ -205,7 +205,16 @@ jobs:
       - name: 打 Windows 安装包
         run: node build.mjs --skip-sidecar
         working-directory: desktop/electron
-      - name: 安装版闭环冒烟（隔离目录与配置）
+      - name: 下载固定的公开旧版用于升级验收
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $baselineDir = Join-Path $env:RUNNER_TEMP 'szu-upgrade-baseline'
+          New-Item -ItemType Directory -Path $baselineDir -Force | Out-Null
+          gh release download beta0.9.1 --repo SzuDesktopTeam/szudesktop --pattern 'szuDesktop-Setup-0.9.1.exe' --pattern 'szuDesktop-Setup-0.9.1.exe.sha256' --dir $baselineDir
+          if ($LASTEXITCODE -ne 0) { throw 'Published upgrade baseline download failed' }
+          "SZU_UPGRADE_INSTALLER=$(Join-Path $baselineDir 'szuDesktop-Setup-0.9.1.exe')" >> $env:GITHUB_ENV
+      - name: 跨版本升级与安装版闭环验收（隔离目录与配置）
         run: python desktop/electron/smoke_installer.py
       - name: 保存安装验收证据（不作为发布附件）
         if: always()

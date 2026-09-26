@@ -86,13 +86,15 @@ Released on 2026-09-26: [PR #15](https://github.com/SzuDesktopTeam/szudesktop/pu
 - The floating pet and these desktop controls are part of the **Electron installer edition**. The portable edition keeps garden care inside its main window and has no separate pet window.
 - Actual checks used one display. Physical multi-display setups have not been tested; geometry-rule tests do not replace that verification.
 
-### In development (not released)
+### beta0.9.2 candidate (release checks pending)
 
 The local development build expands the base roster to **Libao, Chestnut, Xiaobai the egret and A-Qing the turtle**, with visual selection cards in the garden and a **Switch companion** desktop-pet menu. Both select the same desktop companion. Existing saves receive missing base companions while retaining the active choice, names and growth. Local rule checks, switching from both actual Electron + Go windows, switching with the main window hidden, restart restoration and a 420px narrow-window check passed. **The public download above remains beta0.9.1 with the original two companions. These additions are not released.**
 
 ![Four companion selection cards (development build, not released)](screenshot-companions.png)
 
-The 1.0 priorities are school login and session handoff, the timetable/score queries included in its scope, a reliable official booking path, and cross-version upgrades that preserve saves. A campus backend is not deployed; its first scope is public service links, notices, calendar data and release information. Automatic updates are not implemented. Content data may later refresh independently; application logic will use a full-package update and restart. The current installer is unsigned, and cross-version upgrades remain untested. Plans and verification stay in [STATUS section 50](STATUS.md#50-四位伙伴与-10-收口计划2026-09-26开发中未发布).
+This candidate also addresses score pagination, stale school sessions after sign-out, and an installer check that upgrades from beta0.9.1 while preserving data. Backup checks exercise downloading, cancelling restoration and confirming restoration in the actual window. Results and release progress are recorded in [STATUS](STATUS.md); pending checks are not treated as delivered features.
+
+The 1.0 plan focuses on the desktop app; **campus backend and Docker deployment are deferred**. Remaining work covers on-site campus network authentication, installer school login and session handoff, real undergraduate/graduate timetables and complete scores, in-app space booking, college piano-room permissions, delivery of the four companions, cross-version upgrades and the final release. Existing valid checks are retained; gaps and acceptance criteria stay in [STATUS section 50.2](STATUS.md#502-10-剩余任务暂不部署后端). Backend services, cloud sync and automatic updates are deferred. The current installer is unsigned, and cross-version upgrades remain untested.
 
 ### First run
 

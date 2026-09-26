@@ -192,7 +192,7 @@ func (s *Server) handleScores(w http.ResponseWriter, r *http.Request) {
 		writeSchoolClientError(w, err)
 		return
 	}
-	result, err := readScore(c, app)
+	result, err := readScoreContext(r.Context(), c, app)
 	if err != nil {
 		writeSchoolError(w, err)
 		return

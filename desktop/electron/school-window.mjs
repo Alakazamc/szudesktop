@@ -11,7 +11,7 @@ export function createSchoolWindows(getBaseURL){
     const response=await fetch(getBaseURL()+endpoint,{method,headers:{'Content-Type':'application/json'},
       body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(30000)});
     const result=await response.json();
-    if(!response.ok)throw Error(result.error||'学校登录尚未完成，请在学校页面登录后重试');
+    if(!response.ok)throw Error(result.message||result.error||'学校登录尚未完成，请在学校页面登录后重试');
     return result;
   }
   async function clear(){
@@ -58,7 +58,8 @@ export function createSchoolWindows(getBaseURL){
   async function sync(business){
     if(!Object.hasOwn(schoolTargets,business)||business==='booking')throw Error('请选择课表或成绩业务');
     const cookies=academicCookies(await profile.cookies.get({}));
-    if(!cookies.length)throw Error('请先在应用内的学校页面登录；系统浏览器的登录状态不会自动共享');
+    // An empty browser session also replaces the selected account. Let Go clear
+    // its previous session before reporting that the user needs to log in.
     imported=true;
     return local('/api/academic/browser-session',{business,cookies});
   }

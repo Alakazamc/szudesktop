@@ -1,6 +1,6 @@
 // Invoked only by the isolated application smoke mode, including the final NSIS package.
 import assert from 'node:assert/strict';
-import {writeFileSync} from 'node:fs';
+import {readFileSync,writeFileSync} from 'node:fs';
 import path from 'node:path';
 import {readPetSettings} from './pet-settings.mjs';
 import {petWindowBounds} from './pet-policy.mjs';
@@ -9,6 +9,67 @@ async function until(read, message) {
   const end=Date.now()+6000;
   while(Date.now()<end){if(await read())return;await new Promise(r=>setTimeout(r,50));}
   throw Error(message);
+}
+
+// Exercise the same download, file input and confirmation used by users. This
+// module only runs with the isolated smoke profile; no real account is loaded.
+async function checkBackup(mainWin,baseUrl,evidenceDir){
+  const main=source=>mainWin.webContents.executeJavaScript(source);
+  const snapshot=async()=>{const r=await fetch(baseUrl+'/api/workspace');assert.ok(r.ok);return r.json();};
+  const seed=await snapshot();
+  const original=structuredClone(seed.data);
+  seed.data.profile.name='备份验收';
+  seed.data.todos=[{id:'backup-task',text:'验收后恢复学习记录',done:false,rewarded:false}];
+  seed.data.courses=[{code:'backup-course',name:'合成课程',credit:2,point:3.5}];
+  const saved=await fetch(baseUrl+'/api/workspace',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(seed)});
+  assert.ok(saved.ok,'synthetic backup fixture saved');
+  await mainWin.loadURL(baseUrl+'/?smoke=backup#settings');
+  await until(()=>main("document.querySelector('#display-name')?.value==='备份验收'"),'backup fixture not loaded');
+  const file=path.join(evidenceDir,'workspace-backup.json');
+  let completed=false,downloadState='';
+  const onDownload=(_event,item)=>{
+    item.setSavePath(file);
+    item.once('done',(_event,state)=>{downloadState=state;completed=true;});
+  };
+  mainWin.webContents.session.once('will-download',onDownload);
+  try{
+    await main("document.querySelector('[data-action=\"export\"]').click()");
+    await until(()=>completed,'backup file was not downloaded');
+  }finally{mainWin.webContents.session.removeListener('will-download',onDownload);}
+  assert.equal(downloadState,'completed');
+  const backup=JSON.parse(readFileSync(file,'utf8'));
+  assert.equal(backup.profile.name,'备份验收');
+  assert.equal(backup.todos[0].id,'backup-task');
+  assert.equal(backup.courses[0].code,'backup-course');
+  assert.equal(backup.game.pets.length,4);
+  for(const key of ['profile','preferences','todos','reminders','semester'])assert.deepEqual(backup[key],seed.data[key],'export preserves '+key);
+  for(const key of ['coins','food','seeds','stock','plots','stats'])assert.deepEqual(backup.game[key],seed.data.game[key],'export preserves garden '+key);
+  assert.equal(backup.password,undefined);
+  assert.equal(backup.account,undefined);
+  await main("document.querySelector('#display-name').value='恢复前';document.querySelector('#profile-form').requestSubmit()");
+  await until(async()=>(await snapshot()).data.profile.name==='恢复前','profile change not saved');
+  const importFile=(data=backup)=>main(`(()=>{const input=document.querySelector('#import-file'),files=new DataTransfer();files.items.add(new File([${JSON.stringify(JSON.stringify(data))}],'backup.json',{type:'application/json'}));input.files=files.files;input.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+  await importFile();
+  await until(()=>main("Boolean(document.querySelector('#confirm[open]'))"),'restore confirmation not shown');
+  await main("document.querySelector('#confirm button[value=cancel]').click()");
+  await until(()=>main("document.querySelector('#import-file')?.value===''") ,'cancelled restore did not reset the picker');
+  assert.equal((await snapshot()).data.profile.name,'恢复前','cancel preserves the current save');
+  await importFile();
+  await until(()=>main("Boolean(document.querySelector('#confirm[open]'))"),'restore confirmation not shown again');
+  await main("document.querySelector('#confirm button[value=ok]').click()");
+  await until(async()=>(await snapshot()).data.profile.name==='备份验收','backup not restored through the real API');
+  const restored=(await snapshot()).data;
+  for(const key of ['profile','preferences','todos','courses','reminders','semester'])assert.deepEqual(restored[key],backup[key],key+' restored');
+  for(const key of ['coins','food','seeds','stock','plots','stats'])assert.deepEqual(restored.game[key],backup.game[key],'garden '+key+' restored');
+  assert.deepEqual(restored.game.pets.map(p=>[p.species,p.name,p.xp]),backup.game.pets.map(p=>[p.species,p.name,p.xp]),'companion identity and growth restored');
+  // Leave the upgrade fixture intact for the installer's preservation checks.
+  const beforeReset=await snapshot();
+  await importFile(original);
+  await until(()=>main("Boolean(document.querySelector('#confirm[open]'))"),'original save confirmation not shown');
+  await main("document.querySelector('#confirm button[value=ok]').click()");
+  await until(async()=>(await snapshot()).revision>beforeReset.revision,'original upgrade fixture not restored');
+  const reset=(await snapshot()).data;
+  for(const key of ['profile','preferences','todos','courses','reminders','semester'])assert.deepEqual(reset[key],original[key],'original '+key+' retained');
 }
 
 export async function checkPetRuntime({mainWin,petWin,tray,getMenu,getPetMenu,screen,initialScale,userData,evidenceDir,baseUrl}){
@@ -140,7 +201,9 @@ export async function checkPetRuntime({mainWin,petWin,tray,getMenu,getPetMenu,sc
   assert.equal(await main("Boolean(document.querySelector('#session-cookie'))"),false,'installed UI does not ask for cookies');
   await main('document.fonts.ready.then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))');
   writeFileSync(path.join(evidenceDir,'school-account.png'),(await mainWin.webContents.capturePage()).toPNG());
+  trace('backup-restore');
+  await checkBackup(mainWin,baseUrl,evidenceDir);
   await main("document.querySelector('[data-action=\"navigate\"][data-page=\"home\"]').click()");
   return {rendered:true,tray:true,closeAndReopen:true,hideAndShow:true,actionsReturnToBase:true,
-    initialScale,finalScale:1.7,settingsAndPresets:true,petMenu:true,hiddenCare:true,feedUsesInventory:true,menuNavigation:true,petSelection:true,petSelectionSync:true,drag:true,positionPersistence:true,displayCount:screen.getAllDisplays().length};
+    initialScale,finalScale:1.7,settingsAndPresets:true,petMenu:true,hiddenCare:true,feedUsesInventory:true,menuNavigation:true,petSelection:true,petSelectionSync:true,backupRestore:true,drag:true,positionPersistence:true,displayCount:screen.getAllDisplays().length};
 }

@@ -74,8 +74,8 @@ func TestScoreTruncatedPageCannotClaimComplete(t *testing.T) {
 		return 200, `{"code":"0","datas":{"xscjcx":{"rows":[{"KCM":"test"}],"totalSize":80}}}`
 	})
 	result, err := readUndergradScore(c)
-	if err != nil || result.Full || result.Total == nil || *result.Total != 80 || result.Note == "" {
-		t.Fatalf("bad partial result: %+v %v", result, err)
+	if err == nil || result != nil || !strings.Contains(err.Error(), "重复或重叠") {
+		t.Fatalf("repeated page must not look complete: %+v %v", result, err)
 	}
 }
 func TestScoresPreserveZeroAndDoNotGuessNumericFields(t *testing.T) {
