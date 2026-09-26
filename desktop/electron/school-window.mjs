@@ -51,7 +51,10 @@ export function createSchoolWindows(getBaseURL){
     if(window.webContents.getURL()!==url)void window.loadURL(url).catch(showError);
     return {ok:true};
   }
-  function showError(){dialog.showErrorBox('学校页面暂时无法打开','请检查校园网或 WebVPN；也可通过学校窗口菜单在系统浏览器中打开。');}
+  function showError(error){
+    const code=/^ERR_[A-Z_]+$/.test(error?.code||'')?`\n错误代码：${error.code}`:'';
+    dialog.showErrorBox('学校页面暂时无法打开','请检查校园网或 WebVPN；也可通过学校窗口菜单在系统浏览器中打开。'+code);
+  }
   async function sync(business){
     if(!Object.hasOwn(schoolTargets,business)||business==='booking')throw Error('请选择课表或成绩业务');
     const cookies=academicCookies(await profile.cookies.get({}));

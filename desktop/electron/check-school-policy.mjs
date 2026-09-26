@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {academicCookies,isSchoolURL,schoolTargets} from './school-policy.mjs';
 for(const url of Object.values(schoolTargets))assert.ok(isSchoolURL(url));
-for(const url of ['https://szu.edu.cn.evil.test/','http://ehall.szu.edu.cn/','https://ehall.szu.edu.cn:444/','https://user@ehall.szu.edu.cn/','file:///C:/test','javascript:alert(1)'])assert.equal(isSchoolURL(url),false,url);
+assert.ok(isSchoolURL('https://authserver-443.webvpn.szu.edu.cn/authserver/login?service=https%3A%2F%2Fwebvpn.szu.edu.cn%2F'));
+for(const url of ['https://szu.edu.cn.evil.test/','http://ehall.szu.edu.cn/','https://ehall.szu.edu.cn:444/','https://user@ehall.szu.edu.cn/','https://authserver-443.webvpn.szu.edu.cn.evil.test/','http://authserver-443.webvpn.szu.edu.cn/','https://other.webvpn.szu.edu.cn/','file:///C:/test','javascript:alert(1)'])assert.equal(isSchoolURL(url),false,url);
 assert.deepEqual(academicCookies([
  {domain:'ehall.szu.edu.cn',path:'/jwapp',name:'s',value:'test-only'},
  {domain:'swzx.webvpn.szu.edu.cn',path:'/',name:'vpn',value:'separate'},
