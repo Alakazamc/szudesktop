@@ -75,6 +75,8 @@ beta0.9.0 adds a floating desktop pet, a system tray and 40%–200% scaling that
 
 Published on 2026-09-26: [PR #13](https://github.com/SzuDesktopTeam/szudesktop/pull/13) is merged and the [release checks](https://github.com/SzuDesktopTeam/szudesktop/actions/runs/36220458700) passed, including installation, main window and pet, persistent size after restart, saved data after a same-version reinstall, and uninstall. A subsequent live check passed graduate alternative login and timetable reading. See section 47 of [STATUS](STATUS.md) for the remaining acceptance boundaries.
 
+**Visual update on the development branch, not yet in the downloads:** the pixel campus and timber navigation remain, with lighter paper surfaces, green primary buttons and clearer typography. The home page has a shorter welcome section, no duplicate network status and a new companion scene. Forms, service links and narrow layouts share the updated styling. Changes and verification remain in [STATUS](STATUS.md).
+
 ### First run
 
 1. Open the app and go to **Campus network**
@@ -131,7 +133,7 @@ Published on 2026-09-26: [PR #13](https://github.com/SzuDesktopTeam/szudesktop/p
 | Save file | ✅ | Fixed local file, survives restarts and port changes, supports export / import and multi-window conflict protection |
 | Launch at login | Partial (Windows only) | Portable and CLI editions retain silent autostart; the installer can disable old entries but does not create new ones. macOS / Linux explicitly report unsupported |
 
-beta0.9.0 is a public prerelease. Scores are limited to the first page and balance is not integrated. Graduate alternative login and the current timetable passed a live read. The undergraduate page returned 403 for the test account, the official graduate scores page did not render its list, and the college piano service could not be reached. The candidate installer completed WebVPN verification and opened the booking list, but room details and time slots did not load. The full booking flow and business-session handoff still require validation. See [STATUS.md](STATUS.md).
+beta0.9.0 is a public prerelease. Scores are limited to the first page and balance is not integrated. Graduate alternative login and the current timetable passed a live read. The undergraduate page returned 403 for the test account, the official graduate scores page did not render its list, and the college piano service could not be reached. The official browser allowed slot selection and opened the booking confirmation form; no reservation was submitted. The candidate installer still failed to load room details, and a later browser refresh also encountered a closed connection. The full booking flow and business-session handoff still require validation. See [STATUS.md](STATUS.md).
 
 **College notice filtering:** selecting a college automatically reads its public column. Unsupported units have an official-site link; authenticated internal notices are not included. This update is included in beta0.6.1.
 
