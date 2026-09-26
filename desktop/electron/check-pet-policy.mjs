@@ -32,6 +32,8 @@ assert.equal(petSay(2026),'2026');
 
 // 立绘映射：默认荔宝；栗栗按 sleeping/mood 四帧。
 assert.equal(petSpriteFor({species:'libao',mood:5,sleeping:true}),'libao');
+assert.equal(petSpriteFor({species:'egret',mood:85,sleeping:false}),'egret');
+assert.equal(petSpriteFor({species:'turtle',mood:5,sleeping:true}),'turtle');
 assert.equal(petSpriteFor({species:'chestnut',sleeping:true,mood:90}),'cat-sleep');
 assert.equal(petSpriteFor({species:'chestnut',sleeping:false,mood:34}),'cat-sad');
 assert.equal(petSpriteFor({species:'chestnut',sleeping:false,mood:35}),'cat-normal');

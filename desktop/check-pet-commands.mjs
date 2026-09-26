@@ -69,6 +69,31 @@ await check('navigation selects the requested real page and the correct garden s
  await f.command('study');assert.equal(f.context.page,'study');await f.command('home');assert.equal(f.context.page,'home');
  assert.equal(f.writes.length,0);assert.equal(f.results.length,4);assert.ok(f.results.every(r=>r.ok));
 });
+await check('pet selection saves the active companion and refuses invalid or stale choices',async()=>{
+ const f=fixture(),before=f.context.state.game.pets[0];
+ await f.command('switchPet:1');
+ assert.equal(f.context.state.game.active,1);assert.equal(f.results[0].ok,true);
+ assert.equal(f.context.state.game.pets[0].xp,before.xp);assert.equal(f.writes.length,1);
+ assert.match(f.results[0].message,/来陪你/);
+ for(const command of ['switchPet:1','switchPet:7','switchPet:8','switchPet:-1','switchPet:0.5','switchPet:constructor'])await f.command(command);
+ assert.equal(f.writes.length,1);assert.ok(f.results.slice(1).every(result=>!result.ok));
+});
+await check('pet selection refreshes the name field instead of keeping the previous companion draft',async()=>{
+ const f=fixture();let replaced=false;
+ const oldForm={id:'pet-name-form'},newForm={replaceWith(){replaced=true}};
+ f.context.document.querySelectorAll=selector=>selector==='#main form[id]'?[oldForm]:f.controls;
+ f.context.document.getElementById=()=>newForm;
+ await f.command('switchPet:1');assert.equal(f.results[0].ok,true);assert.equal(replaced,false);
+});
+await check('a care conflict that changes companion cannot attach the previous name draft',async()=>{
+ const f=fixture(),latest=createState();latest.game.active=2;let restored=false;
+ f.context.page='garden';
+ f.context.document.querySelectorAll=selector=>selector==='#main form[id]'?[{id:'pet-name-form'}]:f.controls;
+ f.context.document.getElementById=()=>({replaceWith(){restored=true}});
+ f.context.api=async(_path,body)=>{if(body)throw Object.assign(Error('conflict'),{code:409});return {revision:5,data:latest}};
+ await f.command('feed');
+ assert.equal(f.context.state.game.active,2);assert.equal(restored,false);assert.equal(f.results[0].ok,false);
+});
 await check('the command boundary cannot trigger arbitrary game actions or inherited property names',async()=>{
  const f=fixture();for(const command of ['gift','shutdown','constructor','__proto__',null])await f.command(command);
  assert.equal(f.writes.length,0);assert.equal(f.results.length,5);assert.ok(f.results.every(r=>!r.ok));
@@ -131,8 +156,8 @@ await check('preload strips IPC events, filters command names, and restricts res
  })});
  vm.runInContext(readFileSync(new URL('./electron/preload.cjs',import.meta.url),'utf8'),context);
  const calls=[],unsubscribe=bridge.onPetCommand((...args)=>calls.push(args));
- for(const command of ['pat','feed','play','sleep','garden','farm','study','home','quit',{}])listener({sender:'private'},command);
- assert.equal(calls.length,8);assert.ok(calls.every(args=>args.length===1));
+ for(const command of ['pat','feed','play','sleep','garden','farm','study','home','switchPet:0','switchPet:7','switchPet:8','switchPet:-1','switchPet:0.5','switchPet:__proto__','quit',{}])listener({sender:'private'},command);
+ assert.equal(calls.length,10);assert.ok(calls.every(args=>args.length===1));
  unsubscribe();assert.equal(removed[0],'szu:pet-command');assert.equal(removed[1],listener);
  bridge.petResult({ok:true,message:'好'.repeat(121),secret:'never forward'});
  bridge.petResult({ok:'true',message:'invalid'});bridge.petResult({ok:true,message:5});

@@ -69,6 +69,33 @@ export async function checkPetRuntime({mainWin,petWin,tray,getMenu,getPetMenu,sc
   await until(()=>pet("/吃饱|唤醒|食物用完/.test(document.querySelector('#bubble-text').textContent)"),'feed result was not shown');
   assert.equal((await game()).food,beforeFeed.food-(canFeed?1:0),'food changes only after a valid meal');
   assert.equal(mainWin.isVisible(),false,'care works with the main window hidden');
+  const companions=(await game()).pets;
+  assert.deepEqual(companions.map(p=>p.species),['libao','chestnut','egret','turtle'],'four base companions are available');
+  for(const [index,sprite] of [[2,'egret'],[3,'turtle'],[0,'libao']]){
+    getPetMenu().getMenuItemById(`switchPet:${index}`).click();
+    await until(async()=>(await game()).active===index,'menu choice did not persist');
+    await until(()=>pet(`document.querySelector('#pet-use').getAttribute('href')==='#${sprite}'`),'desktop sprite did not follow the choice');
+    assert.equal(mainWin.isVisible(),false,'switching companions need not open the main window');
+    await pet('document.fonts.ready.then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))');
+    writeFileSync(path.join(evidenceDir,`companion-${sprite}.png`),(await petWin.webContents.capturePage()).toPNG());
+  }
+  getPetMenu().getMenuItemById('garden').click();
+  await until(()=>main("document.querySelectorAll('.companion-choice').length===4"),'companion picker did not render four choices');
+  await main("document.querySelector('.companion-choice[data-index=\"1\"]').click()");
+  await until(()=>pet("document.querySelector('#pet-use').getAttribute('href').startsWith('#cat-')"),'garden selection did not update desktop immediately');
+  await main("document.querySelector('.companion-choice[data-index=\"0\"]').click()");
+  await until(()=>pet("document.querySelector('#pet-use').getAttribute('href')==='#libao'"),'garden cannot select libao');
+  await main("document.querySelector('.companion-picker').scrollIntoView({block:'center'})");
+  await main('document.fonts.ready.then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))');
+  writeFileSync(path.join(evidenceDir,'companion-picker.png'),(await mainWin.webContents.capturePage()).toPNG());
+  const picker=await main("(()=>{const r=document.querySelector('.companion-picker').getBoundingClientRect();return {x:Math.ceil(r.x),y:Math.ceil(r.y),width:Math.floor(r.width),height:Math.floor(r.height)}})()");
+  writeFileSync(path.join(evidenceDir,'companion-roster.png'),(await mainWin.webContents.capturePage(picker)).toPNG());
+  const mainSize=mainWin.getSize();
+  mainWin.setMinimumSize(390,600);mainWin.setSize(420,780);
+  await main("document.querySelector('.companion-picker').scrollIntoView({block:'center'});new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))");
+  assert.ok(await main('document.documentElement.scrollWidth<=document.documentElement.clientWidth'),'companion page overflows in a narrow window');
+  writeFileSync(path.join(evidenceDir,'companion-narrow.png'),(await mainWin.webContents.capturePage()).toPNG());
+  mainWin.setSize(...mainSize);
   getPetMenu().getMenuItemById('farm').click();
   trace('farm');
   await until(()=>main("location.hash==='#garden' && Boolean(document.querySelector('#seed-choice'))"),'farm menu did not select the farm');
@@ -115,5 +142,5 @@ export async function checkPetRuntime({mainWin,petWin,tray,getMenu,getPetMenu,sc
   writeFileSync(path.join(evidenceDir,'school-account.png'),(await mainWin.webContents.capturePage()).toPNG());
   await main("document.querySelector('[data-action=\"navigate\"][data-page=\"home\"]').click()");
   return {rendered:true,tray:true,closeAndReopen:true,hideAndShow:true,actionsReturnToBase:true,
-    initialScale,finalScale:1.7,settingsAndPresets:true,petMenu:true,hiddenCare:true,feedUsesInventory:true,menuNavigation:true,drag:true,positionPersistence:true,displayCount:screen.getAllDisplays().length};
+    initialScale,finalScale:1.7,settingsAndPresets:true,petMenu:true,hiddenCare:true,feedUsesInventory:true,menuNavigation:true,petSelection:true,petSelectionSync:true,drag:true,positionPersistence:true,displayCount:screen.getAllDisplays().length};
 }

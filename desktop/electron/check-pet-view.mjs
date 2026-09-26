@@ -7,6 +7,12 @@ const read = name => readFileSync(new URL(name, here), 'utf8');
 const html = read('pet.html');
 const render = read('pet-render.mjs');
 const preload = read('pet-preload.cjs');
+const gardenHTML = read('../index.html');
+for (const id of ['libao','cat-normal','cat-happy','cat-sleep','cat-sad','egret','turtle']) {
+  const definition = new RegExp(`<symbol id="${id}"[\\s\\S]*?<\\/symbol>`);
+  assert.ok(definition.test(html),`桌宠缺少 ${id}`);
+  assert.equal(html.match(definition)?.[0],gardenHTML.match(definition)?.[0],`庭院与桌宠的 ${id} 立绘必须一致`);
+}
 
 // 每个动作都要有对应的 CSS 规则，否则状态机会推出看不见的动作。
 for (const id of Object.keys(PET_ACTIONS)) {

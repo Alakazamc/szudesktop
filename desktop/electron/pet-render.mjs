@@ -5,6 +5,8 @@ import {PET_ACTIONS, petIdleAction} from './pet-policy.mjs';
 
 const VIEW_BOX = {
   libao: '0 0 52 56',
+  egret: '0 0 32 32',
+  turtle: '0 0 32 32',
   'cat-normal': '0 0 20 22',
   'cat-happy': '0 0 20 22',
   'cat-sleep': '0 0 20 22',

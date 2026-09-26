@@ -8,20 +8,25 @@ export const CROPS={
 export const DECOR={flower:{name:'窗边小花',price:35},scarf:{name:'猫咪围巾',price:60},lantern:{name:'暖光灯笼',price:90}};
 // 宠物名册：sprite 对应 index.html 里的 symbol id；states=true 表示按心情切换
 // cat-normal / cat-happy / cat-sad / cat-sleep 四帧，false 表示只有单帧立绘。
-// 荔宝是新存档的默认伙伴（登录页迎客的那位）；栗栗是早期单伙伴存档迁移来的，
-// 名字由用户自己改过的话保留原名，不强行覆盖。
+// 荔宝是新存档的默认伙伴；旧存档补齐名册时保留已有伙伴及其名字和成长。
 export const PETS={
- libao:{name:'荔宝',sprite:'libao',states:false},
- chestnut:{name:'栗栗',sprite:'cat',states:true},
+ libao:{name:'荔宝',sprite:'libao',states:false,description:'荔枝庭院的老朋友，热情又爱笑。'},
+ chestnut:{name:'栗栗',sprite:'cat',states:true,description:'爱晒太阳的栗色小猫，心情都写在脸上。'},
+ egret:{name:'小白',sprite:'egret',states:false,description:'湖边散步的白鹭，喜欢安静地陪你。'},
+ turtle:{name:'阿青',sprite:'turtle',states:false,description:'慢慢悠悠的小龟，最擅长陪你专注。'},
 };
 export const DEFAULT_PET='libao';
+const PET_GREETINGS={libao:'嗨，我是荔宝！今天也一起加油。',chestnut:'喵，我在这儿呢。',egret:'湖边的风很舒服，陪你坐一会儿。',turtle:'不着急，我们一步一步来。'};
+function createPet(species,now){
+ return {species,name:PETS[species].name,xp:0,bond:10,hunger:80,energy:85,mood:85,sleeping:false,lastPat:0,lastPlay:0,say:PET_GREETINGS[species],saidAt:now};
+}
 // 每只宠物的字段。新增字段必须同时加进 createState / normalize 的迁移与白名单，
 // 否则旧存档读进来会是 undefined。
 const PET_FIELDS=['species','name','xp','bond','hunger','energy','mood','sleeping','lastPat','lastPlay','say','saidAt'];
 export const activePet=g=>g.pets[g.active]||g.pets[0];
-// 立绘取哪一帧：栗栗按心情四帧切换，荔宝是单帧。
+// 立绘取哪一帧：栗栗按心情四帧切换，其余伙伴是单帧。
 export function petSprite(p){
- const spec=PETS[p.species]||PETS[DEFAULT_PET];
+ const spec=Object.hasOwn(PETS,p.species)?PETS[p.species]:PETS[DEFAULT_PET];
  if(!spec.states)return spec.sprite;
  return p.sleeping?'cat-sleep':p.mood<35?'cat-sad':p.mood>65?'cat-happy':'cat-normal';
 }
@@ -34,8 +39,7 @@ export function createState(now=Date.now()){
  return {schema:3,profile:{name:'',college:''},preferences:{theme:'day',motion:true,onboarded:false},todos:[],courses:[],reminders:[],semester:'',
  game:{created:now,last:now,coins:40,food:3,seeds:{radish:4,strawberry:2,blueberry:0,lychee:0},stock:{radish:0,strawberry:0,blueberry:0,lychee:0},
  plots:[{crop:'radish',planted:now,ready:now+60000,watered:false},null,null,'locked','locked','locked'],
- pets:[{species:DEFAULT_PET,name:'荔宝',xp:0,bond:10,hunger:80,energy:85,mood:85,sleeping:false,lastPat:0,lastPlay:0,say:'嗨，我是荔宝！今天也一起加油。',saidAt:now},
-  {species:'chestnut',name:'栗栗',xp:0,bond:10,hunger:80,energy:85,mood:85,sleeping:false,lastPat:0,lastPlay:0,say:'喵，我在这儿呢。',saidAt:now}],active:0,
+ pets:Object.keys(PETS).map(species=>createPet(species,now)),active:0,
  daily:{day:dayKey(now),gift:false,care:0,plant:0,harvest:0,focus:0,claimed:[]},stats:{harvest:0,focus:0,minutes:0,planted:1,tasks:0},discovered:[],decor:[],equipped:[],achievements:[],focus:null,log:[{time:now,text:'欢迎来到荔枝庭院。第一块萝卜地已经种好，记得来收获。'}]}};
 }
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
@@ -65,13 +69,11 @@ export function normalize(input,now=Date.now()){
   check(g.pets.length>=1&&g.pets.length<=8,'伙伴数量不对');
  }else{
   check(g.pet&&typeof g.pet==='object','伙伴存档格式错误');
-  const old=g.pet;
-  g.pets=[{species:'chestnut',name:typeof old.name==='string'?old.name:'栗栗',xp:old.xp,bond:old.bond,hunger:old.hunger,
-   energy:old.energy,mood:old.mood,sleeping:!!old.sleeping,lastPat:old.lastPat||0,lastPlay:old.lastPlay||0,say:'',saidAt:0}];
+  g.pets=[{...g.pet,species:'chestnut'}];
  }
- g.pets=g.pets.slice(0,8).map(p=>{
+ g.pets=g.pets.map(p=>{
   check(p&&typeof p==='object','伙伴存档格式错误');
-  check(typeof p.species==='string'&&PETS[p.species],'不认识的伙伴种类');
+  check(typeof p.species==='string'&&Object.hasOwn(PETS,p.species),'不认识的伙伴种类');
   const out={};
   for(const k of PET_FIELDS)out[k]=p[k];
   out.species=p.species;
@@ -94,7 +96,13 @@ export function normalize(input,now=Date.now()){
  const clean={schema:3,profile:s.profile,preferences:s.preferences,todos:s.todos,courses:s.courses,reminders:s.reminders,semester:s.semester,game:{}};
  for(const k of Object.keys(createState(now).game))clean.game[k]=g[k];
  clean.game.pets=g.pets;clean.game.active=g.active;
- return settle(clean,now);
+ const settled=settle(clean,now);
+ // 先结算原有伙伴，再迎接新伙伴；已有记录不覆盖、不重排，满 8 只时不挤掉旧伙伴。
+ for(const species of Object.keys(PETS)){
+  if(settled.game.pets.length>=8)break;
+  if(!settled.game.pets.some(p=>p.species===species))settled.game.pets.push(createPet(species,now));
+ }
+ return settled;
 }
 export function settle(state,now=Date.now()){
  const s=structuredClone(state),g=s.game;now=Math.max(now,g.last);

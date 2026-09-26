@@ -86,6 +86,14 @@ Released on 2026-09-26: [PR #15](https://github.com/SzuDesktopTeam/szudesktop/pu
 - The floating pet and these desktop controls are part of the **Electron installer edition**. The portable edition keeps garden care inside its main window and has no separate pet window.
 - Actual checks used one display. Physical multi-display setups have not been tested; geometry-rule tests do not replace that verification.
 
+### In development (not released)
+
+The local development build expands the base roster to **Libao, Chestnut, Xiaobai the egret and A-Qing the turtle**, with visual selection cards in the garden and a **Switch companion** desktop-pet menu. Both select the same desktop companion. Existing saves receive missing base companions while retaining the active choice, names and growth. Local rule checks, switching from both actual Electron + Go windows, switching with the main window hidden, restart restoration and a 420px narrow-window check passed. **The public download above remains beta0.9.1 with the original two companions. These additions are not released.**
+
+![Four companion selection cards (development build, not released)](screenshot-companions.png)
+
+The 1.0 priorities are school login and session handoff, the timetable/score queries included in its scope, a reliable official booking path, and cross-version upgrades that preserve saves. A campus backend is not deployed; its first scope is public service links, notices, calendar data and release information. Automatic updates are not implemented. Content data may later refresh independently; application logic will use a full-package update and restart. The current installer is unsigned, and cross-version upgrades remain untested. Plans and verification stay in [STATUS section 50](STATUS.md#50-四位伙伴与-10-收口计划2026-09-26开发中未发布).
+
 ### First run
 
 1. Open the app and go to **Campus network**
@@ -149,6 +157,8 @@ These entries describe beta0.9.1. Verified desktop features and queries are dist
 **College notice filtering:** selecting a college automatically reads its public column. Unsupported units have an official-site link; authenticated internal notices are not included. This update is included in beta0.6.1.
 
 **Booking flow:** the installer opens a separate official school window for WebVPN, verification, selecting a slot, submitting and viewing results. Its isolated login state lasts only until full application exit. The Go service only reads public rooms and availability; it has no reservation write endpoints and does not confirm reservations automatically. The portable edition continues to use the system browser.
+
+**Off-campus access:** the public build uses official WebVPN pages and does not include the experimental VPN tunnel. Local Go room queries still connect directly and do not use the school window's WebVPN route. A future campus backend would serve specific supported services, not provide a system-wide VPN. Off-campus reachability and each user's business permissions must be established separately. For the school's client access, follow the [official SecureLink guide](https://www1.szu.edu.cn/nc/view.asp?id=654).
 
 ### School login, timetables and scores
 
