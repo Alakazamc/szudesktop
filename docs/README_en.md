@@ -61,23 +61,23 @@ protocol at an endpoint that isn't there.
 
 ## Download
 
-The current installer is **[szuDesktop-Setup-0.9.1.exe](https://github.com/SzuDesktopTeam/szudesktop/releases/download/beta0.9.1/szuDesktop-Setup-0.9.1.exe)**. Run it, then open szuDesktop. The Windows installer includes its window runtime and Go engine. Portable downloads, CLI binaries and checksums are on the [beta0.9.1 release page](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.9.1).
+The current installer is **[szuDesktop-Setup-0.9.2.exe](https://github.com/SzuDesktopTeam/szudesktop/releases/download/beta0.9.2/szuDesktop-Setup-0.9.2.exe)**. Run it, then open szuDesktop. The Windows installer includes its window runtime and Go engine. Portable downloads, CLI binaries and checksums are on the [beta0.9.2 release page](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.9.2).
 
 | Item | Detail |
 | :--- | :----- |
 | Windows installer | An independent Electron window; a matching `.sha256` file verifies the download |
-| Windows portable | `szudesktop-beta0.9.1-windows-amd64.zip`; unzip and run `szudesktop.exe`, using the local Edge / Chrome browser |
+| Windows portable | `szudesktop-beta0.9.2-windows-amd64.zip`; unzip and run `szudesktop.exe`, using the local Edge / Chrome browser |
 | Command line | Windows / macOS / Linux `szunet` binaries remain available |
-| Current version | `beta0.9.1` · Released; actual desktop-pet operation and installer checks passed |
+| Current version | `beta0.9.2` · Released; four companions, cross-version upgrade and backup restoration checked |
 | Saved data | Both Windows editions use the same local garden and study records; export a backup from Settings before updating |
 
 The installer provides a floating desktop pet, a system tray and 40%–200% scaling. Closing the main window keeps the pet available; choose **Open main window** from the pet menu, or click the tray to reopen. Official school login and booking pages open inside the installer edition, without a cookie-copy workflow. Calendar OCR prefers Chinese. See [STATUS](STATUS.md) for the limits of live account validation. Installer autostart is still not implemented.
 
-Released on 2026-09-26: [PR #15](https://github.com/SzuDesktopTeam/szudesktop/pull/15) is merged and the [beta0.9.1 release checks](https://github.com/SzuDesktopTeam/szudesktop/actions/runs/36233240617) passed. Actual shell checks covered menus, care and inventory changes while the main window was hidden, farm and Study navigation, scaling, dragging and restoration after restart. The Windows installer flow also passed. Graduate alternative login and the current timetable have live evidence; see section 47 of [STATUS](STATUS.md) for the remaining school-account boundaries.
+Released on 2026-09-26: [PR #17](https://github.com/SzuDesktopTeam/szudesktop/pull/17) is merged and the [beta0.9.2 release checks](https://github.com/SzuDesktopTeam/szudesktop/actions/runs/36242237913) passed. Upgrading from the published beta0.9.1 installer preserved garden and study records, encrypted account data and pet settings, removed obsolete program resources, and passed backup export/restoration, reopening and uninstall checks. These checks use synthetic data; live school-account boundaries remain in [STATUS](STATUS.md).
 
-**beta0.9.1 update:** the pet gains a left/right-click menu, wheel scaling, dragging and remembered position; care actions use the existing garden save. The pixel campus and timber navigation remain, with lighter paper surfaces, green primary buttons and clearer typography. The home page has a shorter welcome section, no duplicate network status and a new companion scene. Forms, service links and narrow layouts share the updated styling. This release also includes the school authentication redirect fix. Changes and verification remain in [STATUS](STATUS.md).
+**beta0.9.2 update:** four companions and synchronized desktop selection; paginated scores using the school-reported total without treating failed or timed-out reads as complete; stale account cleanup after school sign-out; and preservation of specific permission errors. The pixel campus, timber navigation, scaling and dragging remain. Changes and verification stay in [STATUS](STATUS.md).
 
-### Desktop companion (beta0.9.1 installer)
+### Desktop companion (beta0.9.2 installer)
 
 - **Left-click or right-click** the pet to open its menu, view its current state, pat, feed, play or toggle sleep. Care uses the existing garden rules and local save; insufficient food, low energy and cooldowns are reported.
 - **Scroll while hovering over the pet** to change its size by 10 percentage points, from 40% to 200%. Menu controls, the Settings slider and tray presets are also available.
@@ -86,15 +86,15 @@ Released on 2026-09-26: [PR #15](https://github.com/SzuDesktopTeam/szudesktop/pu
 - The floating pet and these desktop controls are part of the **Electron installer edition**. The portable edition keeps garden care inside its main window and has no separate pet window.
 - Actual checks used one display. Physical multi-display setups have not been tested; geometry-rule tests do not replace that verification.
 
-### beta0.9.2 candidate (release checks pending)
+### Four companions
 
-The local development build expands the base roster to **Libao, Chestnut, Xiaobai the egret and A-Qing the turtle**, with visual selection cards in the garden and a **Switch companion** desktop-pet menu. Both select the same desktop companion. Existing saves receive missing base companions while retaining the active choice, names and growth. Local rule checks, switching from both actual Electron + Go windows, switching with the main window hidden, restart restoration and a 420px narrow-window check passed. **The public download above remains beta0.9.1 with the original two companions. These additions are not released.**
+The released installer includes **Libao, Chestnut, Xiaobai the egret and A-Qing the turtle**. Select a portrait in the garden or use **Switch companion** from the desktop pet menu; both choices synchronize immediately. Existing saves receive missing base companions while retaining names, growth and the active choice. Rules, actual window switching, switching with the main window hidden, restart restoration and a 420px layout check passed.
 
-![Four companion selection cards (development build, not released)](screenshot-companions.png)
+![Four companion selection cards](screenshot-companions.png)
 
-This candidate also addresses score pagination, stale school sessions after sign-out, and an installer check that upgrades from beta0.9.1 while preserving data. Backup checks exercise downloading, cancelling restoration and confirming restoration in the actual window. Initial CI confirmed data preservation, but the restore script needed to wait for enabled UI controls; the complete installer check must pass again. Results stay in [STATUS](STATUS.md).
+Export a backup from Settings before upgrading. A clean Windows environment passed the real beta0.9.1 → beta0.9.2 installation upgrade and data preservation checks, plus export, cancelled restoration and confirmed restoration. New installers are still downloaded manually; automatic updates are not implemented.
 
-The 1.0 plan focuses on the desktop app; **campus backend and Docker deployment are deferred**. Remaining work covers on-site campus network authentication, installer school login and session handoff, real undergraduate/graduate timetables and complete scores, in-app space booking, college piano-room permissions, delivery of the four companions, cross-version upgrades and the final release. Existing valid checks are retained; gaps and acceptance criteria stay in [STATUS section 50.2](STATUS.md#502-10-剩余任务暂不部署后端). Backend services, cloud sync and automatic updates are deferred. The current installer is unsigned, and cross-version upgrades remain untested.
+The 1.0 plan focuses on the desktop app; **campus backend and Docker deployment are deferred**. Four companions are released and this cross-version upgrade is verified. Remaining work covers on-site campus authentication, real installer school-session handoff, undergraduate/graduate timetables and scores, in-app booking, college piano permissions and final 1.0 candidate delivery. Gaps stay in [STATUS section 50.2](STATUS.md#502-10-剩余任务暂不部署后端). Backend services, cloud sync and automatic updates are deferred. The installer remains unsigned.
 
 ### First run
 
@@ -133,7 +133,7 @@ The 1.0 plan focuses on the desktop app; **campus backend and Docker deployment 
 
 ## Features
 
-These entries describe beta0.9.1. Verified desktop features and queries are distinguished from pending school-account workflows below, with evidence in STATUS.md.
+These entries describe beta0.9.2. Verified desktop features and queries are distinguished from pending school-account workflows below, with evidence in STATUS.md.
 
 | Capability | Status | Notes |
 | :--------- | :----- | :---- |
@@ -146,7 +146,7 @@ These entries describe beta0.9.1. Verified desktop features and queries are dist
 | Calendar and timetables | Partial | Official calendar updates and manual week overrides. Graduate alternative login and timetable reading passed with a real account, distinguishing no scheduled classes from selected courses without arrangements. Undergraduate access, populated schedules and the installer session handoff remain unverified |
 | Study reminders | ✅ | Add a reminder manually, export a standard ICS calendar (15 minutes before start). **A reminder is not a booking** |
 | Common contacts | Partial | Only numbers verifiable on official school pages (library help desks); other offices link to their official pages |
-| Grades and GPA | Partial | Paste or import CSV / TSV grade tables and calculate GPA locally. Manual school queries remain pending live account validation, read only the first page and do not update local GPA records automatically. **No PDF / image / XLSX parsing** |
+| Grades and GPA | Partial | Paste or import CSV / TSV grade tables and calculate GPA locally. School queries follow pages using the reported total, remain pending live account validation and do not update local GPA records automatically. **No PDF / image / XLSX parsing** |
 | Todo and focus timer | ✅ | Todo list plus 5 / 25 / 45-minute focus sessions |
 | Desktop pet (installer) | Released and verified | Transparent pet window, left/right-click care menu, 40%–200% wheel/slider scaling, dragging and persistent size/position. Actual shell and installer checks passed; physical multi-display setups remain untested |
 | College piano rooms | Experimental | Login, paginated rooms and read-only reservations; memory-only session, pending validation with an authorized account |
@@ -154,7 +154,7 @@ These entries describe beta0.9.1. Verified desktop features and queries are dist
 | Save file | ✅ | Fixed local file, survives restarts and port changes, supports export / import and multi-window conflict protection |
 | Launch at login | Partial (Windows only) | Portable and CLI editions retain silent autostart; the installer can disable old entries but does not create new ones. macOS / Linux explicitly report unsupported |
 
-**Current limitations:** scores are limited to the first page and balance is not integrated. Graduate alternative login and the current timetable passed a live read. The undergraduate page returned 403 for the test account, the official graduate scores page did not render its list, and the college piano service could not be reached. The official browser allowed slot selection and opened the booking confirmation form; no reservation was submitted. The installer still failed to load room details, and a later browser refresh also encountered a closed connection. The full booking flow and business-session handoff still require validation. See [STATUS.md](STATUS.md).
+**Current limitations:** actual score fields and pagination still need live validation; balance is not integrated. Graduate alternative login and the current timetable have live evidence. The undergraduate page returned 403 for the test account, the official graduate scores page did not render its list, and the college piano service could not be reached. The official browser allowed slot selection and opened the booking confirmation form; no reservation was submitted. Installer room details and subsequent browser connectivity still have unresolved acceptance gaps. Full booking and business-session handoff require validation. See [STATUS.md](STATUS.md).
 
 **College notice filtering:** selecting a college automatically reads its public column. Unsupported units have an official-site link; authenticated internal notices are not included. This update is included in beta0.6.1.
 
@@ -166,7 +166,7 @@ These entries describe beta0.9.1. Verified desktop features and queries are dist
 
 In the installer edition, select undergraduate/graduate timetable or scores at the top of Study tools. Open the official login page, complete school verification, return to the main window and read the current login. Then query the selected business. Credentials stay in the school page; cookies never pass through the garden renderer or reach disk. Business access is verified separately. Closing the main window keeps the session; full application exit clears it.
 
-The portable edition retains a collapsed alternative login workflow, including manual session import with OS-protected storage and no plaintext fallback. Never share passwords or cookies in feedback. Online scores are read manually and currently limited to the first page; incomplete results are labelled and are not automatically added to local GPA records. Undergraduate arrangements are preserved as school text, and graduate courses use the school's returned schedule.
+The portable edition retains a collapsed alternative login workflow, including manual session import with OS-protected storage and no plaintext fallback. Never share passwords or cookies in feedback. Online scores follow pages using the school-reported total and are not added to local GPA automatically. Missing totals are labelled unconfirmed; pagination failures and timeouts report errors. Undergraduate arrangements retain school text, and graduate courses use the returned schedule.
 
 A real graduate account passed alternative login and displayed the school's current term and courses without arrangements in the app; the official page likewise returned no scheduled classes. This does not validate populated schedules, scores or undergraduate access. beta0.9.1 fixes a blocked WebVPN authentication redirect and an outdated login hint; these fixes are included in the downloads above.
 
