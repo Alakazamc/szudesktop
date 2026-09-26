@@ -131,7 +131,7 @@ Published on 2026-09-26: [PR #13](https://github.com/SzuDesktopTeam/szudesktop/p
 | Save file | ✅ | Fixed local file, survives restarts and port changes, supports export / import and multi-window conflict protection |
 | Launch at login | Partial (Windows only) | Portable and CLI editions retain silent autostart; the installer can disable old entries but does not create new ones. macOS / Linux explicitly report unsupported |
 
-beta0.9.0 is a public prerelease. Scores are limited to the first page and balance is not integrated. Graduate alternative login and the current timetable passed a live read. The undergraduate page returned 403 for the test account, the official graduate scores page did not render its list, and the college piano service could not be reached. Installer booking reached school MFA; the full booking flow and business-session handoff still require validation. See [STATUS.md](STATUS.md).
+beta0.9.0 is a public prerelease. Scores are limited to the first page and balance is not integrated. Graduate alternative login and the current timetable passed a live read. The undergraduate page returned 403 for the test account, the official graduate scores page did not render its list, and the college piano service could not be reached. The candidate installer completed WebVPN verification and opened the booking list, but room details and time slots did not load. The full booking flow and business-session handoff still require validation. See [STATUS.md](STATUS.md).
 
 **College notice filtering:** selecting a college automatically reads its public column. Unsupported units have an official-site link; authenticated internal notices are not included. This update is included in beta0.6.1.
 
