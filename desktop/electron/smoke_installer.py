@@ -131,6 +131,12 @@ def launch(exe, cfg, version, label, owned=True):
             check(label + ": loopback UI", re.fullmatch(r"http://127\.0\.0\.1:\d+/?", result["baseUrl"]) is not None)
             check(label + ": screenshot captured", shot.is_file() and shot.stat().st_size > 1000)
             check(label + ": engine ownership", result["owned"] is owned)
+            pet = result["pet"]
+            check(label + ": real pet and tray", pet["rendered"] and pet["tray"])
+            check(label + ": main closes and reopens", pet["closeAndReopen"])
+            check(label + ": pet visibility and actions", pet["hideAndShow"] and pet["actionsReturnToBase"])
+            check(label + ": scale through settings and tray", pet["settingsAndPresets"] and pet["finalScale"] == 1.7)
+            check(label + ": scale survives restart", pet["initialScale"] == (1 if label == "first-open" else 1.7))
             check(label + ": normal window exit", proc.wait(timeout=25) == 0)
             if owned:
                 wait_process_gone(result["sidecarPid"])
@@ -231,9 +237,8 @@ def main():
             check("real garden save created", workspace.is_file())
             saved = workspace.read_bytes()
             check("real garden save is nonempty", bool(json.loads(saved)["data"]))
-            # No older Electron package has been published. Reinstall this exact
-            # package to exercise the NSIS replacement path without claiming an
-            # untested cross-version migration.
+            # Reinstall this package to exercise replacement and persistence;
+            # this does not claim a cross-version migration test.
             run_nsis(installer, "/D=" + str(install_dir))
             assert_install_path(install_dir)
             check("reinstall preserves garden save byte for byte", workspace.read_bytes() == saved)
@@ -244,6 +249,7 @@ def main():
                 "installed": True, "rendered": True, "reopened": True,
                 "portable_engine_coexistence": True,
                 "same_version_reinstall_preserved_save": True,
+                "pet_and_tray": True, "pet_scale_persists": True,
             }, ensure_ascii=False, indent=2), encoding="utf-8")
         finally:
             if installed:

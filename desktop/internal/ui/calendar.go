@@ -169,6 +169,15 @@ func fetchCalendar(ctx context.Context, address string) ([]byte, error) {
 	return b, nil
 }
 
+// hasCJKText 判断一段 OCR 输出里有没有汉字。
+//
+// 用户语言不是中文的 Windows 上，OcrEngine.TryCreateFromUserProfileLanguages()
+// 会给出英文识别器，中文校历被读成拉丁乱码：输出里一个汉字都没有。这种输出
+// 绝不能当成「没有校历说明的网格页」放过去，否则最后会被误报成学校改了校历格式。
+func hasCJKText(text string) bool {
+	return strings.ContainsFunc(text, func(r rune) bool { return r >= 0x4E00 && r <= 0x9FFF })
+}
+
 func updateCalendar(ctx context.Context, previous calendarResult) (calendarResult, error) {
 	return refreshCalendar(ctx, previous, fetchCalendar, recognizeCalendar)
 }
@@ -195,12 +204,16 @@ func refreshCalendar(ctx context.Context, previous calendarResult, fetch func(co
 	}
 	if !slices.Equal(images, previous.Images) || !slices.Equal(hashes, previous.ImageHashes) {
 		var terms []academicTerm
+		sawChinese := false
 		// Official page pairs the explanatory sheet with its grid. OCR only adopts
 		// explicit dates from the explanatory sheets, never guesses grid digits.
 		for i, address := range images {
 			text, err := recognize(ctx, contents[i])
 			if err != nil {
-				return previous, errors.New("发现校历图片更新，但本机未能识别；请查看官方校历或手动设置")
+				return previous, fmt.Errorf("发现校历图片更新，但本机未能识别：%w", err)
+			}
+			if hasCJKText(text) {
+				sawChinese = true
 			}
 			if !strings.Contains(strings.Join(strings.Fields(text), ""), "校历说明") {
 				continue
@@ -212,6 +225,11 @@ func refreshCalendar(ctx context.Context, previous calendarResult, fetch func(co
 			terms = append(terms, term)
 		}
 		if len(terms) == 0 || len(terms)*2 != len(images) {
+			// 一张汉字都没有 = 识别器语言不对（用户语言非中文的机器上，英文引擎把
+			// 中文读成拉丁乱码）。这时如实说本机认不出中文，不报成学校改了格式。
+			if !sawChinese {
+				return previous, errors.New("本机 OCR 未能识别中文，请查看官方校历或手动设置")
+			}
 			return previous, errors.New("新版校历未能完整识别，请查看官方校历或手动设置")
 		}
 		previous.Terms, previous.Images, previous.ImageHashes = terms, images, hashes

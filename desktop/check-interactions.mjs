@@ -12,7 +12,9 @@ function fixture(){
   busy:false,page:'services',state:null,
   document:{querySelectorAll:()=>controls,addEventListener:(_,fn)=>{click=fn}},
   schoolUI:{click:async()=>false,sync:()=>{}},
+  officialUI:{click:async()=>false},
   campusUI:{click:async action=>{calls.push(action);if(jobs.has(action))await jobs.get(action).promise;return true}},
+  pianoUI:{click:async()=>false},
   academicUI:{load:async()=>{}},toast:message=>toasts.push(message),clocks:()=>{},
   navigate:p=>{context.page=p},networkResult:()=>{},
  });
@@ -65,7 +67,7 @@ await check('onboarding and settings explain the active shell exit behavior',()=
  assert.ok(from>=0&&to>from);const context=vm.createContext({});vm.runInContext(source.slice(from,to),context);
  assert.match(vm.runInContext('exitHint()',context),/10 秒/);
  context.szuDesktop={shell:'electron'};
- const installed=vm.runInContext('exitHint()',context);assert.match(installed,/关闭主窗口/);assert.doesNotMatch(installed,/10 秒/);
+ const installed=vm.runInContext('exitHint()',context);assert.match(installed,/关闭主窗口/);assert.match(installed,/常驻/);assert.match(installed,/托盘/);assert.doesNotMatch(installed,/10 秒/);
  const guide=source.slice(source.indexOf('function showGuide(){'),from);
  assert.match(guide,/hint.textContent=exitHint\(\)/);
  const settings=source.slice(source.indexOf('function settings(){'),source.indexOf('function render(){'));
@@ -75,5 +77,43 @@ await check('load failure retry works without an inline script under Electron CS
  const f=fixture();let reloads=0;f.context.location={reload(){reloads++}};
  f.click('reload');assert.equal(reloads,1);
  assert.doesNotMatch(source,/onclick=/);assert.match(source,/data-action="reload"/);
+});
+await check('the pet size slider only exists under the Electron shell and round-trips through the bridge',()=>{
+ const from=source.indexOf('function settings(){'),to=source.indexOf('function render(){',from);
+ assert.ok(from>=0&&to>from);
+ const settings=source.slice(from,to);
+ // 浏览器模式（无 szuDesktop）绝不渲染滑杆。
+ assert.match(settings,/globalThis\.szuDesktop\?\.shell==='electron'/);
+ assert.match(settings,/id="pet-scale"/);
+ assert.match(settings,/id="pet-scale-value"/);
+ assert.match(settings,/type="range"/);
+ assert.match(settings,/min="0\.4"/);
+ assert.match(settings,/max="2"/);
+ // 滑杆的读写必须落在桥接函数上，而不是自己写一份状态。
+ const wire=source.slice(source.indexOf('function loadPetScale(){'),source.indexOf('function render(){'));
+ assert.match(wire,/petScale\(\)\.then/,'必须先从主进程读回当前值');
+ assert.match(wire,/setPetScale\(Number\(input\.value\)\)/,'必须把显示值交给桥接函数');
+ assert.match(wire,/szuDesktop\?\.setPetScale/,'浏览器模式下不得接线');
+});
+await check('the unified-auth login lives in the app and never keeps the password',()=>{
+ const ui=readFileSync(new URL('./assets/garden/campus-ui.mjs',import.meta.url),'utf8');
+ // 表单与三个端点都要在。
+ assert.match(ui,/id="cas-login-form"/);
+ assert.match(ui,/id="cas-username"/);
+ assert.match(ui,/id="cas-password"/);
+ assert.match(ui,/\/api\/cas\/challenge/);
+ assert.match(ui,/\/api\/cas\/login/);
+ assert.match(ui,/\/api\/cas\/session/);
+ // 密码用完必须清掉输入框和 values，不能留在页面上。
+ assert.match(ui,/values\.password=''/);
+ assert.match(ui,/pwd\.value=''/);
+ // 明文字密码绝不能进日志或 URL。
+ assert.doesNotMatch(ui,/console\.log\([^)]*password/i);
+ assert.doesNotMatch(ui,/toast\([^)]*password/i);
+ // 会话失效时要同时刷新两条入口的状态，不能只刷新粘 Cookie 那个。
+ assert.match(ui,/if\(e\.code===401\)\{sessionErr=e\.message;casLogged=false;/);
+ // 登出 CAS 后要能回落到 Cookie，所以不能让cas-clear 顺手把 Cookie 也删了。
+ assert.match(ui,/a==='cas-clear'[\s\S]{0,400}?\/api\/cas\/session/);
+ assert.doesNotMatch(ui.slice(ui.indexOf("a==='cas-clear'"),ui.indexOf("a==='online-score'")),/\/api\/session/,{},'DELETE');
 });
 console.log(`${count} interaction checks passed`);

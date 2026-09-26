@@ -63,7 +63,9 @@ type Server struct {
 	campus        *campusGateway
 	calendar      *calendarService
 	academic      *academicService
+	cas           *casService
 	booking       *bookingService
+	piano         *pianoService
 	probe         func() *portal.DetectResult
 	detect        func() *portal.DetectResult
 	workspace     *workspaceStore
@@ -92,7 +94,7 @@ func New(opts Options) *Server {
 		campus = &campusGateway{}
 	}
 	workspace := newWorkspaceStore()
-	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager(), campus: campus, calendar: newCalendarService(filepath.Dir(workspace.path)), academic: newAcademicService(), booking: newBookingService(), probe: portal.Probe, detect: portal.Detect, workspace: workspace, windows: newWindowSessions()}
+	return &Server{opts: opts, store: credential.Default(), vpn: newVPNManager(), campus: campus, calendar: newCalendarService(filepath.Dir(workspace.path)), academic: newAcademicService(), cas: newCasService(), booking: newBookingService(), piano: newPianoService(), probe: portal.Probe, detect: portal.Detect, workspace: workspace, windows: newWindowSessions()}
 }
 
 func parseZone(raw string) (portal.Zone, bool) {
@@ -312,13 +314,24 @@ func (s *Server) routes(mux *http.ServeMux, static fs.FS) {
 	mux.HandleFunc("/api/session/check", protectAPI(s.handleSessionCheck, http.MethodPost))
 	mux.HandleFunc("/api/scores", protectAPI(s.handleScores, http.MethodGet))
 	mux.HandleFunc("/api/academic/session", protectAPI(s.handleAcademicSession, http.MethodGet, http.MethodDelete))
+	mux.HandleFunc("/api/academic/browser-session", protectAPI(s.handleBrowserSession, http.MethodPost, http.MethodDelete))
 	mux.HandleFunc("/api/academic/challenge", protectAPI(s.handleAcademicChallenge, http.MethodPost))
 	mux.HandleFunc("/api/academic/captcha", protectAPI(s.handleAcademicCaptcha, http.MethodGet))
 	mux.HandleFunc("/api/academic/login", protectAPI(s.handleAcademicLogin, http.MethodPost))
 	mux.HandleFunc("/api/academic/timetable", protectAPI(s.handleTimetable, http.MethodGet))
 	mux.HandleFunc("/api/academic/undergrad/timetable", protectAPI(s.handleUndergradTimetable, http.MethodGet))
+	// 统一身份认证（本科）应用内登录；与 /api/session 的粘 Cookie 是两套入口。
+	mux.HandleFunc("/api/cas/session", protectAPI(s.handleCasSession, http.MethodGet, http.MethodDelete))
+	mux.HandleFunc("/api/cas/challenge", protectAPI(s.handleCasChallenge, http.MethodPost))
+	mux.HandleFunc("/api/cas/captcha", protectAPI(s.handleCasCaptcha, http.MethodGet))
+	mux.HandleFunc("/api/cas/login", protectAPI(s.handleCasLogin, http.MethodPost))
 	mux.HandleFunc("/api/booking/rooms", protectAPI(s.handleBookingRooms, http.MethodGet))
 	mux.HandleFunc("/api/booking/availability", protectAPI(s.handleBookingAvailability, http.MethodGet))
+	mux.HandleFunc("/api/piano/status", protectAPI(s.handlePianoStatus, http.MethodGet))
+	mux.HandleFunc("/api/piano/login", protectAPI(s.handlePianoLogin, http.MethodPost))
+	mux.HandleFunc("/api/piano/logout", protectAPI(s.handlePianoLogout, http.MethodPost))
+	mux.HandleFunc("/api/piano/rooms", protectAPI(s.handlePianoRooms, http.MethodGet))
+	mux.HandleFunc("/api/piano/my", protectAPI(s.handlePianoMy, http.MethodGet))
 }
 
 /* ---------- 接口 ---------- */
