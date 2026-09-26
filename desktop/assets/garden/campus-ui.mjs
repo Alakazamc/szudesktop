@@ -21,6 +21,9 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
  let gradeText='',gradeLevel='undergrad',preview=null,filterLevel='',filterTerm='';
  // 学校系统（ehall）在线读取相关状态。会话本身不放在这里，只由后端保管。
  let sessionSaved=false,sessionDesc='',sessionErr='',sessionBusy=false,onlineScore=null,onlineErr='',onlineBusy=false,onlineLevel='undergrad';
+ // 统一身份认证（本科）应用内登录的状态。与上面粘 Cookie 是两条独立入口，
+ // 后端优先用 CAS 会话，没有才回落到 Cookie。
+ let casLogged=false,casErr='',casBusy=false,casChallenge='',casImage='',casNeedCaptcha=false;
  const formatTime=n=>new Date(n).toLocaleString('zh-CN',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
  function download(text,name,type){const url=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
  function services(){const reminders=getState().reminders||[];return `${safeCard('学习空间 · 预约与空位',()=>booking.card())}
@@ -43,6 +46,22 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
   if(sessionErr)return `<p role="status" class="notice error">${esc(sessionErr)}</p>`;
   if(!sessionSaved)return '<p class="muted">还没有保存学校系统登录状态。可按下面步骤保存，再验证所选成绩业务是否可访问。</p>';
   return `<p class="notice ok">已保存登录状态${sessionDesc?' · '+esc(sessionDesc):''}。内容加密保存在本机；查询时仅发送至学校办事大厅，不写入日志。已保存不代表业务验证通过。</p>`;
+ }
+ function casStatusHTML(){
+  if(casBusy)return '<p role="status">正在处理…</p>';
+  if(casErr)return `<p role="status" class="notice error">${esc(casErr)}</p>`;
+  if(casLogged)return '<p role="status" class="notice ok">统一身份认证已登录 · 关闭应用即清除。本科课表与成绩会优先使用这条会话。</p>';
+  return '<p class="muted">还没有登录统一身份认证。先点「获取 / 更换验证码」拿登录页，再填学号密码。</p>';
+ }
+ function casCaptchaHTML(){
+  if(!casImage)return casNeedCaptcha?'<p class="muted">学校要求输入验证码，请先获取。</p>':'<p class="muted">本次登录可能不需要验证码；先获取登录页，按页面要求填写。</p>';
+  return `<label for="cas-verification">学校验证码</label><div class="school-captcha-row"><img src="${esc(casImage)}" width="160" height="50" alt="学校登录验证码"><input id="cas-verification" name="captcha" maxlength="10" autocomplete="off" placeholder="输入图片中的字符"></div>`;
+ }
+ function refreshCasBox(){const el=document.querySelector('#cas-status');if(el)el.innerHTML=casStatusHTML();const box=document.querySelector('#cas-captcha');if(box)box.innerHTML=casCaptchaHTML();const submit=document.querySelector('#cas-login-form button[type=submit]');if(submit)submit.disabled=!casChallenge||casBusy}
+ async function loadCas(){
+  try{const v=await api('/api/cas/session');casLogged=!!v.authenticated;casErr=''}
+  catch(e){casLogged=false;casErr=e.message}
+  refreshCasBox();
  }
  function howtoHTML(){
   // 步骤写细一点：这一步对不熟开发者工具的同学是唯一的门槛。
@@ -74,11 +93,26 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
   <div class="actions">${link('https://ehall.szu.edu.cn/','学校办事大厅')}${link('https://cjzm.szu.edu.cn/gztcyUI/','本科成绩证明')}${link('https://gra.szu.edu.cn/info/1092/3484.htm','研究生成绩单指南')}</div>
   <details open><summary>从学校系统直接读取（可选）${unverifiedBadge()}</summary>
   <p class="muted">在线读取尚未完成真实成绩验收。保存学校登录状态后，可尝试读取所选业务；账号权限和会话需分别验证。</p>
+  ${globalThis.szuDesktop?.openSchool?'<p class="muted">在上方选择本科或研究生成绩，完成学校登录并读取本次登录，再点击下面的「读取成绩」。</p>':`<details><summary>便携版备用登录</summary>
   <div id="session-status" aria-live="polite">${sessionHTML()}</div>
+  <div id="cas-status" aria-live="polite">${casStatusHTML()}</div>
+  <form id="cas-login-form" autocomplete="off">
+  <div class="grid">
+   <div><label for="cas-username">学号</label><input id="cas-username" name="username" autocomplete="off" maxlength="80" required placeholder="统一身份认证的学号"></div>
+   <div><label for="cas-password">密码</label><input id="cas-password" name="password" type="password" autocomplete="new-password" maxlength="128" required placeholder="仅用于本次登录，不保存"></div>
+  </div>
+  <div id="cas-captcha">${casCaptchaHTML()}</div>
+  <div class="actions"><button type="submit" class="primary" ${casChallenge?'':'disabled'}>${pixelIcon('i-key')}登录统一身份认证</button>${button('获取学校登录页','cas-challenge','type="button"')}</div>
+  </form>
+  <p class="muted">用统一身份认证的学号密码直接登录，登完就能读本科课表和成绩，不用再去浏览器复制 Cookie。登录状态只留在本次运行里，关闭应用即清除。</p>
+  <div class="actions">${button('清除本次登录','cas-clear',casLogged?'':'disabled')}</div>
+  <hr>
+  <p class="muted">或者用原来的办法：从浏览器复制 ehall 的 Cookie。</p>
   <label for="session-cookie">浏览器里的 Cookie</label>
   <textarea id="session-cookie" rows="3" maxlength="8000" placeholder="JSESSIONID=..."></textarea>
   <div class="actions">${button('保存登录状态','session-save','class="primary"')}${button('验证登录状态','session-check')}${button('清除登录状态','session-clear')}</div>
   ${howtoHTML()}
+</details>`}
   <div class="actions" style="margin-top:10px"><label for="online-score-level">读取哪一份成绩</label><select id="online-score-level"><option value="undergrad" ${onlineLevel==='undergrad'?'selected':''}>本科</option><option value="graduate" ${onlineLevel==='graduate'?'selected':''}>研究生</option></select>${button('读取成绩','online-score')}</div>
   <div id="online-score" aria-live="polite">${onlineScoreHTML()}</div>
   <p class="notice">只查询成绩，不提交预约、选课或评教。登录状态过期时会明确报错，不会显示成「没有成绩」。</p></details>
@@ -118,11 +152,27 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
     catch(e){toast(e.message)}
     refreshSessionBox();refreshScoreBox();
    }
+  }else if(a==='cas-challenge'){
+   casErr='';casBusy=true;casChallenge='';casImage='';casNeedCaptcha=false;refreshCasBox();
+   try{
+    const r=await api('/api/cas/challenge',{});
+    casChallenge=r.challenge;casImage=r.image||'';casNeedCaptcha=!!r.image;
+    const box=document.querySelector('#cas-captcha');if(box)box.innerHTML=casCaptchaHTML();
+    const submit=document.querySelector('#cas-login-form button[type=submit]');if(submit)submit.disabled=false;
+    toast(r.message||'请填写学号密码登录');
+   }catch(e){casErr=e.message;casChallenge='';casImage=''}
+   finally{casBusy=false;refreshCasBox()}
+  }else if(a==='cas-clear'){
+   if(await confirm('清除统一身份认证登录？','只清除本次运行的登录状态，不影响你的校园网账号密码，也不影响浏览器里的登录。清除后需要重新登录。')){
+    try{await api('/api/cas/session',{},'DELETE');casLogged=false;casChallenge='';casImage='';onlineScore=null;onlineErr='';toast('已清除统一身份认证登录')}
+    catch(e){toast(e.message)}
+    refreshCasBox();refreshScoreBox();
+   }
   }else if(a==='online-score'){
    const level=onlineLevel;
    onlineErr='';onlineScore=null;onlineBusy=true;refreshScoreBox();
    try{onlineScore=await api('/api/scores?level='+encodeURIComponent(level))}
-   catch(e){onlineErr=e.message;if(e.code===401)sessionErr=e.message;refreshSessionBox()}
+   catch(e){onlineErr=e.message;if(e.code===401){sessionErr=e.message;casLogged=false;refreshSessionBox();refreshCasBox()}}
    finally{onlineBusy=false;refreshScoreBox()}
   }else if(a==='preview'){preview=parseGrades(gradeText,gradeLevel);document.querySelector('#grade-preview').innerHTML=previewHTML()}
   else if(a==='template')download('\uFEFF课程名称,学分,绩点,成绩,学期,课程代码\r\n','成绩表-空白表头.csv','text/csv;charset=utf-8');
@@ -142,7 +192,20 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
   catch(e){sessionSaved=false;sessionDesc='';sessionErr=e.message}
   refreshSessionBox();
  }
- async function submit(form,values){if(form.id!=='campus-reminder-form')return false;const next=structuredClone(getState());next.reminders=next.reminders||[];if(next.reminders.length>=50)throw Error('最多保留 50 条提醒，请先移除已结束的提醒');next.reminders.push(makeStudyReminder(values));await commit(next,{formId:form.id,values});toast('已保存本机提醒，学校预约状态不变');return true}
+ async function submit(form,values){
+  if(form.id==='cas-login-form'){
+   casErr='';casBusy=true;refreshCasBox();
+   try{
+    const r=await api('/api/cas/login',{...values,challenge:casChallenge});
+    casLogged=!!r.authenticated;casChallenge='';casImage='';casNeedCaptcha=false;
+    form.reset();const box=document.querySelector('#cas-captcha');if(box)box.innerHTML=casCaptchaHTML();
+    onlineScore=null;onlineErr='';
+    toast(r.message||'登录成功，可以读取本科课表和成绩了');
+   }catch(e){casErr=e.message;casLogged=false}
+   finally{values.password='';const pwd=document.getElementById('cas-password');if(pwd)pwd.value='';casBusy=false;refreshCasBox()}
+   return true;
+  }
+  if(form.id!=='campus-reminder-form')return false;const next=structuredClone(getState());next.reminders=next.reminders||[];if(next.reminders.length>=50)throw Error('最多保留 50 条提醒，请先移除已结束的提醒');next.reminders.push(makeStudyReminder(values));await commit(next,{formId:form.id,values});toast('已保存本机提醒，学校预约状态不变');return true}
  function input(e){if(e.target.id==='grade-text'){gradeText=e.target.value;preview=null;const el=document.querySelector('#grade-preview');if(el)el.innerHTML=''}}
  async function change(e){if(booking.change(e))return;if(await notices.change(e))return;const el=e.target;
   if(el.id==='online-score-level'){onlineLevel=el.value;onlineScore=null;onlineErr='';sessionErr='';refreshScoreBox();refreshSessionBox()}
@@ -151,5 +214,6 @@ export function createCampusUI({getState,commit,toast,confirm,api,render}) {
   else if(el.id==='grade-filter-level'){filterLevel=el.value;render()}
   else if(el.id==='grade-filter-term'){filterTerm=el.value;render()}
  }
- return {services,grades,click,submit,input,change,loadSession,loadSources:notices.load};
+ function resetSchoolData(){onlineScore=null;onlineErr='';refreshScoreBox()}
+ return {services,grades,click,submit,input,change,loadSession,loadCas,loadSources:notices.load,resetSchoolData};
 }

@@ -45,6 +45,12 @@ jobs:
         run: |
           node desktop/electron/check-sidecar.mjs
           node desktop/electron/check-window-policy.mjs
+          node desktop/electron/check-pet-policy.mjs
+          node desktop/electron/check-pet-settings.mjs
+          node desktop/electron/check-pet-view.mjs
+          node desktop/electron/check-school-policy.mjs
+      - name: 琴房预约回归
+        run: node desktop/check-piano.mjs
       - name: 发布说明抽取回归
         run: python desktop/check_release_notes.py
       - name: 静态检查

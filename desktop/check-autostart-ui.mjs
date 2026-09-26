@@ -52,7 +52,7 @@ async function clickAutostart(initial,response,shell){
   const calls=[];let message='',painted=0;
   const ctx=vm.createContext({
     probing:false,autostartState:initial,szuDesktop:shell,
-    schoolUI:{click:async()=>false},campusUI:{click:async()=>false},
+    officialUI:{click:async()=>false},schoolUI:{click:async()=>false},campusUI:{click:async()=>false},pianoUI:{click:async()=>false},
     document:{addEventListener:(_,handler)=>{ctx.clickHandler=handler}},
     run:fn=>{ctx.work=fn()},toast:t=>{message=t},paintAutostart:()=>{painted++},
     api:async(path,data)=>{calls.push([path,data]);if(response instanceof Error)throw response;return response},

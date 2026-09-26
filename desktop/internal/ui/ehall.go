@@ -38,7 +38,7 @@ const (
 var errSessionPermission = errors.New("当前账号没有所选业务的访问权限，请核对培养层次或在官方系统确认权限")
 var errUnsafeEhallURL = errors.New("学校系统连接地址不安全，已停止发送登录状态")
 
-var errSessionInvalid = errors.New("学校系统登录状态已失效，请重新在浏览器登录后再复制一次")
+var errSessionInvalid = errors.New("学校系统登录状态已失效，请在学校页面重新登录并读取登录状态")
 
 // ehallClient 用一份会话请求 ehall。
 type ehallClient struct {
@@ -47,6 +47,9 @@ type ehallClient struct {
 	// 留成字段只为让测试能指向本地假服务，不必联网。
 	base string
 	http *http.Client
+	// usesJar 表示会话由 http.Client 的 cookiejar 托管（统一身份认证登录走这条路）。
+	// 此时既不能要求 cookie 字段非空，也不能手写 Cookie 请求头——jar 会自己带上。
+	usesJar bool
 }
 
 // newEhallClient 造一个客户端。
@@ -91,7 +94,7 @@ func newEhallClient(cookie string, timeout time.Duration) *ehallClient {
 
 // postForm 向 ehall 发一个表单 POST，返回响应体。
 func (c *ehallClient) postForm(path string, form url.Values) ([]byte, error) {
-	if strings.TrimSpace(c.cookie) == "" {
+	if !c.usesJar && strings.TrimSpace(c.cookie) == "" {
 		return nil, errors.New("还没有学校系统的登录状态")
 	}
 	base, parseErr := url.Parse(c.base)
@@ -109,7 +112,10 @@ func (c *ehallClient) postForm(path string, form url.Values) ([]byte, error) {
 	req.Header.Set("Accept", "application/json, text/javascript, */*; q=0.01")
 	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9")
 	// Cookie 只放请求头里，不进日志、不进错误信息。
-	req.Header.Set("Cookie", c.cookie)
+	// usesJar 时由 cookiejar 自动带上，手写反而会覆盖掉会话。
+	if !c.usesJar {
+		req.Header.Set("Cookie", c.cookie)
+	}
 	req.Header.Set("Origin", c.base)
 	req.Header.Set("Referer", c.base+"/")
 

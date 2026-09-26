@@ -10,7 +10,7 @@
   "scripts": {
     "start": "electron .",
     "dist": "node build.mjs",
-    "check": "node check-sidecar.mjs"
+    "check": "node check-sidecar.mjs && node check-window-policy.mjs && node check-pet-policy.mjs && node check-pet-settings.mjs && node check-pet-view.mjs && node check-school-policy.mjs"
   },
   "devDependencies": {
     "electron": "44.4.5",

@@ -39,7 +39,7 @@ function exportFixture(api){
  const context=vm.createContext({
   state:local,revision:1,createState,normalize,Blob,Date,
   api,toast:()=>{},setTimeout:()=>{},render:()=>{},
-  schoolUI:{click:async()=>false},campusUI:{click:async()=>false},run:work=>{pending=work()},
+  officialUI:{click:async()=>false},schoolUI:{click:async()=>false},campusUI:{click:async()=>false},pianoUI:{click:async()=>false},run:work=>{pending=work()},
   document:{addEventListener:(_,handler)=>{click=handler},createElement:()=>({click:()=>{}})},
   URL:{createObjectURL:value=>{blob=value;return 'blob:workspace-test'},revokeObjectURL:()=>{}},
  });

@@ -186,12 +186,13 @@ func (s *Server) handleScores(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, 400, err)
 		return
 	}
-	v, err := s.sessionStore().Load()
+	// 优先统一身份认证会话，回落到粘来的 ehall Cookie（迁移期间两条路并存）。
+	c, err := s.schoolClient()
 	if err != nil {
-		writeSessionLoadError(w, err)
+		writeSchoolClientError(w, err)
 		return
 	}
-	result, err := readScore(s.makeEhallClient(v.Cookie), app)
+	result, err := readScore(c, app)
 	if err != nil {
 		writeSchoolError(w, err)
 		return

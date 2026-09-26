@@ -25,7 +25,9 @@ Unofficial · Built by a student · Not affiliated with Shenzhen University
 
 ## Preview
 
-| Main window | Lychee Garden | Network sign-in |
+| Main window | Desktop pet (installer) | ✅ | Transparent pet window, mood and click animations, tray, presets and continuous scaling; size survives restart |
+| College piano rooms | Experimental | Login, paginated rooms and read-only reservations; memory-only session, pending validation with an authorized account |
+| Lychee Garden | Network sign-in |
 | :---------: | :-----------: | :-------------: |
 | ![Main window](screenshot-desktop.png) | ![Lychee Garden](screenshot-garden.png) | ![Network sign-in](screenshot-login.png) |
 
@@ -61,17 +63,17 @@ protocol at an endpoint that isn't there.
 
 ## Download
 
-Download **`szuDesktop-Setup-0.8.0.exe`** from [Releases](https://github.com/SzuDesktopTeam/szudesktop/releases), run the installer, then open szuDesktop. The Windows installer includes its window runtime and Go engine. Available downloads are listed on the release page.
+Download **`szuDesktop-Setup-0.9.0.exe`** from [Releases](https://github.com/SzuDesktopTeam/szudesktop/releases), run the installer, then open szuDesktop. The Windows installer includes its window runtime and Go engine. Available downloads are listed on the release page.
 
 | Item | Detail |
 | :--- | :----- |
 | Windows installer | An independent Electron window; a matching `.sha256` file verifies the download |
-| Windows portable | `szudesktop-beta0.8.0-windows-amd64.zip`; unzip and run `szudesktop.exe`, using the local Edge / Chrome browser |
+| Windows portable | `szudesktop-beta0.9.0-windows-amd64.zip`; unzip and run `szudesktop.exe`, using the local Edge / Chrome browser |
 | Command line | Windows / macOS / Linux `szunet` binaries remain available |
-| Source version | `beta0.8.0` public beta; see [Releases](https://github.com/SzuDesktopTeam/szudesktop/releases) for published files |
+| Source version | `beta0.9.0` public beta; see [Releases](https://github.com/SzuDesktopTeam/szudesktop/releases) for published files |
 | Saved data | Both Windows editions use the same local garden and study records; export a backup from Settings before updating |
 
-The installer reuses an existing engine, handles startup failures and timeouts, and cleans up the engine it starts. It uses Electron 44.4.5. Startup checks only the local engine, so the garden opens even when campus or internet access is unavailable; network status loads in the background. Both Windows editions fix a script-loading issue that could leave the garden stuck on its opening screen. Public school queries now allow navigation while the relevant card loads. Acceptance evidence is maintained in [STATUS](STATUS.md); CI installation tests retain page screenshots and failure details. A floating pet window, tray and installer autostart remain future work.
+beta0.9.0 adds a floating desktop pet, a system tray and 40%–200% scaling that persists across restarts. Closing the main window keeps the pet available; click it or the tray to reopen. Official school login and booking pages open inside the installer edition, without a cookie-copy workflow. Calendar OCR now prefers Chinese. See [STATUS](STATUS.md) for the limits of live account validation. Installer autostart is still not implemented.
 
 ### First run
 
@@ -86,7 +88,7 @@ The installer reuses an existing engine, handles startup failures and timeouts, 
 ### Opening and exiting
 
 - Starting the installer edition twice focuses the existing window; it can also reuse an already running portable engine of the same version. If an older engine is reported, exit the old edition before reopening
-- Closing the installer window or choosing **Settings → Exit** stops only the engine it started; a reused service remains running. The portable edition exits about 10 seconds after all its windows close
+- Closing the main window keeps the pet and tray running. Click either to reopen; use **Tray → Exit** or **Settings → Exit** to quit fully. Only the engine started by this instance is stopped; a reused service remains running. The portable edition exits about 10 seconds after all its windows close
 - Reloading the page does not stop the service
 - To start the service without a window, launch `szudesktop.exe` with `--no-open`
   (meant for headless / sidecar use — the Electron shell starts the Go engine the same way)
@@ -123,21 +125,25 @@ The installer reuses an existing engine, handles startup failures and timeouts, 
 | Common contacts | Partial | Only numbers verifiable on official school pages (library help desks); other offices link to their official pages |
 | Grades and GPA | Partial | Paste or import CSV / TSV grade tables for undergrad and postgrad, converted by the school's own rules. **No PDF / image / XLSX parsing, no automatic online sync** |
 | Todo and focus timer | ✅ | Todo list plus 5 / 25 / 45-minute focus sessions |
+| Desktop pet (installer) | ✅ | Transparent pet window, mood and click animations, tray, presets and continuous scaling; size survives restart |
+| College piano rooms | Experimental | Login, paginated rooms and read-only reservations; memory-only session, pending validation with an authorized account |
 | Lychee Garden | ✅ | Companion care and growth, crops, plots, watering, harvest, decorations, daily goals, achievements and a field guide. No purchases, no real-money trading |
 | Save file | ✅ | Fixed local file, survives restarts and port changes, supports export / import and multi-window conflict protection |
 | Launch at login | Partial (Windows only) | Portable and CLI editions retain silent autostart; the installer can disable old entries but does not create new ones. macOS / Linux explicitly report unsupported |
 
-beta0.8.0 is a public prerelease. Score reading remains limited to the first page; balance is not integrated. Timetables require manual queries and still await full live account validation. In the current source, reservations are completed on the official school page; embedding that page inside the app is not yet implemented. See [STATUS.md](STATUS.md).
+beta0.9.0 is a public prerelease. Scores are limited to the first page and balance is not integrated. Real undergraduate/graduate records and college piano-room permissions remain unverified in this round: school authentication, academic services and WebVPN connections failed in the test environment. Embedded school windows and the session handoff are implemented; UI and simulated checks do not substitute for live account acceptance. See [STATUS.md](STATUS.md).
 
 **College notice filtering:** selecting a college automatically reads its public column. Unsupported units have an official-site link; authenticated internal notices are not included. This update is included in beta0.6.1.
 
-**Booking usability fix:** since beta0.6.1 the interface no longer shows the booking cookie field, developer-tools instructions or the unverified local submission form. Availability is a read-only overview; the booking button opens the official school website in the browser, where you sign in and submit yourself. **Follow-up:** beta0.6.1 only withdrew the interface — `/api/booking/{session,history,prepare,commit}` stayed in the binary. Those four endpoints have now been **removed entirely** (F23); the booking module keeps only the read-only rooms and availability queries, so there is no code path left that can submit a reservation to the school. Embedded official pages and their full login flow remain unverified.
+**Booking flow:** the installer opens a separate official school window for WebVPN, verification, selecting a slot, submitting and viewing results. Its isolated login state lasts only until full application exit. The Go service only reads public rooms and availability; it has no reservation write endpoints and does not confirm reservations automatically. The portable edition continues to use the system browser.
 
-### Experimental score reading
+### School login, timetables and scores
 
-Since beta0.6.1 the app includes undergraduate and graduate score readers, pending validation with real school records. Enter the Cookie only in the local application. Session storage fails closed if secure storage is unavailable — no plaintext fallback is used, and campus network passwords now follow the same rule (F24, fixed). Verification targets the selected academic application and distinguishes missing permission from an expired session. Only the first page is read; unknown totals and partial results are explicitly labelled. Community reservations are completed on the official school page; sports venues are not integrated.
+In the installer edition, select undergraduate/graduate timetable or scores at the top of Study tools. Open the official login page, complete school verification, return to the main window and read the current login. Then query the selected business. Credentials stay in the school page; cookies never pass through the garden renderer or reach disk. Business access is verified separately. Closing the main window keeps the session; full application exit clears it.
 
-The app provides the official academic calendar, local graduate login and timetable reading, and undergraduate personal timetable reading using a business-specific ehall cookie. Timetable adapters still require live account acceptance. Public community rooms and availability can be read on the campus network. Users open the official school page to sign in, submit a reservation, and view its result. The booking session input and experimental local submission interface shipped in beta0.6 were withdrawn from the interface in beta0.6.1, and the server endpoints have since been removed (F23). See [STATUS.md](STATUS.md) for current acceptance status.
+The portable edition retains a collapsed alternative login workflow, including manual session import with OS-protected storage and no plaintext fallback. Never share passwords or cookies in feedback. Online scores are read manually and currently limited to the first page; incomplete results are labelled and are not automatically added to local GPA records. Undergraduate arrangements are preserved as school text, and graduate courses use the school's returned schedule. Live account acceptance is still pending.
+
+The official calendar is checked daily. Windows OCR prefers Simplified Chinese; failed refreshes preserve the cache and report the cause. Teaching weeks support manual overrides. College piano rooms use a separate campus system with read-only queries; its current HTTP service should only be used on a trusted campus network with its own credentials.
 
 ---
 
@@ -219,7 +225,7 @@ is open source, so you can read it or build it yourself (`go build`) and compare
 <details>
 <summary><b>Does it keep running after I close the window?</b></summary>
 
-Closing the installer window exits and cleans up its own engine; a reused service stays running.
+Closing the main window keeps the pet and tray running. Quit from the tray or Settings to stop its own engine; a reused service stays running.
 The portable edition exits about 10 seconds after all its windows close. **Settings → Exit** is also available.
 </details>
 
