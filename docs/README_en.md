@@ -25,9 +25,7 @@ Unofficial · Built by a student · Not affiliated with Shenzhen University
 
 ## Preview
 
-| Main window | Desktop pet (installer) | ✅ | Transparent pet window, mood and click animations, tray, presets and continuous scaling; size survives restart |
-| College piano rooms | Experimental | Login, paginated rooms and read-only reservations; memory-only session, pending validation with an authorized account |
-| Lychee Garden | Network sign-in |
+| Main window | Lychee Garden | Network sign-in |
 | :---------: | :-----------: | :-------------: |
 | ![Main window](screenshot-desktop.png) | ![Lychee Garden](screenshot-garden.png) | ![Network sign-in](screenshot-login.png) |
 
@@ -63,7 +61,7 @@ protocol at an endpoint that isn't there.
 
 ## Download
 
-Download **`szuDesktop-Setup-0.9.0.exe`** from [Releases](https://github.com/SzuDesktopTeam/szudesktop/releases), run the installer, then open szuDesktop. The Windows installer includes its window runtime and Go engine. Available downloads are listed on the release page.
+Download **[szuDesktop-Setup-0.9.0.exe](https://github.com/SzuDesktopTeam/szudesktop/releases/download/beta0.9.0/szuDesktop-Setup-0.9.0.exe)**, run the installer, then open szuDesktop. The Windows installer includes its window runtime and Go engine. Portable downloads, CLI binaries and checksums are on the [beta0.9.0 release page](https://github.com/SzuDesktopTeam/szudesktop/releases/tag/beta0.9.0).
 
 | Item | Detail |
 | :--- | :----- |
@@ -74,6 +72,8 @@ Download **`szuDesktop-Setup-0.9.0.exe`** from [Releases](https://github.com/Szu
 | Saved data | Both Windows editions use the same local garden and study records; export a backup from Settings before updating |
 
 beta0.9.0 adds a floating desktop pet, a system tray and 40%–200% scaling that persists across restarts. Closing the main window keeps the pet available; click it or the tray to reopen. Official school login and booking pages open inside the installer edition, without a cookie-copy workflow. Calendar OCR now prefers Chinese. See [STATUS](STATUS.md) for the limits of live account validation. Installer autostart is still not implemented.
+
+Published on 2026-09-26: [PR #13](https://github.com/SzuDesktopTeam/szudesktop/pull/13) is merged and the [release checks](https://github.com/SzuDesktopTeam/szudesktop/actions/runs/36220458700) passed, including installation, main window and pet, persistent size after restart, saved data after a same-version reinstall, and uninstall. Live school account validation still requires restored connectivity.
 
 ### First run
 
@@ -123,7 +123,7 @@ beta0.9.0 adds a floating desktop pet, a system tray and 40%–200% scaling that
 | Calendar and timetables | Partial | Official calendar updates and manual week overrides. Undergraduate personal timetable reading and graduate login are **pending full live account validation** |
 | Study reminders | ✅ | Add a reminder manually, export a standard ICS calendar (15 minutes before start). **A reminder is not a booking** |
 | Common contacts | Partial | Only numbers verifiable on official school pages (library help desks); other offices link to their official pages |
-| Grades and GPA | Partial | Paste or import CSV / TSV grade tables for undergrad and postgrad, converted by the school's own rules. **No PDF / image / XLSX parsing, no automatic online sync** |
+| Grades and GPA | Partial | Paste or import CSV / TSV grade tables and calculate GPA locally. Manual school queries remain pending live account validation, read only the first page and do not update local GPA records automatically. **No PDF / image / XLSX parsing** |
 | Todo and focus timer | ✅ | Todo list plus 5 / 25 / 45-minute focus sessions |
 | Desktop pet (installer) | ✅ | Transparent pet window, mood and click animations, tray, presets and continuous scaling; size survives restart |
 | College piano rooms | Experimental | Login, paginated rooms and read-only reservations; memory-only session, pending validation with an authorized account |
