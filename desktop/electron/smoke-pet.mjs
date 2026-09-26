@@ -48,7 +48,13 @@ async function checkBackup(mainWin,baseUrl,evidenceDir){
   assert.equal(backup.account,undefined);
   await main("document.querySelector('#display-name').value='恢复前';document.querySelector('#profile-form').requestSubmit()");
   await until(async()=>(await snapshot()).data.profile.name==='恢复前','profile change not saved');
-  const importFile=(data=backup)=>main(`(()=>{const input=document.querySelector('#import-file'),files=new DataTransfer();files.items.add(new File([${JSON.stringify(JSON.stringify(data))}],'backup.json',{type:'application/json'}));input.files=files.files;input.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+  const ready=()=>until(()=>main("Boolean(document.querySelector('#import-file') && !document.querySelector('#import-file').disabled)"),'backup controls did not become ready');
+  const importFile=async(data=backup)=>{
+    // A disk write may be visible before the renderer consumes its response.
+    // Follow the enabled file input, as a user would, instead of racing it.
+    await ready();
+    await main(`(()=>{const input=document.querySelector('#import-file'),files=new DataTransfer();files.items.add(new File([${JSON.stringify(JSON.stringify(data))}],'backup.json',{type:'application/json'}));input.files=files.files;input.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+  };
   await importFile();
   await until(()=>main("Boolean(document.querySelector('#confirm[open]'))"),'restore confirmation not shown');
   await main("document.querySelector('#confirm button[value=cancel]').click()");
@@ -68,6 +74,7 @@ async function checkBackup(mainWin,baseUrl,evidenceDir){
   await until(()=>main("Boolean(document.querySelector('#confirm[open]'))"),'original save confirmation not shown');
   await main("document.querySelector('#confirm button[value=ok]').click()");
   await until(async()=>(await snapshot()).revision>beforeReset.revision,'original upgrade fixture not restored');
+  await ready();
   const reset=(await snapshot()).data;
   for(const key of ['profile','preferences','todos','courses','reminders','semester'])assert.deepEqual(reset[key],original[key],'original '+key+' retained');
 }

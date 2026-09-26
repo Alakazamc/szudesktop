@@ -92,7 +92,7 @@ The local development build expands the base roster to **Libao, Chestnut, Xiaoba
 
 ![Four companion selection cards (development build, not released)](screenshot-companions.png)
 
-This candidate also addresses score pagination, stale school sessions after sign-out, and an installer check that upgrades from beta0.9.1 while preserving data. Backup checks exercise downloading, cancelling restoration and confirming restoration in the actual window. Results and release progress are recorded in [STATUS](STATUS.md); pending checks are not treated as delivered features.
+This candidate also addresses score pagination, stale school sessions after sign-out, and an installer check that upgrades from beta0.9.1 while preserving data. Backup checks exercise downloading, cancelling restoration and confirming restoration in the actual window. Initial CI confirmed data preservation, but the restore script needed to wait for enabled UI controls; the complete installer check must pass again. Results stay in [STATUS](STATUS.md).
 
 The 1.0 plan focuses on the desktop app; **campus backend and Docker deployment are deferred**. Remaining work covers on-site campus network authentication, installer school login and session handoff, real undergraduate/graduate timetables and complete scores, in-app space booking, college piano-room permissions, delivery of the four companions, cross-version upgrades and the final release. Existing valid checks are retained; gaps and acceptance criteria stay in [STATUS section 50.2](STATUS.md#502-10-剩余任务暂不部署后端). Backend services, cloud sync and automatic updates are deferred. The current installer is unsigned, and cross-version upgrades remain untested.
 
