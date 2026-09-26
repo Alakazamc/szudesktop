@@ -2,12 +2,56 @@ package ui
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 )
+
+func TestBrowserSessionInvalidReplacementClearsOnlySelectedAccount(t *testing.T) {
+	for _, business := range []string{"undergrad", "graduate", "undergrad-scores", "graduate-scores"} {
+		for _, row := range []struct {
+			name    string
+			cookies []browserCookie
+		}{
+			{"empty", nil},
+			{"invalid", []browserCookie{{"bad\nname", "test-only", "/"}}},
+		} {
+			t.Run(business+"/"+row.name, func(t *testing.T) {
+				s := &Server{cas: newCasService(), academic: newAcademicService()}
+				s.cas.client, s.cas.authenticated = newCasClient(), true
+				s.academic.client, s.academic.authenticated = newAcademicClient(), true
+				body, err := json.Marshal(map[string]any{"business": business, "cookies": row.cookies})
+				if err != nil {
+					t.Fatal(err)
+				}
+				w := httptest.NewRecorder()
+				s.handleBrowserSession(w, httptest.NewRequest(http.MethodPost, "/api/academic/browser-session", strings.NewReader(string(body))))
+				if w.Code != http.StatusBadRequest {
+					t.Fatalf("invalid replacement status = %d", w.Code)
+				}
+				if business == "graduate" {
+					if s.academic.authenticated || s.academic.client != nil {
+						t.Fatal("previous graduate account survived failed replacement")
+					}
+					if !s.cas.authenticated || s.cas.client == nil {
+						t.Fatal("unrelated CAS account was cleared")
+					}
+				} else {
+					if s.cas.authenticated || s.cas.client != nil {
+						t.Fatal("previous CAS account survived failed replacement")
+					}
+					if !s.academic.authenticated || s.academic.client == nil {
+						t.Fatal("unrelated graduate account was cleared")
+					}
+				}
+			})
+		}
+	}
+}
 
 func TestBrowserCookiesStayOnSchoolHostAndPath(t *testing.T) {
 	c := newCasClient()

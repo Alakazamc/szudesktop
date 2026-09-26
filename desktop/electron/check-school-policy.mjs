@@ -13,6 +13,30 @@ const window=readFileSync(new URL('./school-window.mjs',import.meta.url),'utf8')
 assert.match(window,/fromPartition\('szu-official',\{cache:false\}\)/);
 assert.match(window,/contextIsolation:true,nodeIntegration:false,sandbox:true/);
 assert.doesNotMatch(window,/webSecurity:false|preload:/);
+// Exercise the real sync path without Electron, the network or any user profile.
+// An empty official profile must still reach Go so it can replace the selected
+// account, rather than leave a previously imported person's session available.
+const requests=[];
+let responseStatus=400,responseMessage='请先在应用内的学校页面完成登录';
+const profile={setPermissionRequestHandler(){},setPermissionCheckHandler(){},cookies:{get:async()=>[]}};
+const createSchoolWindows=new Function('session','fetch','academicCookies','isSchoolURL','schoolTargets',
+ window.replace(/^import[^\n]*\n/gm,'').replace('export function createSchoolWindows','function createSchoolWindows')+'\nreturn createSchoolWindows;'
+)({fromPartition:()=>profile},async(url,options)=>{
+ requests.push({url,options});
+ return {ok:false,status:responseStatus,json:async()=>({ok:false,message:responseMessage})};
+},academicCookies,isSchoolURL,schoolTargets);
+const school=createSchoolWindows(()=>'http://127.0.0.1:1234');
+for(const business of ['undergrad','graduate','undergrad-scores','graduate-scores']){
+ await assert.rejects(school.sync(business),/请先在应用内的学校页面完成登录/);
+ const {url,options}=requests.at(-1);
+ assert.equal(url,'http://127.0.0.1:1234/api/academic/browser-session');
+ assert.equal(options.method,'POST');
+ assert.deepEqual(JSON.parse(options.body),{business,cookies:[]});
+}
+assert.equal(requests.length,4);
+responseStatus=403;
+responseMessage='当前账号没有所选业务的访问权限，请核对培养层次或在官方系统确认权限';
+await assert.rejects(school.sync('undergrad'),{message:responseMessage});
 const packaged=readFileSync(new URL('./electron-builder.yml',import.meta.url),'utf8');
 for(const name of ['pet-settings.mjs','smoke-pet.mjs','school-window.mjs','school-policy.mjs'])assert.ok(packaged.includes(`- ${name}`),`${name} absent from installer`);
-console.log('School window: URL boundary, cookie scope, isolated profile and packaged modules passed');
+console.log('School window: URL boundary, cookie scope, empty-session replacement, isolated profile and packaged modules passed');

@@ -23,6 +23,8 @@ export const PET_SAY_MAX = 60;
 const PET_SPECIES = {
   libao: {sprite: 'libao', states: false},
   chestnut: {sprite: 'cat', states: true},
+  egret: {sprite: 'egret', states: false},
+  turtle: {sprite: 'turtle', states: false},
 };
 const DEFAULT_SPECIES = 'libao';
 

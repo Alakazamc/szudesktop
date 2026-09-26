@@ -110,6 +110,20 @@ func (s *Server) handleBrowserSession(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, 400, errors.New("请选择课表或成绩业务"))
 		return
 	}
+	// Lock the selected account for the entire transition. Failed replacement must
+	// not leave a previous person's authenticated state available to the UI,
+	// including when the browser has no cookies after logout or failed login.
+	if in.Business == "graduate" {
+		a := s.academic
+		a.mu.Lock()
+		defer a.mu.Unlock()
+		a.reset()
+	} else {
+		c := s.cas
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		c.reset()
+	}
 	client := newCasClient()
 	if in.Business == "graduate" {
 		client = newAcademicClient()
@@ -118,32 +132,21 @@ func (s *Server) handleBrowserSession(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, 400, err)
 		return
 	}
-	// Lock the selected account for the entire transition. Failed replacement must
-	// not leave a previous person's authenticated state available to the UI.
-	if in.Business == "graduate" {
-		a := s.academic
-		a.mu.Lock()
-		defer a.mu.Unlock()
-		a.reset()
-		if err := validateBrowserSession(r.Context(), client, in.Business); err != nil {
-			client.CloseIdleConnections()
+	if err := validateBrowserSession(r.Context(), client, in.Business); err != nil {
+		client.CloseIdleConnections()
+		if in.Business == "graduate" {
 			writeAcademicError(w, err)
-			return
-		}
-		a.client = client
-		a.authenticated = true
-	} else {
-		c := s.cas
-		c.mu.Lock()
-		defer c.mu.Unlock()
-		c.reset()
-		if err := validateBrowserSession(r.Context(), client, in.Business); err != nil {
-			client.CloseIdleConnections()
+		} else {
 			writeCasError(w, err)
-			return
 		}
-		c.client = client
-		c.authenticated = true
+		return
+	}
+	if in.Business == "graduate" {
+		s.academic.client = client
+		s.academic.authenticated = true
+	} else {
+		s.cas.client = client
+		s.cas.authenticated = true
 	}
 	writeJSON(w, map[string]any{"ok": true, "authenticated": true, "business": in.Business,
 		"message": "所选业务已通过学校查询验证，可以返回课表或成绩卡片读取；登录仅保留到退出应用"})

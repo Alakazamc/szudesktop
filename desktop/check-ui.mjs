@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {createState,act,settle,normalize,gpa,activePet,petSprite} from './assets/garden/engine.mjs';
+import {createState,act,settle,normalize,gpa,activePet,petSprite,PETS} from './assets/garden/engine.mjs';
 let checks=0;function test(name,fn){fn();checks++;console.log('PASS',name)}
 const now=new Date('2026-09-18T10:00:00').getTime();
 test('one harvest cannot be claimed twice; inventory can be sold',()=>{let s=createState(now);assert.throws(()=>act(s,{type:'harvest',index:0},now));s=act(s,{type:'water',index:0},now+1000);const due=s.game.plots[0].ready;assert.equal(due,now+45250);assert.throws(()=>act(s,{type:'water',index:0},now+2000));s=act(s,{type:'harvest',index:0},due);assert.equal(s.game.stock.radish,2);assert.throws(()=>act(s,{type:'harvest',index:0},due));s=act(s,{type:'sell',crop:'radish'},due);assert.equal(s.game.coins,52);assert.equal(s.game.stock.radish,0)});
@@ -8,21 +8,53 @@ test('seed spending, locked plots and level requirements',()=>{let s=createState
 test('daily gifts and quest rewards are one-time, clock rollback cannot reset',()=>{let s=act(createState(now),{type:'gift'},now);assert.throws(()=>act(s,{type:'gift'},now));s=act(s,{type:'plant',index:1,crop:'radish'},now);s=act(s,{type:'quest',id:'plant'},now);assert.throws(()=>act(s,{type:'quest',id:'plant'},now));assert.throws(()=>act(s,{type:'gift'},now-86400000));s=act(s,{type:'gift'},now+86400000);assert.equal(s.game.daily.gift,true)});
 test('focus survives reload, early/duplicate claims fail',()=>{let s=act(createState(now),{type:'focusStart',minutes:5},now);s=normalize(JSON.parse(JSON.stringify(s)),now+120000);assert.throws(()=>act(s,{type:'focusClaim'},now+120000));s=act(s,{type:'focusClaim'},now+300000);assert.equal(s.game.stats.minutes,5);assert.equal(s.game.coins,45);assert.throws(()=>act(s,{type:'focusClaim'},now+300000))});
 test('offline pet does not die and sleep restores energy',()=>{let s=createState(now);activePet(s.game).energy=20;s=act(s,{type:'sleep'},now);s=settle(s,now+3600000);assert.equal(activePet(s.game).energy,50);s=settle(s,now+86400000*10);assert.ok(activePet(s.game).hunger>=15);assert.ok(activePet(s.game).mood>=20);assert.equal(s.game.plots[0].crop,'radish')});
-// 多伙伴：新存档默认荔宝且一开局就有两只（否则切换器对谁都不显示）；
-// 切到另一位时成长各自独立，不继承也不清零；旧单伙伴存档迁移后保留用户起的名字。
-test('pets: libao default, independent growth, old save migrates with its name',()=>{
- let s=createState(now);
+test('pets: all four companions are available with libao as the default',()=>{
+ const s=createState(now);
+ assert.deepEqual(s.game.pets.map(p=>p.species),['libao','chestnut','egret','turtle']);
  assert.equal(activePet(s.game).name,'荔宝');
- assert.equal(petSprite(activePet(s.game)),'libao');
- assert.equal(s.game.pets.length,2,'新存档一开局就要有两只，切换器才对用户可见');
+ assert.deepEqual(s.game.pets.map(p=>petSprite(p)),['libao','cat-happy','egret','turtle']);
+ for(const p of s.game.pets)assert.ok(PETS[p.species].description);
+});
+test('pets: switching companions keeps growth, bond and care cooldowns independent',()=>{
+ let s=createState(now);
  s=act(s,{type:'pat'},now);
  assert.ok(activePet(s.game).say.length>0,'互动后宠物要说话');
- s=act(s,{type:'switchPet',index:1},now);
- assert.equal(activePet(s.game).species,'chestnut');
- assert.equal(activePet(s.game).xp,0,'切到栗栗时它的成长是独立的，不该继承荔宝的');
- const old=JSON.parse(JSON.stringify(s));old.schema=2;old.game.pet=old.game.pets[0];delete old.game.pets;delete old.game.active;
- const m=normalize(old,now);
- assert.equal(m.schema,3);assert.equal(m.game.pets.length,1);assert.equal(activePet(m.game).species,'chestnut');
+ for(const index of [1,2,3]){
+  s=act(s,{type:'switchPet',index},now);
+  assert.equal(activePet(s.game).xp,0);
+  assert.equal(activePet(s.game).bond,10);
+  s=act(s,{type:'pat'},now);
+  assert.equal(activePet(s.game).xp,2);
+  assert.equal(activePet(s.game).bond,13);
+ }
+ s=act(s,{type:'switchPet',index:0},now);
+ assert.equal(activePet(s.game).xp,2);assert.equal(activePet(s.game).bond,13);
+ assert.throws(()=>act(s,{type:'pat'},now),'切换回来不能绕过摸头冷却');
+});
+test('pets: old single-cat and two-pet saves keep names, progress, state and active companion',()=>{
+ const old=createState(now);old.schema=2;
+ old.game.pet={...old.game.pets[1],name:'团团',xp:123,bond:64,hunger:47,energy:36,mood:28,sleeping:true,lastPat:now-1000,say:'晚安',saidAt:now};
+ delete old.game.pets;delete old.game.active;
+ const migrated=normalize(old,now);
+ assert.equal(migrated.schema,3);
+ assert.deepEqual(activePet(migrated.game),old.game.pet);
+ assert.deepEqual(migrated.game.pets.map(p=>p.species),['chestnut','libao','egret','turtle']);
+ const two=createState(now);two.game.pets=two.game.pets.slice(0,2);two.game.active=1;
+ two.game.pets[1]={...two.game.pets[1],name:'汤圆',xp:88,bond:53};
+ const normalized=normalize(two,now);
+ assert.equal(normalized.game.active,1);
+ assert.deepEqual(normalized.game.pets.slice(0,2),two.game.pets);
+ assert.deepEqual(normalized.game.pets.map(p=>p.species),['libao','chestnut','egret','turtle']);
+ assert.deepEqual(normalize(normalized,now),normalized,'重复读档不应重复添加伙伴');
+});
+test('pets: full saves retain all records and inherited object keys are not valid species',()=>{
+ const full=createState(now);full.game.pets=Array.from({length:8},(_,i)=>({...full.game.pets[1],name:'栗栗'+i,xp:i}));full.game.active=7;
+ const normalized=normalize(full,now);
+ assert.deepEqual(normalized.game.pets,full.game.pets);assert.equal(normalized.game.active,7);
+ for(const species of ['constructor','toString','__proto__']){
+  const invalid=createState(now);invalid.game.pets[0].species=species;
+  assert.throws(()=>normalize(invalid,now),/不认识的伙伴种类/);
+ }
 });
 test('todos reward completion only once',()=>{let s=act(createState(now),{type:'todoAdd',id:'task',text:'test'},now);for(let i=0;i<3;i++)s=act(s,{type:'todoToggle',id:'task'},now);assert.equal(activePet(s.game).xp,2);assert.equal(s.game.stats.tasks,1)});
 test('invalid imports are rejected; unknown root fields are excluded',()=>{assert.throws(()=>normalize({schema:1},now));let s=createState(now);s.game.coins=-1;assert.throws(()=>normalize(s,now));s=createState(now);s.game.plots[0].crop='unknown';assert.throws(()=>normalize(s,now));s=createState(now);s.password='must-not-export';activePet(s.game).password='must-not-export';s.semester='2026-09-01';s=normalize(s,now);assert.equal(s.password,undefined);assert.equal(activePet(s.game).password,undefined);assert.equal(s.semester,'2026-09-01')});

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -94,6 +95,13 @@ func newEhallClient(cookie string, timeout time.Duration) *ehallClient {
 
 // postForm 向 ehall 发一个表单 POST，返回响应体。
 func (c *ehallClient) postForm(path string, form url.Values) ([]byte, error) {
+	return c.postFormContext(context.Background(), path, form)
+}
+
+func (c *ehallClient) postFormContext(ctx context.Context, path string, form url.Values) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if !c.usesJar && strings.TrimSpace(c.cookie) == "" {
 		return nil, errors.New("还没有学校系统的登录状态")
 	}
@@ -102,7 +110,7 @@ func (c *ehallClient) postForm(path string, form url.Values) ([]byte, error) {
 		return nil, errUnsafeEhallURL
 	}
 	body := form.Encode()
-	req, err := http.NewRequest(http.MethodPost, c.base+path, strings.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.base+path, strings.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -121,6 +129,9 @@ func (c *ehallClient) postForm(path string, form url.Values) ([]byte, error) {
 
 	res, err := c.http.Do(req)
 	if err != nil {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		if errors.Is(err, errSessionInvalid) {
 			return nil, errSessionInvalid
 		}
@@ -133,6 +144,9 @@ func (c *ehallClient) postForm(path string, form url.Values) ([]byte, error) {
 
 	data, err := io.ReadAll(io.LimitReader(res.Body, ehallMaxBody+1))
 	if err != nil {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		return nil, fmt.Errorf("读取学校系统响应失败：%w", err)
 	}
 	if len(data) > ehallMaxBody {
